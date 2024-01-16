@@ -27,7 +27,7 @@ Comme beaucoup le savent la suite de fibonacci est construite de manière récur
 $ forall n in NN, F_n := cases(F_0 = F_1 = 1, F_(n+2) = F_(n+1) + F_n \, n>= 2) $
 Pour généraliser cette suite nous allons au lieux de sommer les deux termes précédent, mais le termes précédent et un termes se trouvant $p$ termes plus loin de ce premier termes et pour ce faire nous avons besoin que les $p$ premier termes valent 1, i.e.
 $ forall n, p in NN, F_n ^((p)) :=  cases(F_j^((p)) = 1\, 0 <=j <= p, F_(n+p+1)^((p)) = F^((p))_(n+p) + F^((p))_n ) $
-On nomme $p$ comme étant l'odre de la suite engendré et $(F^((p)))$ la suite engendré pour un certain $p$
+On nomme $p$ comme étant l'odre de la suite engendré et $(F^((p))_n)_(n in NN)$ la suite engendré pour un certain entier $p$
 
 
 
