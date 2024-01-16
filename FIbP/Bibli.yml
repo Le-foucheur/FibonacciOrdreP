@@ -1,0 +1,16 @@
+Pingala:
+  type: web
+  title: Pingala
+  url: https://fr.wikipedia.org/wiki/Pingala_(mathématicien)
+  autor: Wikipedia
+
+Liber:
+  type: book
+  title: Liber abbaci
+  autor: Fibonacci
+  
+Lucas:
+  type: web
+  title: Suite de Lucas
+  url: https://fr.wikipedia.org/wiki/Suite_de_Lucas
+  autor: Wikipédia
