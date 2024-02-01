@@ -7,9 +7,6 @@
     else if n == 3 { [*Preuve:*]} 
   },
 )
-#show heading : it => {
-  if it.body == [] or it.level >= 3 [#parbreak() #linebreak() #counter(heading).display() #it.body] else [#parbreak() #linebreak() #counter(heading).display() #it.body]
-}
 #let et = "et" + h(5pt)
 #let Fnp = $F_n^((p))$
 #let defF = $forall n, p in NN, F_n ^((p)) :=  cases(F_j^((p)) = 1\, "si " 0 <=j <= p, F_(n+p+1)^((p)) = F^((p))_(n+p) + F^((p))_n "si " n>p)$
@@ -107,5 +104,5 @@ $ F_(n-p)^((p)) = display(sum_(i=1)^(p+1))  R_i^n/display(product_(j=1\ j!=i)^(p
 Ainsi en revenant à la définition de base:
 $ Fnp = display(sum_(i=1)^(p+1))  R_i^(n+p)/display(product_(j=1\ j!=i)^(p+1)R_i-R_j) $ #QED
 
-
-#bibliography("Bibli.yml", style: "biomed-central")
+= d
+#bibliography("Bibli.yml", style: "biomed-central", title: "References")
