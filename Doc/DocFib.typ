@@ -36,7 +36,7 @@ $ forall n, p in NN, F_(n-p)^((p)) =  cases(F_j^((p)) = 0\, "si" 0 <= j < p, F_n
 Ce qui reviens à décaler les suites de $p$ termes 
 
 === \
-Il est évident que les deux définitions sont équivalentes moyennant un décalage car les $p-1$ premier termes de la seconde définitions valent $0$ #QED
+Il est évident que les deux définitions sont équivalentes moyennant un décalage car les $p-1$ premier termes de la seconde définitions valent $0$ et le $p$-ième vaut $1$ #QED
 #pagebreak()
 
 #align(center, text[= Exemple de suite généré])
