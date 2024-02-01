@@ -104,5 +104,4 @@ $ F_(n-p)^((p)) = display(sum_(i=1)^(p+1))  R_i^n/display(product_(j=1\ j!=i)^(p
 Ainsi en revenant à la définition de base:
 $ Fnp = display(sum_(i=1)^(p+1))  R_i^(n+p)/display(product_(j=1\ j!=i)^(p+1)R_i-R_j) $ #QED
 
-= d
 #bibliography("Bibli.yml", style: "biomed-central", title: "References")
