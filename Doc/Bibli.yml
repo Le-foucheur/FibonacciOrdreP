@@ -14,3 +14,15 @@ Lucas:
   title: Suite de Lucas
   url: https://fr.wikipedia.org/wiki/Suite_de_Lucas
   autor: Wikipédia
+
+Narayana:
+  type: web
+  title: Suite des vaches de Narayana
+  url: https://oeis.org/A000930
+  autor: O.E.I.S.
+
+InverVander:
+  type: web
+  title: The Inverse matrix of Vandermonde matrix
+  url: http://www.vesnik.math.rs/vol/mv19303.pdf
+  autor: None
