@@ -1,4 +1,5 @@
-#let prop = counter("Proposition")
+#import "template.typ": *
+#set page(numbering: "1/1", number-align: right)
 #set heading(
   numbering: (..numbers) => {
     let n = numbers.pos().len();
@@ -7,11 +8,7 @@
     else if n == 3 { [*Preuve:*]} 
   },
 )
-#let et = "et" + h(5pt)
-#let Fnp = $F_n^((p))$
-#let defF = $forall n, p in NN, F_n ^((p)) :=  cases(F_j^((p)) = 1\, "si " 0 <=j <= p, F_(n+p+1)^((p)) = F^((p))_(n+p) + F^((p))_n "si " n>p)$
-#let tend(n, val) = $limits(-->)_(#n -> #val)$
-#let QED = align(right, text[*Q.E.D.*])
+#import "@preview/cetz:0.2.0" : *
 
 #align(center, text(20pt)[TITRE])
 
@@ -104,4 +101,151 @@ $ F_(n-p)^((p)) = display(sum_(i=1)^(p+1))  R_i^n/display(product_(j=1\ j!=i)^(p
 Ainsi en revenant à la définition de base:
 $ Fnp = display(sum_(i=1)^(p+1))  R_i^(n+p)/display(product_(j=1\ j!=i)^(p+1)R_i-R_j) $ #QED
 
+== Expression fonctionelle via le triangle de Pascale 
+#pagebreak()
+
+#align(center, text[= Sur les limites de quotients des $(Fnp)$])
+Le ratio de deux termes succésif de la suite de Fibonacci a toujours été porteur de mystère et d'isotérisme, néanmoins il en reste intérésant de s'y intéresser.\
+C'est pourquoi nous allons voir les propriétés de deux généralisation de la limite de quotient.
+
+*1er généralisation:*\
+Pour cette première généralisation, nous ne généraliserons par réelement le quotient, i.e. que nous allons nous intéréser à:
+$ forall p in NN, lim_(n -> +oo) F_n^(p+1)/Fnp $
+
+Regardons ce que cela donne pour certins $p$:
+
+*Pour $p=0$*\
+On sais que $forall n in NN, F_n^((0)) = 2^n$\
+Ainsi 
+$ F_(n+1)^((0))/F_(n)^((0)) = 2^(n+1)/2^n = 2 tend(n, +oo) 2 $
+
+*Pour $p=1$*\
+Il est connue que la limite du qotient la suite de Fibonacci tend vers $(1+sqrt(5))/2$
+
+#pagebreak()
+*Pour $p --> +oo$*\
+On a définie pour $p --> +oo$, $ forall n in NN, F_n^((+oo)) =1 $
+Donc 
+$ F_(n+1)^((+oo))/F_n^((+oo)) = 1/1 = 1 tend(n,+oo) 1  $
+
+*Pour p >1*\
+Au dela 1, il deviens difficile de calculer algébriquement le qotient, nous avons donc calculer informatiquement jusqu'à $p = 30$ en voici le tableau:
+#grid(
+  columns: (1fr,1fr),
+  align(left)[
+    Ainsi on peut traduire le tableau en un graphique
+  #move(dx:-60pt)[
+  #canvas(length: 1cm, {
+    plot.plot(
+       axis-style: "left",
+       size: (11,5.5),
+       x-min: 0,
+       x-max: 30,
+       y-max: 2,
+       y-min: .9,
+       x-label:$p$,
+       y-label:"",
+       {
+        plot.add(
+          ((0,2),
+            (1,1.618033989),
+            (2,1.465571232),
+            (3,1.380277569),
+            (4,1.324717957),
+            (5,1.285199033),
+            (6,1.255422871),
+            (7,1.232054631),
+            (8,1.213149723),
+            (9,1.197491434),
+            (10,1.184276322),
+            (11,1.172950750),
+            (12,1.163119791),
+            (13,1.154493551),
+            (14,1.146854042),
+            (15,1.140033937),
+            (16,1.133902490),
+            (17,1.128355940),
+            (18,1.123310806),
+            (19,1.118699108),
+            (20,1.114464880),
+            (21,1.110561598),
+            (22,1.106950245),
+            (23,1.103597835),
+            (24,1.100476279),
+            (25,1.097561494),
+            (26,1.094832708),
+            (27,1.092271899),
+            (28,1.089863353),
+            (29,1.087593296),
+            (30,1.085449605)
+            )
+        )
+        plot.add-hline(1)
+       }
+    )
+  })
+  Dont on voit clairement qui tend vers 1
+  #move(dx: 25pt, dy: -215pt)[Quotient]
+  ]],
+  align(center)[
+#table(
+  columns: 2,
+  inset: 4pt,
+  align: (x, y) => (left, right).at(x),
+  [$p$], [quotient],
+  [0],[2],
+  [1],[1,618033989],
+  [2],[1,465571232],
+  [3],[1,380277569],
+  [4],[1,324717957],
+  [5],[1,285199033],
+  [6],[1,255422871],
+  [7],[1,232054631],
+  [8],[1,213149723],
+  [9],[1,197491434],
+  [10],[1,184276322],
+  [11],[1,172950750],
+  [12],[1,163119791],
+  [13],[1,154493551],
+  [14],[1,146854042],
+  [15],[1,140033937],
+  [16],[1,133902490],
+  [17],[1,128355940],
+  [18],[1,123310806],
+  [19],[1,118699108],
+  [20],[1,114464880],
+  [21],[1,110561598],
+  [22],[1,106950245],
+  [23],[1,103597835],
+  [24],[1,100476279],
+  [25],[1,097561494],
+  [26],[1,094832708],
+  [27],[1,092271899],
+  [28],[1,089863353],
+  [29],[1,087593296],
+  [30],[1,085449605]
+
+)])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#pagebreak()
 #bibliography("Bibli.yml", style: "biomed-central", title: "References")
