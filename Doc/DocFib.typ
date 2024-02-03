@@ -41,20 +41,20 @@ Il est évident que les deux définitions sont équivalentes moyennant un décal
 
 #align(center, text[= Exemple de suite généré])
 
-*Pour $n=0$:*\
+*Pour $p=0$:*\
 Par la définition:
-$ F_n^((0)) = cases(F_0^((0)) = 1, F_(n+1) = F_n +F_n = 2F_n) $
+$ forall n in NN,  F_n^((0)) = cases(F_0^((0)) = 1, F_(n+1) = F_n +F_n = 2F_n) $
 On retombe sur un suite géométrique de raison 2 et de premier terme 1, donc 
 $ F_n^((0)) = 2^n $
 
-*Pour $n=1$*\
+*Pour $p=1$*\
 On retombe par construction sur la suite de Fibonacci, donc 
-$ F_n^((1)) = cases(F_0 = F_1 = 1, F_(n+2) = F_(n+1) + F_n) $
+$ forall n in NN,  F_n^((1)) = cases(F_0 = F_1 = 1, F_(n+2) = F_(n+1) + F_n) $
 ou par la formule de binet $F_n^(0) = 1/sqrt(5) (phi^(n+1) - phi'^(n+1))$ avec $phi = (1+sqrt(5))/2$ et $phi' = -1/phi$
 
-*Pour $n=2$*\
+*Pour $p=2$*\
 Par la définition:
-$ F_n^((2)) = cases(F_0 = F_1 = F_2 = 1, F_(n+3) = F_(n+2) + F_n) $
+$ forall n in NN,  F_n^((2)) = cases(F_0 = F_1 = F_2 = 1, F_(n+3) = F_(n+2) + F_n) $
 Ainsi on tombe sur la suite des vaches de Narayana @Narayana\
 D'expretion fonctionelle $F_n^((2)) = lambda^(n+2)/((lambda - nu)(lambda - mu)) + mu^(n+2)/((mu - nu)(mu - lambda)) + nu^(n+2)/((nu - lambda)(nu - mu))$ avec $lambda, mu$ et $nu$ les racines complexes du polynômes: $x^3-x^2-1$
 
@@ -62,7 +62,7 @@ D'expretion fonctionelle $F_n^((2)) = lambda^(n+2)/((lambda - nu)(lambda - mu)) 
 #align(center, text(size: 20pt)[A voir])
 *Si $p --> +oo$*\
 Alors par la définition les $p$ premier termes valent $1$,donc on pose 
-$ F_n^((+oo)) = 1 $
+$ forall n in NN,  F_n^((+oo)) = 1 $
 
 #align(center, text[= Écriture fonctionelle des suites])
 
