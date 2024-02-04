@@ -129,13 +129,13 @@ Donc
 $ F_(n+1)^((+oo))/F_n^((+oo)) = 1/1 = 1 tend(n,+oo) 1  $
 
 *Pour p >1*\
-Au dela 1, il deviens difficile de calculer algébriquement le qotient, nous avons donc calculer informatiquement jusqu'à $p = 30$ en voici le tableau:
+Au dela 1, il deviens difficile de calculer algébriquement le quotient, nous avons donc calculer informatiquement jusqu'à $p = 30$ en voici le tableau:
 #grid(
   columns: (1fr,1fr),
   align(left)[
     Ainsi on peut traduire le tableau en un graphique
-  #move(dx:-60pt)[
-  #canvas(length: 1cm, {
+  #move(dx:-55pt)[
+  #canvas( {
     plot.plot(
        axis-style: "left",
        size: (11,5.5),
@@ -184,8 +184,65 @@ Au dela 1, il deviens difficile de calculer algébriquement le qotient, nous avo
        }
     )
   })
-  Dont on voit clairement qui tend vers 1
-  #move(dx: 25pt, dy: -215pt)[Quotient]
+  Dont on voit clairement que le qotient tend vers 1\
+  à partir de cette courbe on peut définir l'aproximation suivante:
+  $upright(A)_p = 1 + 1/((1+p)^(log_2(phi))) "avec" phi = (1+sqrt(5))/2$
+  Dont voici la courbe représentative : \
+  #canvas({
+    plot.plot(
+      axis-style: "left",
+       size: (11,5.5),
+       x-min: 0,
+       x-max: 30,
+       y-max: 2,
+       y-min: .9,
+       x-label:$p$,
+       y-label:"",
+       legend: "legend.inner-north-east",
+       legend-style: (stroke: 0),
+       {
+        plot.add(domain: (0,30), x => 1+1/(calc.pow(x+1,calc.log(((1+calc.sqrt(5))/2), base:2))), label: $upright(A)_p$)
+        plot.add(
+          ((0,2),
+            (1,1.618033989),
+            (2,1.465571232),
+            (3,1.380277569),
+            (4,1.324717957),
+            (5,1.285199033),
+            (6,1.255422871),
+            (7,1.232054631),
+            (8,1.213149723),
+            (9,1.197491434),
+            (10,1.184276322),
+            (11,1.172950750),
+            (12,1.163119791),
+            (13,1.154493551),
+            (14,1.146854042),
+            (15,1.140033937),
+            (16,1.133902490),
+            (17,1.128355940),
+            (18,1.123310806),
+            (19,1.118699108),
+            (20,1.114464880),
+            (21,1.110561598),
+            (22,1.106950245),
+            (23,1.103597835),
+            (24,1.100476279),
+            (25,1.097561494),
+            (26,1.094832708),
+            (27,1.092271899),
+            (28,1.089863353),
+            (29,1.087593296),
+            (30,1.085449605)
+            ),
+            label: "Quotient"
+        )
+        plot.add-hline(1)
+       }
+    )
+  })
+  #move(dx: 25pt, dy: -200pt)[Quotient]
+  #move(dx: 25pt, dy: -497pt)[Quotient]
   ]],
   align(center)[
 #table(
@@ -224,10 +281,11 @@ Au dela 1, il deviens difficile de calculer algébriquement le qotient, nous avo
   [28],[1,089863353],
   [29],[1,087593296],
   [30],[1,085449605]
-
 )])
+#pagebreak()
 
 
+ytuytuyt
 
 
 
