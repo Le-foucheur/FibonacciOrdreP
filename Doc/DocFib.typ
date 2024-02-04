@@ -6,6 +6,7 @@
     if n == 1 {numbering("1.", numbers.pos().at(0)) } 
     else if n == 2 { [Proposition ]; prop.step(); prop.display();":"}
     else if n == 3 { [*Preuve:*]} 
+    else if n == 4 {[Conjecture: ]}
   },
 )
 #import "@preview/cetz:0.2.0" : *
@@ -108,7 +109,7 @@ $ Fnp = display(sum_(i=1)^(p+1))  R_i^(n+p)/display(product_(j=1\ j!=i)^(p+1)R_i
 Le ratio de deux termes succésif de la suite de Fibonacci a toujours été porteur de mystère et d'isotérisme, néanmoins il en reste intérésant de s'y intéresser.\
 C'est pourquoi nous allons voir les propriétés de deux généralisation de la limite de quotient.
 
-*1er généralisation:*\
+*1#super("er") généralisation:*\
 Pour cette première généralisation, nous ne généraliserons par réelement le quotient, i.e. que nous allons nous intéréser à:
 $ forall p in NN, lim_(n -> +oo) F_n^(p+1)/Fnp $
 
@@ -122,11 +123,11 @@ $ F_(n+1)^((0))/F_(n)^((0)) = 2^(n+1)/2^n = 2 tend(n, +oo) 2 $
 *Pour $p=1$*\
 Il est connue que la limite du qotient la suite de Fibonacci tend vers $(1+sqrt(5))/2$
 
-#pagebreak()
 *Pour $p --> +oo$*\
 On a définie pour $p --> +oo$, $ forall n in NN, F_n^((+oo)) =1 $
 Donc 
 $ F_(n+1)^((+oo))/F_n^((+oo)) = 1/1 = 1 tend(n,+oo) 1  $
+#pagebreak()
 
 *Pour p >1*\
 Au dela 1, il deviens difficile de calculer algébriquement le quotient, nous avons donc calculer informatiquement jusqu'à $p = 30$ en voici le tableau:
@@ -186,7 +187,7 @@ Au dela 1, il deviens difficile de calculer algébriquement le quotient, nous av
   })
   Dont on voit clairement que le qotient tend vers 1\
   à partir de cette courbe on peut définir l'aproximation suivante:
-  $upright(A)_p = 1 + 1/((1+p)^(log_2(phi))) "avec" phi = (1+sqrt(5))/2$
+  $ upright(A)_p = 1 + 1/((1+p)^(log_2(phi))) "avec" phi = (1+sqrt(5))/2 $
   Dont voici la courbe représentative : \
   #canvas({
     plot.plot(
@@ -199,7 +200,7 @@ Au dela 1, il deviens difficile de calculer algébriquement le quotient, nous av
        x-label:$p$,
        y-label:"",
        legend: "legend.inner-north-east",
-       legend-style: (stroke: 0),
+       legend-style: (stroke: 0pt, spacing: 1),
        {
         plot.add(domain: (0,30), x => 1+1/(calc.pow(x+1,calc.log(((1+calc.sqrt(5))/2), base:2))), label: $upright(A)_p$)
         plot.add(
@@ -242,7 +243,7 @@ Au dela 1, il deviens difficile de calculer algébriquement le quotient, nous av
     )
   })
   #move(dx: 25pt, dy: -200pt)[Quotient]
-  #move(dx: 25pt, dy: -497pt)[Quotient]
+  #move(dx: 25pt, dy: -526pt)[Quotient]
   ]],
   align(center)[
 #table(
@@ -284,8 +285,150 @@ Au dela 1, il deviens difficile de calculer algébriquement le quotient, nous av
 )])
 #pagebreak()
 
+==== \
+le quotient noté $R_p$ peut s'écrire avec une sorte de fraction continue: 
+$ R_p = 1 + 1/(1+ 1/(1+ 1/(dots))^p)^p $
 
-ytuytuyt
+*2#super("ième") généralisation*\
+Pour mieux coller à la définition on peut au lieux de faire la limite du quotient entre deux termes successif, on peut faire la limite du quotient entre deux termes séparé par $p-1$ termes noté $Q_p$, i.e.:
+$ forall p in NN, lim_(n -> +oo) F_(n+p)^((p))/Fnp $
+
+Regardons également ce que cela donne pour certaine valeur de $p$
+
+*Pour $p = 0$*\
+On a: $forall n in NN, F_n^((0)) = 2^n$\
+Ainsi:
+$ F_n^((0))/F_n^((0)) = 1 tend(n, +oo) 1 $
+
+*Pour $p = 1$*\
+Dans ce cas on retombe sur le même quotient étudier plus haut donc:
+$ lim_(n -> +oo) F_(n+1)^((1))/F_(n)^((1)) = (1+sqrt(5))/2 $
+
+*Pour $p --> +oo$*\
+On a: $forall n in NN, F_n^((+oo)) = 1$\
+Ainsi:
+$ F_n^((+oo))/F_n^((+oo)) = 1/1 = 1 tend(n, +oo) 1 $
+
+*Pour p > 1*\
+De même que pour la 1#super("er") généralisation, on a calculé le quotient jusqu'à $p=30$ compilé également en un tableau:
+#grid(
+  columns: (1fr, 1fr, 1fr),
+  align(center)[
+    #table(
+      columns: 2,
+      inset: 4pt,
+      align: (x, y) => (left, right).at(x),
+      [$p$], [quotient],
+      [0], [1,0000],
+      [1], [1,6180],
+      [2], [2,6180],
+      [3], [4,2361],
+      [4], [6,8541],
+      [5], [11,0902],
+      [6], [17,9443],
+      [7], [29,0344],
+      [8], [46,9787],
+      [9], [76,0132],
+    )
+  ],
+  align(center)[
+    #table(
+      columns: 2,
+      inset: 4pt,
+      align: (x, y) => (left, right).at(x),
+      [10], [122,9919],
+      [11], [199,0050],
+      [12], [321,9969],
+      [13], [521,0019],
+      [14], [842,9988],
+      [15], [1 364,0007],
+      [16], [2 206,9995],
+      [17], [3 571,0003],
+      [18], [5 777,9998],
+      [19], [9 349,0001],
+      [20], [15 126,9999],
+    )
+  ],
+  align(center)[
+    #table(
+      columns: 2,
+      inset: 4pt,
+      align: (x, y) => (left, right).at(x),
+      [21], [24 476,0000],
+      [22], [39 603,0000],
+      [23], [64 079,0000],
+      [24], [103 682,0000],
+      [25], [167 761,0000],
+      [26], [271 443,0000],
+      [27], [439 204,0000],
+      [28], [710 647,0000],
+      [29], [1 149 851,0000],
+      [30], [1 860 498,0000],
+    )
+  ]
+)
+#pagebreak()
+==== \
+On remarque par le tableau ci-dessus que:
+$ forall p in  NN, Q_p = phi^n "avec" phi = (1+sqrt(5))/2 $
+
+#align(center)[= Comportement de (#Fnp) sur $NN$]
+
+== \
+$ forall p in NN, forall n in [|0; p|], Fnp = 1 $
+
+=== \
+Ceci est immédiat via la définition
+
+== \
+$ forall p in NN, forall n in [|p+1; 2p+1|], Fnp = 1 + n - p $ \
+i.e. que pour $n$ compris entre $p$ et $2p$, #Fnp se comporte comme une suite arithmétique de raison $1$ et de premier termes $1-p$
+
+=== \
+Soient $p in NN "et" n in [|p+1; 2p+1|]$\
+Alors comme $n > p$ on peut aplliquer la formule de récurrence,\
+Ainsi:
+$ Fnp = F_(n-1)^((p)) + F_(n-p-1)^((p)) $
+Or $p+1<= n  <= 2p+1$ donc $0 <= n - p -1 <= p$ donc $F_(n-p-1)^((p)) = 1$\
+Donc:
+$ Fnp = F_(n-1)^((p)) +1 $
+Donc $(Fnp)_(p+1<=n<=2p+1)$ est suite arithmétique de raison $1$\ et de premier termes $F_(p+1)^((n)) = F_(p)^((p)) + F_(0)^((p)) = 2$\
+Donc
+$ forall p in NN, forall [|p+1; 2p+1|], F_(n)^((p)) = 1+n -p $
+#QED
+
+==== \
+soit $k in NN$, les termes modulo 2 de $F_(k p+1)^((p))$ à $F_((k+1) p)^((p))$ forme un paterne\
+Note: Ceci à déjà été démontrer dans les cas particuliers pour $k=0$ et $k=1$
+#pagebreak()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
