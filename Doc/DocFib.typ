@@ -291,23 +291,23 @@ $ R_p = 1 + 1/(1+ 1/(1+ 1/(dots))^p)^p $
 
 *2#super("ième") généralisation*\
 Pour mieux coller à la définition on peut au lieux de faire la limite du quotient entre deux termes successif, on peut faire la limite du quotient entre deux termes séparé par $p-1$ termes noté $Q_p$, i.e.:
-$ forall p in NN, lim_(n -> +oo) F_(n+p)^((p))/Fnp $
+$ forall p in NN, Q_p = lim_(n -> +oo) F_(n+p)^((p))/Fnp $
 
 Regardons également ce que cela donne pour certaine valeur de $p$
 
 *Pour $p = 0$*\
 On a: $forall n in NN, F_n^((0)) = 2^n$\
 Ainsi:
-$ F_n^((0))/F_n^((0)) = 1 tend(n, +oo) 1 $
+$ F_n^((0))/F_n^((0)) = 1 tend(n, +oo) 1 = Q_0 $
 
 *Pour $p = 1$*\
 Dans ce cas on retombe sur le même quotient étudier plus haut donc:
-$ lim_(n -> +oo) F_(n+1)^((1))/F_(n)^((1)) = (1+sqrt(5))/2 $
+$ lim_(n -> +oo) F_(n+1)^((1))/F_(n)^((1)) = (1+sqrt(5))/2 = Q_1 $
 
 *Pour $p --> +oo$*\
 On a: $forall n in NN, F_n^((+oo)) = 1$\
 Ainsi:
-$ F_n^((+oo))/F_n^((+oo)) = 1/1 = 1 tend(n, +oo) 1 $
+$ F_n^((+oo))/F_n^((+oo)) = 1/1 = 1 tend(n, +oo) 1 = Q_(+oo) $
 
 *Pour p > 1*\
 De même que pour la 1#super("er") généralisation, on a calculé le quotient jusqu'à $p=30$ compilé également en un tableau:
