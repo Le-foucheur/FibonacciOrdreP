@@ -202,7 +202,7 @@ Au dela 1, il deviens difficile de calculer algébriquement le quotient, nous av
        legend: "legend.inner-north-east",
        legend-style: (stroke: 0pt, spacing: 1),
        {
-        plot.add(domain: (0,30), x => 1+1/(calc.pow(x+1,calc.log(((1+calc.sqrt(5))/2), base:2))), label: $upright(A)_p$)
+        plot.add(domain: (0,30), x => 1+1/(calc.pow(x+1,calc.log(((1+calc.sqrt(5))/2), base:2))), label: math.equation(upright(A)_p))
         plot.add(
           ((0,2),
             (1,1.618033989),
