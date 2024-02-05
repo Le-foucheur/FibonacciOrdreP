@@ -457,5 +457,5 @@ On peut supposer que le triangle apparait dû au liens entre les suites de Fibon
 
 
 
-#pagebreak()
+
 #bibliography("Bibli.yml", style: "biomed-central", title: "References")
