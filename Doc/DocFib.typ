@@ -202,7 +202,7 @@ Au dela 1, il deviens difficile de calculer algébriquement le quotient, nous av
        legend: "legend.inner-north-east",
        legend-style: (stroke: 0pt, spacing: 1),
        {
-        plot.add(domain: (0,30), x => 1+1/(calc.pow(x+1,calc.log(((1+calc.sqrt(5))/2), base:2))), label: $upright(A)_p$)
+        plot.add(domain: (0,30), x => 1+1/(calc.pow(x+1,calc.log(((1+calc.sqrt(5))/2), base:2))), label: $ upright(A)_p $)
         plot.add(
           ((0,2),
             (1,1.618033989),
@@ -402,7 +402,16 @@ soit $k in NN$, les termes modulo 2 de $F_(k p+1)^((p))$ à $F_((k+1) p)^((p))$ 
 Note: Ceci à déjà été démontrer dans les cas particuliers pour $k=0$ et $k=1$
 #pagebreak()
 
+#align(center)[= Dessin créé par $(Fnp)$ modulo $2$]
+Si l'on prend sur une feuille à carreaux et que l'on mets dans la case d'indice $n,p$, le termes $F_n^((p))$ modulo 2, et que l'on colorise la dite case en noir ou en blanc si sa valeur est $1$ ou $0$, comme ci-dessous:
 
+#figure(image("./fibo_suite.png"), caption: [dessin réalisé pour un nombre petit de cases])
+On remarque en premier lieux que des motif apparaise entre les droites d'équations : $y = -x/n$ avec $n in NN^*$\
+#pagebreak()
+De plus si l'on prend des valeurs de $p$ et de $n$ bien plus grande on obtient:
+#figure(image("./fibo_sequence.png"), caption: [dessins réalisé pour des valeurs bien plus grande])
+On voit ici, un triangle de Sierpiński étiré de plus en plus vers le bas et arrondie vers des valeurs bien précises.\
+On peut supposer que le triangle apparait dû au liens entre les suites de Fibonacci d'odre $p$ et le triangle de Pascale qui fait apparaitre le triangle par une contruction similaire.
 
 
 
