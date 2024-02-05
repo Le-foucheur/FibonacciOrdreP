@@ -413,6 +413,12 @@ De plus si l'on prend des valeurs de $p$ et de $n$ bien plus grande on obtient:
 On voit ici, un triangle de Sierpiński étiré de plus en plus vers le bas et arrondie vers des valeurs bien précises.\
 On peut supposer que le triangle apparait dû au liens entre les suites de Fibonacci d'odre $p$ et le triangle de Pascale qui fait apparaitre le triangle par une contruction similaire.
 
+#align(center)[= Propriétés divers des suites (Fnp)]
+
+== Formule du jump\
+$ forall p in NN n, n'>= p, F_(n+n')^((p)) = F_n^((p)) F_(n')^((p)) + sum_(k=1)^p F_(n-k)^((p)) F_(n'+k-p-1)^((p)) $
+
+=== \
 
 
 
