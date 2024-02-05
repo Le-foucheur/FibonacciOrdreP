@@ -14,6 +14,8 @@
 })
 #import "@preview/cetz:0.2.0" : *
 
+#align(left)[Gaspar Daguet\ Julien Thillard]
+
 #align(center, text(20pt)[TITRE])
 
 #align(center,text[= Introduction])
