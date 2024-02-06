@@ -224,7 +224,7 @@ $ forall n in NN, sum_(k=0)^(n+1) binom(n,k) = 2^n = F_n^((0)) $
 #lr((250pt,-270pt), k2, 70pt)[2]
 #lr((250pt,-289pt), k2, 82.5pt)[3]
 #lr((250pt,-304pt), k2, 90pt)[4]
-#lr((250pt,-322pt), k2, 103pt)[5]
+#lr((250pt,-322pt), k2, 113pt)[5]
 #lr((250pt,-339pt), k2, 115pt)[7]
 #lr((250pt,-355pt), k2, 130pt)[10]
 
