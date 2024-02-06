@@ -121,7 +121,7 @@ $ F_(n-p)^((p)) = display(sum_(i=1)^(p+1))  R_i^n/display(product_(j=1\ j!=i)^(p
 Ainsi en revenant à la définition de base :
 $ Fnp = display(sum_(i=1)^(p+1))  R_i^(n+p)/display(product_(j=1\ j!=i)^(p+1)R_i-R_j) $ #QED
 
-== Expression fonctionelle via le triangle de Pascale Ò
+== Expression fonctionelle via le triangle de Pascale
 
 $ forall n,p in NN, sum_(k=0)^(floor(n/(p+1))+1) binom(n-p k,k)  $
 
