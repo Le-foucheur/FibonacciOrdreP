@@ -14,7 +14,7 @@
 })
 #import "@preview/cetz:0.2.0" : *
 
-#align(left)[Gaspar Daguet\ Julien Thillard]
+#align(left)[Gaspar Daguet\ Julien Thillard\ Louwen Fricout]
 
 #align(center, text(20pt)[TITRE])
 
@@ -421,14 +421,47 @@ On peut supposer que le triangle apparait dû au liens entre les suites de Fibon
 #align(center)[= Propriétés divers des suites (Fnp)]
 
 == Formule du jump\
-$ forall p in NN n, n'>= p, F_(n+n')^((p)) = F_n^((p)) F_(n')^((p)) + sum_(k=1)^p F_(n-k)^((p)) F_(n'+k-p-1)^((p)) $
-// (NB: cette formule demande, pour les premiers termes, d'admettre que $forall n in [| |]
+$ forall p, n, n' in NN, F_(n+n')^((p)) = F_n^((p)) F_(n')^((p)) + sum_(k=1)^p F_(n-k)^((p)) F_(n'+k-p-1)^((p)) $
+(NB: on admet que, $forall p in NN, forall n in [|-p,-1|], F_n^((p)) = 0$,
+ce qui est cohérent avec les généralisation au négatifs de chaque suite, et la formule de récurence.
+On peut d'ailleur noter que cette formule (et sa preuve) restent valides dans cette généralisation aux n négatifs)
 === \
-Par 
+#let Fp(index) = $F_(index)^((p))$
 
+Il est plus simple, pour l'objet de la preuve, de considerer la formule équivalente suivante:
 
+$ forall p,i in NN, forall j in [|0,i|], Fp(i) = Fp(i-j) Fp(j) + sum_(k=1)^p Fp(i-j-k) Fp(j+k-p-1) $
 
+(C'est la formule précédente en prenant $i=n+n'$ et $j=n'$)
 
+Prouvons la proposition pour tout $p$ et $i$ par récurence sur $j$
+
+Soit $p,i in NN$
+
+Initialisation: $j=0$
+
+$ Fp(i-0) Fp(0) + sum_(k=1)^p Fp(i-0-k) Fp(0+k-p-1) =
+  Fp(i) times 1 + sum_(k=1)^p Fp(i-k) times 0 = Fp(i) $
+
+Récurence: supposons que $exists j in NN, Fp(i) = Fp(i-j)  Fp(j) + sum_(k=1)^p Fp(i-j-k) Fp(j+k-p-1)$ et posons un tel $j$. On a alors:
+
+$ &Fp(i) = Fp(i-j) Fp(j) + sum_(k=1)^p Fp(i-j-k) Fp(j+k-p-1) \
+ &= (Fp(i-j-1) + Fp(i-j-p)) Fp(j) + sum_(k=0)^(p-1) Fp(i-j-k-1) Fp(j+k+1-p-1) \
+ &= Fp(i-j-1) Fp(j) + underbrace(Fp(i-j-p) Fp(j+p+1-p-1),"peut rentrer comme terme p dans la somme")
+   + sum_(k=1)^(p-1) Fp(i-j-k-1) Fp(j+k+1-p-1) + underbrace(Fp(i-j-1) Fp(j-p),"terme k=0 de la somme") \
+  &= Fp(i-j-1) (Fp(j) + Fp(j-p)) + sum_(k=1)^p Fp(i-j-k-1) Fp(j+k+1-p-1) \
+  &= Fp(i-(j+1)) Fp(j+1) + sum_(k=1)^p Fp(i-(j+1)-k) Fp((j+1)+k-p-1) $
+
+On a alors prouvé que la formule est valable pour $j+1$, donc, par récurence sur $j$ (et comme cela est vrai pour tout $i$ et pour tout $p$):
+
+  $ forall p,i in NN, forall j in [|0,i|], Fp(i) = Fp(i-j) Fp(j) + sum_(k=1)^p Fp(i-j-k) Fp(j+k-p-1) $  
+#QED
+
+* Application *
+
+Cette formule, lorsque bien utilisée, permet de calculer en temps $O(p*log(n))$ le terme $n$ de la suite $F(p)$,
+en ne manipulant que des entiers, et sans connaiscance préalable de la suite (par exemple les racines du polynôme caractéristique)
+(voir algo_jump.c)
 
 
 
