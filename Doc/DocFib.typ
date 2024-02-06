@@ -86,7 +86,7 @@ $ forall n in NN,  F_n^((+oo)) = 1 $
 == Expression fonctionelle de $(Fnp)_(n in NN)$
 
 Soit $R_1, R_2, . . . , R_(p+1)$ les racines complexes du polynômes $x^(p+1)-x^p-1$\
-Alors $ Fnp = sum_(i=1)^(p+1) R^(n+p)/(display(product_(j =1, j!=i)^(p+1)R_i - R_j)) $
+Alors $ Fnp = sum_(i=1)^(p+1) R^(n+p)/(display(product_(j =1\ j!=i)^(p+1)R_i - R_j)) $
 #pagebreak()
 === \
 Pour démontrer cette proposition nous utiliserons la seconde définition qui décale les termes de la suites avec $p$ zéros #local_link("def2", "def").\
