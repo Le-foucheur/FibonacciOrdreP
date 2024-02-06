@@ -13,6 +13,20 @@
   super[[#text(fill: blue)[#content]]]
 })
 #import "@preview/cetz:0.2.0" : *
+#import "@preview/tablex:0.0.8" : *
+#let pasc(n,k) = for x in range(0,n+1){
+  let l = ()
+  for y in range(k){
+    if y <= x {
+      l.push[#calc.binom(x,y)]
+    } else { l.push[] }
+  }
+  l
+}
+#let lr(a,k,l, body) = {
+  move(dy: -l*calc.sin(calc.atan(k))+a.last()+10pt, dx: l*calc.cos(calc.atan(k))+a.first())[#text(red)[#body]]
+  line(stroke: red+.5pt, start: a, length: l, angle: calc.atan(-k))
+}
 
 #align(left)[Gaspar Daguet\ Julien Thillard]
 
@@ -107,8 +121,115 @@ $ F_(n-p)^((p)) = display(sum_(i=1)^(p+1))  R_i^n/display(product_(j=1\ j!=i)^(p
 Ainsi en revenant à la définition de base :
 $ Fnp = display(sum_(i=1)^(p+1))  R_i^(n+p)/display(product_(j=1\ j!=i)^(p+1)R_i-R_j) $ #QED
 
-== Expression fonctionelle via le triangle de Pascale 
+== Expression fonctionelle via le triangle de Pascale Ò
+
+$ forall n,p in NN, sum_(k=0)^(floor(n/(p+1))+1) binom(n-p k,k)  $
+
+===
+Posons $display(P(n): F^((p))_n = sum_(k=0)^(floor(n/(p+1))+1) binom(n - p k, k))$
+
+_Initialisation :_ Pour $n<=p$, on a
+$
+  sum_(k=0)^(floor(n/(p+1))+1) binom(n - p k, k)
+  = sum_(k=0)^1 binom(n - p k, k)
+  = underbrace(binom(n, 0), =1) + underbrace(binom(n-p, 1), n-p<=0 "donc" 0)
+  = 1
+$
+
+_Hérédité :_ Soit $n in NN$ tel que $forall k in [|0, n|], P(k)$ soit vraie.
+
+$
+  F^((p))_(n+1)
+    &= F^((p))_(n-p) + F^((p))_(n) \
+    &= sum_(k=0)^(floor((n-p)/(p+1))+1) binom(n-p - p k, k) + sum_(k=0)^(floor(n/(p+1))+1) binom(n - p k, k) \
+    &= sum_(k=1)^(floor((n-p)/(p+1))+2) binom(n-p - p (k-1), k-1) + sum_(k=0)^(floor(n/(p+1))+1) binom(n - p k, k) \
+$
+Or $display(binom(n, -1) = 0)$ donc on peut décaler l'indice de la première
+somme à $k=0$ :
+$
+    F^((p))_(n+1)&= sum_(k=0)^(floor((n-p)/(p+1))+2) binom(n - p k, k-1) + sum_(k=0)^(floor(n/(p+1))+1) binom(n - p k, k) \
+$
+On peut alors essayer de regrouper les deux sommes :
+
+$floor((n-p)/(p+1))+2 = floor((n+p+2)/(p+1))
+"et"
+floor((n)/(p+1))+1 = floor((n+p+1)/(p+1))
+"donc" floor((n-p)/(p+1))+2 >= floor((n)/(p+1))+1 \ $
+
+On souhaite donc montrer que $floor((n-p)/(p+1))+2 > n-p(floor((n-p)/(p+1))+2)$ :
+on a
+$
+  (n-p)/(p+1) - 1 < floor((n-p)/(p+1))
+  &<=> (p+1)(floor((n-p)/(p+1))+2) > n-p + (p+1) \
+  &<=> -(p+1)(floor((n-p)/(p+1))+2) < -n-1 \
+  &<=> n-(p+1)(floor((n-p)/(p+1))+2) < -1 \
+  &<=> n-p(floor((n-p)/(p+1))+2) < -1 +floor((n-p)/(p+1))+2 \
+  &<=> n-p(floor((n-p)/(p+1))+2) < floor((n-p)/(p+1)) + 2 \
+$
+Donc $display(binom(n-floor((n-p)/(p+1))+2, floor((n-p)/(p+1))+2)) = 0$, ce qui permet d'utiliser $floor((n-p)/(p+1))+2$ comme indice commun au deux sommes, qu'on peut donc regrouper :
+
+$
+    F^((p))_(n+1)&= sum_(k=0)^(floor((n-p)/(p+1))+2) (binom(n - p k, k-1) + binom(n - p k, k)) \
+    &= sum_(k=0)^(floor((n-p)/(p+1)+1)+1) binom((n + 1) - p k, k) \
+    &= sum_(k=0)^(floor((n+1)/(p+1))+1) binom((n + 1) - p k, k) \
+$
+
+Donc $P(n+1)$ est vraie.\
+Par le principe de récurrence p-ième, $display(P(n): F^((p))_n = sum_(k=0)^(floor(n/(p+1))+1) binom(n - p k, k))$ #QED
+
+*N.B:* pour $p=1$ et $p=0$, on retombe bien sur les résultats connues a savoir:
+$ forall n in NN, F_n^((1)) = sum_(k=0)^(floor(n/2)+1) binom(n-k,k)  $
+$ forall n in NN, sum_(k=0)^(n+1) binom(n,k) = 2^n = F_n^((0)) $
+
 #pagebreak()
+
+#grid(
+  columns: (1fr,1fr),
+  align(center)[
+    *Pour $p = 2$*
+    #tablex(
+      columns: 10,
+      auto-lines: false,
+      ..pasc(9,10)
+    )
+  ],
+  align(center)[
+    *Pour $p=3$*
+    #tablex(
+      columns: 10,
+      auto-lines: false,
+      ..pasc(9,10)
+    )
+  ]
+)
+#line(start: (227pt,-13pt), end: (227pt,-22em))
+#let k1 = 2.2
+#lr((23pt,-205pt), k1, 10pt)[1]
+#lr((23pt,-222pt), k1, 20pt)[1]
+#lr((23pt,-238pt), k1, 35pt)[1]
+#lr((23pt,-256pt), k1, 50pt)[2]
+#lr((23pt,-270pt), k1, 60pt)[3]
+#lr((23pt,-289pt), k1, 69pt)[4]
+#lr((23pt,-304pt), k1, 85pt)[6]
+#lr((23pt,-322pt), k1, 90pt)[9]
+#lr((23pt,-339pt), k1, 123pt)[13]
+#lr((23pt,-355pt), 2.1, 130pt)[19]
+
+#v(-30.6em)
+#let k2 = 3.2
+#lr((250pt,-205pt), k2, 10pt)[1]
+#lr((250pt,-222pt), k2, 25pt)[1]
+#lr((250pt,-238pt), k2, 40pt)[1]
+#lr((250pt,-256pt), k2, 53.5pt)[1]
+#lr((250pt,-270pt), k2, 70pt)[2]
+#lr((250pt,-289pt), k2, 82.5pt)[3]
+#lr((250pt,-304pt), k2, 90pt)[4]
+#lr((250pt,-322pt), k2, 103pt)[5]
+#lr((250pt,-339pt), k2, 115pt)[7]
+#lr((250pt,-355pt), k2, 130pt)[10]
+
+#v(-32em)
+On retrouve comme pour Fibonacci le faite que cela reviens à sommer les valeurs du triangle de pascale avec une diagonale qui est de plus en plus penché en fonction de $p$
 
 #align(center, text[= Sur les limites de quotients des $(Fnp)$])
 Le ratio de deux termes successif de la suite de Fibonacci a toujours été porteur de mystère et d'isotérisme, néanmoins il en reste intéressant de s'y intéresser.\
@@ -116,7 +237,7 @@ C'est pourquoi nous allons voir les propriétés de deux généralisation de la 
 
 *1#super("ère") généralisation:*\
 Pour cette première généralisation, nous ne généraliserons par réelement le quotient, i.e. que nous allons nous intéréser à:
-$ forall p in NN, lim_(n -> +oo) F_n^(p+1)/Fnp $
+$ forall p in NN, lim_(n -> +oo) F_(n+1)^((p))/Fnp $
 
 Regardons ce que cela donne pour certins $p$:
 
