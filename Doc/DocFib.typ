@@ -113,7 +113,7 @@ lambda_(p+1)) = mat(0;0;0;dots.v;1) $
 On reconnaît la transposé d'une matrice de Vandermonde carré d'odre $p+1$ dont les coefficient sont deux à deux distincts. Cette matrice est donc inversible, notons $upright(A)$ cette matrice et $Lambda$ la matrice composée des coefficiens que l'on cherche. On a alors :
 $ Lambda = upright(A)^(-1) mat(0;0;0;dots.v;1) $
 Ainsi ce produit indique que l'on ne s'intéresse qu'à la dernière colonne de $upright(A)^(-1)$.\
-De plus l'on sais que le $i$-ème coefficient de la dernière ligne d'une matrice de Vandermonde @InverVander (colonne ici, car on a la transposée) est égale à : $ 1/display(product_(j=1\ j!=i)^(p+1)R_i-R_j) $  \
+De plus l'on sais que le $i$-ème coefficient de la dernière ligne de l'inverse d'une matrice de Vandermonde @InverVander (colonne ici, car on a la transposée) est égale à : $ 1/display(product_(j=1\ j!=i)^(p+1)R_i-R_j) $  \
 #pagebreak()
 Donc $ forall i in [|1;p+1|], lambda_i = 1/display(product_(j=1\ j!=i)^(p+1)R_i-R_j) $\
 Ainsi en remplacent les $lambda_i$ dans $display(sum_(i=1)^(p+1)) lambda_i R_i^n$, on trouve bien:
