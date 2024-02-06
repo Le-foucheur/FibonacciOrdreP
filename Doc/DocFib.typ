@@ -422,9 +422,9 @@ On peut supposer que le triangle apparait dû au liens entre les suites de Fibon
 
 == Formule du jump\
 $ forall p in NN n, n'>= p, F_(n+n')^((p)) = F_n^((p)) F_(n')^((p)) + sum_(k=1)^p F_(n-k)^((p)) F_(n'+k-p-1)^((p)) $
-
+// (NB: cette formule demande, pour les premiers termes, d'admettre que $forall n in [| |]
 === \
-
+Par 
 
 
 
