@@ -229,7 +229,7 @@ $ forall n in NN, sum_(k=0)^(n+1) binom(n,k) = 2^n = F_n^((0)) $
 #lr((250pt,-355pt), k2, 130pt)[10]
 
 #v(-32em)
-On retrouve comme pour Fibonacci le faite que cela reviens à sommer les valeurs du triangle de pascale avec une diagonale qui est de plus en plus penché en fonction de $p$, exemple ci-dessus
+On retrouve, comme pour Fibonacci, le faite que cela reviens à sommer les valeurs du triangle de pascale avec une diagonale qui est de plus en plus penché en fonction de $p$, exemple ci-dessus
 
 #align(center, text[= Sur les limites de quotients des $(Fnp)$])
 Le ratio de deux termes successif de la suite de Fibonacci a toujours été porteur de mystère et d'isotérisme, néanmoins il en reste intéressant de s'y intéresser.\
@@ -248,11 +248,6 @@ $ F_(n+1)^((0))/F_(n)^((0)) = 2^(n+1)/2^n = 2 tend(n, +oo) 2 $
 
 *Pour $p=1$*\
 Il est connue que la limite du qotient la suite de Fibonacci tend vers $(1+sqrt(5))/2$
-
-*Pour $p --> +oo$*\
-On a définie pour $p --> +oo$, $ forall n in NN, F_n^((+oo)) =1 $
-Donc 
-$ F_(n+1)^((+oo))/F_n^((+oo)) = 1/1 = 1 tend(n,+oo) 1  $
 #pagebreak()
 
 *Pour p >1*\
@@ -429,11 +424,6 @@ $ F_n^((0))/F_n^((0)) = 1 tend(n, +oo) 1 = Q_0 $
 *Pour $p = 1$*\
 Dans ce cas on retombe sur le même quotient étudier plus haut donc:
 $ lim_(n -> +oo) F_(n+1)^((1))/F_(n)^((1)) = (1+sqrt(5))/2 = Q_1 $
-
-*Pour $p --> +oo$*\
-On a: $forall n in NN, F_n^((+oo)) = 1$\
-Ainsi:
-$ F_n^((+oo))/F_n^((+oo)) = 1/1 = 1 tend(n, +oo) 1 = Q_(+oo) $
 
 *Pour p > 1*\
 De même que pour la 1#super("er") généralisation, on a calculé le quotient jusqu'à $p=30$ compilé également en un tableau:
