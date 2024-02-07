@@ -483,10 +483,10 @@ De même que pour la 1#super("er") généralisation, on a calculé le quotient j
     )
   ]
 )
-#pagebreak()
 ==== \
 On remarque par le tableau ci-dessus que:
 $ forall p in  NN, Q_p = phi^n "avec" phi = (1+sqrt(5))/2 $
+#pagebreak()
 
 #align(center)[= Comportement de (#Fnp) sur $NN$]
 
@@ -523,13 +523,12 @@ Si l'on prend sur une feuille à carreaux et que l'on mets dans la case d'indice
 
 #figure(image("./fibo_suite.png"), caption: [dessin réalisé pour un nombre petit de cases])
 On remarque en premier lieux que des motif apparaise entre les droites d'équations : $y = -x/n$ avec $n in NN^*$\
-#pagebreak()
 De plus si l'on prend des valeurs de $p$ et de $n$ bien plus grande on obtient:
 #figure(image("./fibo_sequence.png"), caption: [dessins réalisé pour des valeurs bien plus grande])
 On voit ici, un triangle de Sierpiński étiré de plus en plus vers le bas et arrondie vers des valeurs bien précises.\
 On peut supposer que le triangle apparait dû au liens entre les suites de Fibonacci d'odre $p$ et le triangle de Pascale qui fait apparaitre le triangle par une contruction similaire.
 
-#align(center)[= Propriétés divers des suites (Fnp)]
+#align(center)[= Propriétés divers des suites (#Fnp)]
 
 == Formule du jump\
 $ forall p, n, n' in NN, F_(n+n')^((p)) = F_n^((p)) F_(n')^((p)) + sum_(k=1)^p F_(n-k)^((p)) F_(n'+k-p-1)^((p)) $
