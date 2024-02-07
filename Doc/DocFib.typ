@@ -522,7 +522,7 @@ Note: Ceci à déjà été démontrer dans les cas particuliers pour $k=0$ et $k
 Si l'on prend sur une feuille à carreaux et que l'on mets dans la case d'indice $n,p$, le termes $F_n^((p))$ modulo 2, et que l'on colorise la dite case en noir ou en blanc si sa valeur est $1$ ou $0$, comme ci-dessous:
 
 #figure(image("./fibo_suite.png"), caption: [dessin réalisé pour un nombre petit de cases])
-On remarque en premier lieux que des motif apparaise entre les droites d'équations : $y = -x/n$ avec $n in NN^*$\
+On remarque en premier lieux que des motif apparaise entre les droites d'équations : $y = -x/n$ avec $n in NN^*$, ce qui reviens à la conjoecture précédente\
 De plus si l'on prend des valeurs de $p$ et de $n$ bien plus grande on obtient:
 #figure(image("./fibo_sequence.png"), caption: [dessins réalisé pour des valeurs bien plus grande])
 On voit ici, un triangle de Sierpiński étiré de plus en plus vers le bas et arrondie vers des valeurs bien précises.\
