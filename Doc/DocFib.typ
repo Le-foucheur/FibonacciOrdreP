@@ -91,7 +91,7 @@ Alors $ Fnp = sum_(i=1)^(p+1) R^(n+p)/(display(product_(j =1\ j!=i)^(p+1)R_i - R
 === \
 Pour démontrer cette proposition nous utiliserons la seconde définition qui décale les termes de la suites avec $p$ zéros #local_link("def2", "def").\
 Le théorème d'Alembert-Gauss nous assure que le polynôme caractéristique $x^(p+1) - x^p - 1$ possède $p+1$ racines complexes, notées: $R_1, R_2, ..., R_(p+1)$\
-Ainsi $F_n^((p+n)) = display(sum_(i=1)^(p+1)) lambda_i R_i^n$ avec $lambda_i$ des constantes qu'il reste à déterminer.\
+Ainsi $F_(n-p)^((p)) = display(sum_(i=1)^(p+1)) lambda_i R_i^n$ avec $lambda_i$ des constantes qu'il reste à déterminer.\
 Pour cela, nous posons le système suivant grâce aux $p$ premiers termes qui sont définis :
 $ cases(lambda_1 + lambda_2 + lambda_3 + ...  +lambda_(p+1) = F_0^((p)) = 0,
   lambda_1 R_1+ lambda_2 R_2+ lambda_3 R_3+ ...  +lambda_(p+1) R_(p+1)= F_1^((p)) = 0, 
