@@ -363,15 +363,15 @@ Au dela 1, il deviens difficile de calculer algébriquement le quotient, nous av
        }
     )
   })
-  #move(dx: 25pt, dy: -200pt)[Quotient]
-  #move(dx: 25pt, dy: -526pt)[Quotient]
+  #move(dx: 25pt, dy: -200pt)[$ R_p $]
+  #move(dx: 25pt, dy: -526pt)[$ R_p $]
   ]],
   align(center)[
 #table(
   columns: 2,
   inset: 4pt,
   align: (x, y) => (left, right).at(x),
-  [$p$], [quotient],
+  [$p$], [$ R_p $],
   [0],[2],
   [1],[1,618033989],
   [2],[1,465571232],
@@ -437,14 +437,15 @@ De même que pour la 1#super("er") généralisation, on a calculé le quotient j
       [$p$], [quotient],
       [0], [1,0000],
       [1], [1,6180],
-      [2], [2,6180],
-      [3], [4,2361],
-      [4], [6,8541],
-      [5], [11,0902],
-      [6], [17,9443],
-      [7], [29,0344],
-      [8], [46,9787],
-      [9], [76,0132],
+      [2], [2,1479],
+      [3], [2,6297],
+      [4],[3,0796],
+      [5],[3,5063],
+      [6],[3,9151],
+      [7],[4,3093],
+      [8],[4,6915],
+      [9],[5,0635],
+      [10],[5,4266],
     )
   ],
   align(center)[
@@ -452,17 +453,17 @@ De même que pour la 1#super("er") généralisation, on a calculé le quotient j
       columns: 2,
       inset: 4pt,
       align: (x, y) => (left, right).at(x),
-      [10], [122,9919],
-      [11], [199,0050],
-      [12], [321,9969],
-      [13], [521,0019],
-      [14], [842,9988],
-      [15], [1 364,0007],
-      [16], [2 206,9995],
-      [17], [3 571,0003],
-      [18], [5 777,9998],
-      [19], [9 349,0001],
-      [20], [15 126,9999],
+      [11],[5,7820],
+      [12],[6,1305],
+      [13],[6,4728],
+      [14],[6,8095],
+      [15],[7,1411],
+      [16],[7,4681],
+      [17],[7,7908],
+      [18],[8,1096],
+      [19],[8,4247],
+      [20],[8,7363],
+
     )
   ],
   align(center)[
@@ -470,23 +471,31 @@ De même que pour la 1#super("er") généralisation, on a calculé le quotient j
       columns: 2,
       inset: 4pt,
       align: (x, y) => (left, right).at(x),
-      [21], [24 476,0000],
-      [22], [39 603,0000],
-      [23], [64 079,0000],
-      [24], [103 682,0000],
-      [25], [167 761,0000],
-      [26], [271 443,0000],
-      [27], [439 204,0000],
-      [28], [710 647,0000],
-      [29], [1 149 851,0000],
-      [30], [1 860 498,0000],
+      [21],[9,0447],
+      [22],[9,3501],
+      [23],[9,6527],
+      [24],[9,9526],
+      [25],[10,2499],
+      [26],[10,5449],
+      [27],[10,8375],
+      [28],[11,1280],
+      [29],[11,4164],
+      [30],[11,7028],
+
     )
   ]
 )
-==== \
-On remarque par le tableau ci-dessus que:
-$ forall p in  NN, Q_p = phi^n "avec" phi = (1+sqrt(5))/2 $
-#pagebreak()
+== \
+Rappelle: on note $R_p$ le ratio de la première généralisation et $Q_p$ celle de la deuxième\
+alors on a:
+$ forall p in NN, (R_p)^p = Q_p $
+
+=== \
+Soit $p in NN$
+$ F_(n+p)^((p)) / Fnp &= product_( k = n)^(n+p) F_(k+1)^((p)) / F_k^((p)) $
+En passant à la limite dans l'égalité et comme le quotient de deux termes successif tend vers $R_p$, on obtient:
+$ Q_p &= product_(k=n)^(n+p) R_p = product_(k=0)^(p) R_p = (R_p)^p  $
+
 
 #align(center)[= Comportement de (#Fnp) sur $NN$]
 
