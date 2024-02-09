@@ -34,8 +34,8 @@
 
 #align(center,text[= Introduction])
 
-La suite de Fibonacci a tout d'abord été étudiée en Inde via un problème de combinatoire dans des sortes de poèmes au V#super("e") siècle avant J.-C. par Pingala @Pingala. Puis, elle a été étudiée en Italie par le célèbre Léonard de Pise, plus connu sous le nom de Fibonacci, dans un problème sur la taille d'une population de lapins apparu dans son ouvrage #text(style: "italic")[Liber abbaci] @Liber en 1202.\
-Cette suite aura toujours créé un engouement, et donc énormément de généralisation ont été créé comme les suites de Lucas @Lucas.\
+La suite de Fibonacci a tout d'abord été étudiée en Inde via un problème de combinatoire dans des sortes de poèmes au V#super("e") siècle avant J.-C. par Pingala @Pingala notament. Puis, elle a été étudiée en Italie par le célèbre Léonard de Pise, plus connu sous le nom de Fibonacci, dans un problème sur la taille d'une population de lapins apparu dans son ouvrage #text(style: "italic")[Liber abbaci] @Liber en 1202.\
+Cette suite aura toujours créé un certin engouement, et donc énormément de généralisation ont été créé comme les suites de Lucas @Lucas.\
 Mais parmis toutes ces généralisations, beaucoup sont laissées de coté, et nous allons nous intéresser à l'une d'entre elles.
 
 #align(center,text[= Définition])
@@ -73,7 +73,7 @@ ou par la formule de binet $F_n^((1)) = 1/sqrt(5) (phi^(n+1) - phi'^(n+1))$ avec
 Par la définition:
 $ forall n in NN,  F_n^((2)) = cases(F_0 = F_1 = F_2 = 1, F_(n+3) = F_(n+2) + F_n) $
 Ainsi on tombe sur la suite des vaches de Narayana @Narayana\
-D'expression fonctionelle $F_n^((2)) = lambda^(n+2)/((lambda - nu)(lambda - mu)) + mu^(n+2)/((mu - nu)(mu - lambda)) + nu^(n+2)/((nu - lambda)(nu - mu))$ avec $lambda, mu$ et $nu$ les racines complexes du polynômes: $x^3-x^2-1$
+D'expression fonctionelle $F_n^((2)) = lambda^(n+2)/((lambda - nu)(lambda - mu)) + mu^(n+2)/((mu - nu)(mu - lambda)) + nu^(n+2)/((nu - lambda)(nu - mu))$ avec $lambda, mu$ et $nu$ les racines complexes du polynôme: $x^3-x^2-1$
 
 // On verras bien
 #align(center, text(size: 20pt)[A voir])
@@ -177,7 +177,7 @@ $
 Donc $P(n+1)$ est vraie.\
 Par le principe de récurrence p-ième, $display(P(n): F^((p))_n = sum_(k=0)^(floor(n/(p+1))+1) binom(n - p k, k))$ #QED
 
-*N.B:* pour $p=1$ et $p=0$, on retombe bien sur les résultats connues a savoir:
+*N.B:* pour $p=1$ et $p=0$, on retombe bien sur des résultats connues a savoir:
 $ forall n in NN, F_n^((1)) = sum_(k=0)^(floor(n/2)+1) binom(n-k,k)  $
 $ forall n in NN, sum_(k=0)^(n+1) binom(n,k) = 2^n = F_n^((0)) $
 
@@ -222,14 +222,14 @@ $ forall n in NN, sum_(k=0)^(n+1) binom(n,k) = 2^n = F_n^((0)) $
 #lr((250pt,-238pt), k2, 40pt)[1]
 #lr((250pt,-256pt), k2, 53.5pt)[1]
 #lr((250pt,-270pt), k2, 70pt)[2]
-#lr((250pt,-289pt), k2, 82.5pt)[3]
+#lr((250pt,-289pt), k2, 90pt)[3]
 #lr((250pt,-304pt), k2, 90pt)[4]
 #lr((250pt,-322pt), k2, 113pt)[5]
 #lr((250pt,-339pt), k2, 115pt)[7]
 #lr((250pt,-355pt), k2, 130pt)[10]
 
 #v(-32em)
-On retrouve, comme pour Fibonacci, le faite que cela reviens à sommer les valeurs du triangle de pascale avec une diagonale qui est de plus en plus penché en fonction de $p$, exemple ci-dessus
+On retrouve, comme pour Fibonacci, le faite que cela reviens à sommer les valeurs du triangle de Pascale avec une diagonale qui est de plus en plus penché en fonction de $p$, exemple ci-dessus
 
 #align(center, text[= Sur les limites de quotients des $(Fnp)$])
 Le ratio de deux termes successif de la suite de Fibonacci a toujours été porteur de mystère et d'isotérisme, néanmoins il en reste intéressant de s'y intéresser.\
@@ -495,6 +495,7 @@ Soit $p in NN$
 $ F_(n+p)^((p)) / Fnp &= product_( k = n)^(n+p) F_(k+1)^((p)) / F_k^((p)) $
 En passant à la limite dans l'égalité et comme le quotient de deux termes successif tend vers $R_p$, on obtient:
 $ Q_p &= product_(k=n)^(n+p) R_p = product_(k=0)^(p) R_p = (R_p)^p  $
+#QED
 
 
 #align(center)[= Comportement de (#Fnp) sur $NN$]
