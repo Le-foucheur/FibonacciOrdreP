@@ -14,19 +14,6 @@
 })
 #import "@preview/cetz:0.2.0" : *
 #import "@preview/tablex:0.0.8" : *
-#let pasc(n,k) = for x in range(0,n+1){
-  let l = ()
-  for y in range(k){
-    if y <= x {
-      l.push[#calc.binom(x,y)]
-    } else { l.push[] }
-  }
-  l
-}
-#let lr(a,k,l, body) = {
-  move(dy: -l*calc.sin(calc.atan(k))+a.last()+10pt, dx: l*calc.cos(calc.atan(k))+a.first())[#text(red)[#body]]
-  line(stroke: red+.5pt, start: a, length: l, angle: calc.atan(-k))
-}
 
 #align(left)[Gaspar Daguet\ Julien Thillard\ Louwen Fricout]
 
