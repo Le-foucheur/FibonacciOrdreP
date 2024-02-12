@@ -518,13 +518,13 @@ Note: Ceci à déjà été démontrer dans les cas particuliers pour $k=0$ et $k
 Si l'on prend sur une feuille à carreaux et que l'on mets dans la case d'indice $n,p$, le termes $F_n^((p))$ modulo 2, et que l'on colorise la dite case en noir ou en blanc si sa valeur est $1$ ou $0$, comme ci-dessous:
 
 #figure(image("./fibo_suite.png"), caption: [dessin réalisé pour un nombre petit de cases])
-On remarque en premier lieu que des motifs apparaissent entre les droites d'équations : $y = -x/n$ avec $n in NN^*$, ce qui reviens à la conjecture précédente\
-De plus si l'on prend des valeurs de $p$ et de $n$ bien plus grande on obtient:
-#figure(image("./fibo_sequence.png"), caption: [dessins réalisé pour des valeurs bien plus grande])
+On remarque en premier lieu que des motifs apparaissent entre les droites d'équations : $y = -x/n$ avec $n in NN^*$, ce qui revient à la conjecture précédente\
+De plus, si l'on prend de très grandes valeurs de $p$ et de $n$ on obtient :
+#figure(image("./fibo_sequence.png"), caption: [Motifs obtenus pour $n>=10$ millions et $p$ entre 0 et 10 mille])
 On voit ici, un triangle de Sierpiński étiré de plus en plus vers le bas et arrondie vers des valeurs bien précises.\
-On peut supposer que le triangle apparaît dû au liens entre les suites de Fibonacci d'ordre $p$ et le triangle de Pascal qui fait apparaître le triangle par une construction similaire.
+On peut supposer que le triangle apparaît grâce aux liens entre les suites de Fibonacci d'ordre $p$ et le triangle de Pascal, qui fait également apparaître cette fractale par construction similaire.
 
-#align(center)[= Propriétés divers des suites (#Fnp)]
+#align(center)[= Propriétés diverses des suites (#Fnp)]
 
 == Formule du jump\
 $ forall p, n, n' in NN, F_(n+n')^((p)) = F_n^((p)) F_(n')^((p)) + sum_(k=1)^p F_(n-k)^((p)) F_(n'+k-p-1)^((p)) $
