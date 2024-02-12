@@ -15,23 +15,23 @@
 #import "@preview/cetz:0.2.0" : *
 #import "@preview/tablex:0.0.8" : *
 
-#align(left)[Gaspar Daguet\ Julien Thillard\ Louwen Fricout]
+#align(left)[Gaspar Daguet\ Julien Thillard\ Louwen Fricout\ Albin Chaboissier]
 
 #align(center, text(20pt)[TITRE])
 
 #align(center,text[= Introduction])
 
-La suite de Fibonacci a tout d'abord été étudiée en Inde via un problème de combinatoire dans des sortes de poèmes au V#super("e") siècle avant J.-C. par Pingala @Pingala notament. Puis, elle a été étudiée en Italie par le célèbre Léonard de Pise, plus connu sous le nom de Fibonacci, dans un problème sur la taille d'une population de lapins apparu dans son ouvrage #text(style: "italic")[Liber abbaci] @Liber en 1202.\
-Cette suite aura toujours créé un certin engouement, et donc énormément de généralisation ont été créé comme les suites de Lucas @Lucas.\
-Mais parmis toutes ces généralisations, beaucoup sont laissées de coté, et nous allons nous intéresser à l'une d'entre elles.
+La suite de Fibonacci a tout d'abord été étudiée en Inde via un problème de combinatoire dans des sortes de poèmes au V#super("e") siècle avant J.-C. par Pingala @Pingala notamment. Puis, elle a été étudiée en Italie par le célèbre Léonard de Pise, plus connu sous le nom de Fibonacci, dans un problème sur la taille d'une population de lapins apparu dans son ouvrage #text(style: "italic")[Liber abaci] @Liber en 1202.\
+Cette suite aura toujours créé un certain engouement, et donc énormément de généralisation ont été créé comme les suites de Lucas @Lucas.\
+Mais parmi toutes ces généralisations, beaucoup sont laissées de coté, et nous allons nous intéresser à l'une d'entre elles.
 
 #align(center,text[= Définition])
 
-Comme beaucoup le savent la suite de fibonacci est construite de manière récurrente en sommant les deux termes précédent et en prenant $F_0 = 1 et F_1 = 1$ (ou parfois $F_0 = 0 et F_1 = 1$), i.e. 
+Comme beaucoup le savent la suite de Fibonacci est construite de manière récurrente en sommant les deux termes précédent et en prenant $F_0 = 1 et F_1 = 1$ (ou parfois $F_0 = 0 et F_1 = 1$), i.e. 
 $ forall n in NN, F_n := cases(F_0 = F_1 = 1, F_(n+2) = F_(n+1) + F_n \, n>= 2) $
 Pour généraliser cette suite nous n'allons pas sommer les deux termes précédents, mais le terme précédent et un terme se trouvant $p$ terme plus loin de ce premier terme et pour ce faire nous avons besoin que les $p$ premiers termes valent 1, i.e.
 $ forall n, p in NN, F_n ^((p)) :=  cases(F_j^((p)) = 1\, "si " 0 <=j <= p, F_(n+p+1)^((p)) = F^((p))_(n+p) + F^((p))_n "si " n>p) $
-On nomme $p$ comme étant l'odre de la suite engendré et $(F^((p))_n)_(n in NN)$ la suite engendré pour un certain entier $p$
+On nomme $p$ comme étant l'ordre de la suite engendré et $(F^((p))_n)_(n in NN)$ la suite engendré pour un certain entier $p$
 
 
 == Définition par récurrence équivalente #label("def2")
@@ -54,13 +54,13 @@ $ F_n^((0)) = 2^n $
 *Pour $p=1$*\
 On retombe par construction sur la suite de Fibonacci, donc 
 $ forall n in NN,  F_n^((1)) = cases(F_0 = F_1 = 1, F_(n+2) = F_(n+1) + F_n) $
-ou par la formule de binet $F_n^((1)) = 1/sqrt(5) (phi^(n+1) - phi'^(n+1))$ avec $phi = (1+sqrt(5))/2$ et $phi' = -1/phi$
+ou par la formule de Binet $F_n^((1)) = 1/sqrt(5) (phi^(n+1) - phi'^(n+1))$ avec $phi = (1+sqrt(5))/2$ et $phi' = -1/phi$
 
 *Pour $p=2$*\
 Par la définition:
 $ forall n in NN,  F_n^((2)) = cases(F_0 = F_1 = F_2 = 1, F_(n+3) = F_(n+2) + F_n) $
 Ainsi on tombe sur la suite des vaches de Narayana @Narayana\
-D'expression fonctionelle $F_n^((2)) = lambda^(n+2)/((lambda - nu)(lambda - mu)) + mu^(n+2)/((mu - nu)(mu - lambda)) + nu^(n+2)/((nu - lambda)(nu - mu))$ avec $lambda, mu$ et $nu$ les racines complexes du polynôme: $x^3-x^2-1$
+D'expression fonctionnelle $F_n^((2)) = lambda^(n+2)/((lambda - nu)(lambda - mu)) + mu^(n+2)/((mu - nu)(mu - lambda)) + nu^(n+2)/((nu - lambda)(nu - mu))$ avec $lambda, mu$ et $nu$ les racines complexes du polynôme: $x^3-x^2-1$
 
 // On verras bien
 #align(center, text(size: 20pt)[A voir])
@@ -68,15 +68,15 @@ D'expression fonctionelle $F_n^((2)) = lambda^(n+2)/((lambda - nu)(lambda - mu))
 Par la définition, les $p$ premiers termes valent $1$, donc on pose 
 $ forall n in NN,  F_n^((+oo)) = 1 $
 
-#align(center, text[= Écriture fonctionelle des suites])
+#align(center, text[= Écriture fonctionnelle des suites])
 
-== Expression fonctionelle de $(Fnp)_(n in NN)$
+== Expression fonctionnelle de $(Fnp)_(n in NN)$
 
 Soit $R_1, R_2, . . . , R_(p+1)$ les racines complexes du polynômes $x^(p+1)-x^p-1$\
 Alors $ Fnp = sum_(i=1)^(p+1) R^(n+p)/(display(product_(j =1\ j!=i)^(p+1)R_i - R_j)) $
 #pagebreak()
 === \
-Pour démontrer cette proposition nous utiliserons la seconde définition qui décale les termes de la suites avec $p$ zéros #local_link("def2", "def").\
+Pour démontrer cette proposition nous utiliserons la seconde définition de la suite, qui décale les termes de la suites avec $p$ zéros #local_link("def2", "def").\
 Le théorème d'Alembert-Gauss nous assure que le polynôme caractéristique $x^(p+1) - x^p - 1$ possède $p+1$ racines complexes, notées: $R_1, R_2, ..., R_(p+1)$\
 Ainsi $F_(n-p)^((p)) = display(sum_(i=1)^(p+1)) lambda_i R_i^n$ avec $lambda_i$ des constantes qu'il reste à déterminer.\
 Pour cela, nous posons le système suivant grâce aux $p$ premiers termes qui sont définis :
@@ -97,18 +97,18 @@ lambda_2;
 lambda_3;
 dots.v;
 lambda_(p+1)) = mat(0;0;0;dots.v;1) $
-On reconnaît la transposé d'une matrice de Vandermonde carré d'odre $p+1$ dont les coefficient sont deux à deux distincts. Cette matrice est donc inversible, notons $upright(A)$ cette matrice et $Lambda$ la matrice composée des coefficiens que l'on cherche. On a alors :
+On reconnaît la transposée d'une matrice de Vandermonde carré d'ordre $p+1$ dont les coefficients sont deux à deux distincts. Cette matrice est donc inversible, notons $upright(A)$ cette matrice et $Lambda$ la matrice composée des coefficients que l'on cherche. On a alors :
 $ Lambda = upright(A)^(-1) mat(0;0;0;dots.v;1) $
 Ainsi ce produit indique que l'on ne s'intéresse qu'à la dernière colonne de $upright(A)^(-1)$.\
-De plus l'on sais que le $i$-ème coefficient de la dernière ligne de l'inverse d'une matrice de Vandermonde @InverVander (colonne ici, car on a la transposée) est égale à : $ 1/display(product_(j=1\ j!=i)^(p+1)R_i-R_j) $  \
+De plus, on sait que le $i$-ème coefficient de la dernière ligne de l'inverse d'une matrice de Vandermonde @InverVander (colonne ici, car on a la transposée) est égale à : $ 1/display(product_(j=1\ j!=i)^(p+1)R_i-R_j) $  \
 #pagebreak()
 Donc $ forall i in [|1;p+1|], lambda_i = 1/display(product_(j=1\ j!=i)^(p+1)R_i-R_j) $\
-Ainsi en remplacent les $lambda_i$ dans $display(sum_(i=1)^(p+1)) lambda_i R_i^n$, on trouve bien:
+Ainsi en remplacant les $lambda_i$ dans $display(sum_(i=1)^(p+1)) lambda_i R_i^n$, on trouve bien:
 $ F_(n-p)^((p)) = display(sum_(i=1)^(p+1))  R_i^n/display(product_(j=1\ j!=i)^(p+1)R_i-R_j) $
-Ainsi en revenant à la définition de base :
+Ainsi en revenant à la définition :
 $ Fnp = display(sum_(i=1)^(p+1))  R_i^(n+p)/display(product_(j=1\ j!=i)^(p+1)R_i-R_j) $ #QED
 
-== Expression fonctionelle via le triangle de Pascale
+== Expression fonctionnelle via le triangle de Pascal
 
 $ forall n,p in NN, sum_(k=0)^(floor(n/(p+1))+1) binom(n-p k,k)  $
 
@@ -153,7 +153,7 @@ $
   &<=> n-p(floor((n-p)/(p+1))+2) < -1 +floor((n-p)/(p+1))+2 \
   &<=> n-p(floor((n-p)/(p+1))+2) < floor((n-p)/(p+1)) + 2 \
 $
-Donc $display(binom(n-floor((n-p)/(p+1))+2, floor((n-p)/(p+1))+2)) = 0$, ce qui permet d'utiliser $floor((n-p)/(p+1))+2$ comme indice commun au deux sommes, qu'on peut donc regrouper :
+Donc $display(binom(n-floor((n-p)/(p+1))+2, floor((n-p)/(p+1))+2)) = 0$, ce qui permet d'utiliser $floor((n-p)/(p+1))+2$ comme indice commun aux deux sommes, qu'on peut donc regrouper :
 
 $
     F^((p))_(n+1)&= sum_(k=0)^(floor((n-p)/(p+1))+2) (binom(n - p k, k-1) + binom(n - p k, k)) \
@@ -216,17 +216,17 @@ $ forall n in NN, sum_(k=0)^(n+1) binom(n,k) = 2^n = F_n^((0)) $
 #lr((250pt,-355pt), k2, 130pt)[10]
 
 #v(-32em)
-On retrouve, comme pour Fibonacci, le faite que cela reviens à sommer les valeurs du triangle de Pascale avec une diagonale qui est de plus en plus penché en fonction de $p$, exemple ci-dessus
+On retrouve, comme pour Fibonacci, que la suite revient à sommer les diagonales du triangle de Pascal, mais avec une diagonale de plus en plus penché en fonction de $p$, exemple ci-dessus.
 
 #align(center, text[= Sur les limites de quotients des $(Fnp)$])
-Le ratio de deux termes successif de la suite de Fibonacci a toujours été porteur de mystère et d'isotérisme, néanmoins il en reste intéressant de s'y intéresser.\
+Le ratio de deux termes successifs de la suite de Fibonacci a toujours été porteur de mystère et d'ésotérisme, néanmoins il en reste intéressant de s'y intéresser.\
 C'est pourquoi nous allons voir les propriétés de deux généralisation de la limite de quotient.
 
 *1#super("ère") généralisation:*\
-Pour cette première généralisation, nous ne généraliserons par réelement le quotient, i.e. que nous allons nous intéréser à:
+Pour cette première généralisation, nous ne généraliserons par réellement le quotient, i.e. que nous allons nous intéresser à:
 $ forall p in NN, lim_(n -> +oo) F_(n+1)^((p))/Fnp $
 
-Regardons ce que cela donne pour certins $p$:
+Regardons ce que cela donne pour certains $p$:
 
 *Pour $p=0$*\
 On sais que $forall n in NN, F_n^((0)) = 2^n$\
@@ -234,16 +234,15 @@ Ainsi
 $ F_(n+1)^((0))/F_(n)^((0)) = 2^(n+1)/2^n = 2 tend(n, +oo) 2 $
 
 *Pour $p=1$*\
-Il est connue que la limite du qotient la suite de Fibonacci tend vers $(1+sqrt(5))/2$
+Il est connue que la limite du quotient la suite de Fibonacci tend vers $(1+sqrt(5))/2$
 #pagebreak()
 
 *Pour p >1*\
-Au dela 1, il deviens difficile de calculer algébriquement le quotient, nous avons donc calculer informatiquement jusqu'à $p = 30$ en voici le tableau:
+Au delà 1, il devient difficile de calculer algébriquement le quotient, nous pouvons donc le calculer informatiquement jusqu'à $p = 30$ :
 #grid(
-  columns: (1fr,1fr),
+  columns: (auto, auto),
   align(left)[
-    Ainsi on peut traduire le tableau en un graphique
-  #move(dx:-55pt)[
+  #move(dx:-10pt)[
   #canvas( {
     plot.plot(
        axis-style: "left",
@@ -293,8 +292,8 @@ Au dela 1, il deviens difficile de calculer algébriquement le quotient, nous av
        }
     )
   })
-  Dont on voit clairement que le qotient tend vers 1\
-  à partir de cette courbe on peut définir l'aproximation suivante:
+  On remarque clairement que le quotient tend vers 1. \
+  On peut définir l'approximation suivante à partir de cette courbe :
   $ upright(A)_p = 1 + 1/((1+p)^(log_2(phi))) "avec" phi = (1+sqrt(5))/2 $
   Dont voici la courbe représentative : \
   #canvas({
@@ -351,7 +350,7 @@ Au dela 1, il deviens difficile de calculer algébriquement le quotient, nous av
     )
   })
   #move(dx: 25pt, dy: -200pt)[$ R_p $]
-  #move(dx: 25pt, dy: -526pt)[$ R_p $]
+  #move(dx: 25pt, dy: -518pt)[$ R_p $]
   ]],
   align(center)[
 #table(
@@ -394,7 +393,7 @@ Au dela 1, il deviens difficile de calculer algébriquement le quotient, nous av
 #pagebreak()
 
 ==== \
-le quotient noté $R_p$ peut s'écrire avec une sorte de fraction continue: 
+Le quotient noté $R_p$ peut s'écrire avec une sorte de fraction continue : 
 $ R_p = 1 + 1/(1+ 1/(1+ 1/(dots))^p)^p $
 
 *2#super("ième") généralisation*\
@@ -499,7 +498,7 @@ i.e. que pour $n$ compris entre $p$ et $2p$, #Fnp se comporte comme une suite ar
 
 === \
 Soient $p in NN "et" n in [|p+1; 2p+1|]$\
-Alors comme $n > p$ on peut aplliquer la formule de récurrence,\
+Alors comme $n > p$ on peut appliquer la formule de récurrence,\
 Ainsi:
 $ Fnp = F_(n-1)^((p)) + F_(n-p-1)^((p)) $
 Or $p+1<= n  <= 2p+1$ donc $0 <= n - p -1 <= p$ donc $F_(n-p-1)^((p)) = 1$\
@@ -519,29 +518,29 @@ Note: Ceci à déjà été démontrer dans les cas particuliers pour $k=0$ et $k
 Si l'on prend sur une feuille à carreaux et que l'on mets dans la case d'indice $n,p$, le termes $F_n^((p))$ modulo 2, et que l'on colorise la dite case en noir ou en blanc si sa valeur est $1$ ou $0$, comme ci-dessous:
 
 #figure(image("./fibo_suite.png"), caption: [dessin réalisé pour un nombre petit de cases])
-On remarque en premier lieux que des motif apparaise entre les droites d'équations : $y = -x/n$ avec $n in NN^*$, ce qui reviens à la conjoecture précédente\
+On remarque en premier lieu que des motifs apparaissent entre les droites d'équations : $y = -x/n$ avec $n in NN^*$, ce qui reviens à la conjecture précédente\
 De plus si l'on prend des valeurs de $p$ et de $n$ bien plus grande on obtient:
 #figure(image("./fibo_sequence.png"), caption: [dessins réalisé pour des valeurs bien plus grande])
 On voit ici, un triangle de Sierpiński étiré de plus en plus vers le bas et arrondie vers des valeurs bien précises.\
-On peut supposer que le triangle apparait dû au liens entre les suites de Fibonacci d'odre $p$ et le triangle de Pascale qui fait apparaitre le triangle par une contruction similaire.
+On peut supposer que le triangle apparaît dû au liens entre les suites de Fibonacci d'ordre $p$ et le triangle de Pascal qui fait apparaître le triangle par une construction similaire.
 
 #align(center)[= Propriétés divers des suites (#Fnp)]
 
 == Formule du jump\
 $ forall p, n, n' in NN, F_(n+n')^((p)) = F_n^((p)) F_(n')^((p)) + sum_(k=1)^p F_(n-k)^((p)) F_(n'+k-p-1)^((p)) $
 (NB: on admet que, $forall p in NN, forall n in [|-p,-1|], F_n^((p)) = 0$,
-ce qui est cohérent avec les généralisation au négatifs de chaque suite, et la formule de récurence.
-On peut d'ailleur noter que cette formule (et sa preuve) restent valides dans cette généralisation aux n négatifs)
+ce qui est cohérent avec les généralisation au négatifs de chaque suite, et la formule de récurrence.
+On peut d'ailleurs noter que cette formule (et sa preuve) restent valides dans cette généralisation aux n négatifs)
 === \
 #let Fp(index) = $F_(index)^((p))$
 
-Il est plus simple, pour l'objet de la preuve, de considerer la formule équivalente suivante:
+Il est plus simple, pour l'objet de la preuve, de considérer la formule équivalente suivante:
 
 $ forall p,i in NN, forall j in [|0,i|], Fp(i) = Fp(i-j) Fp(j) + sum_(k=1)^p Fp(i-j-k) Fp(j+k-p-1) $
 
 (C'est la formule précédente en prenant $i=n+n'$ et $j=n'$)
 
-Prouvons la proposition pour tout $p$ et $i$ par récurence sur $j$
+Prouvons la proposition pour tout $p$ et $i$ par récurrence sur $j$
 
 Soit $p,i in NN$
 
@@ -550,7 +549,7 @@ Initialisation: $j=0$
 $ Fp(i-0) Fp(0) + sum_(k=1)^p Fp(i-0-k) Fp(0+k-p-1) =
   Fp(i) times 1 + sum_(k=1)^p Fp(i-k) times 0 = Fp(i) $
 
-Récurence: supposons que $exists j in NN, Fp(i) = Fp(i-j)  Fp(j) + sum_(k=1)^p Fp(i-j-k) Fp(j+k-p-1)$ et posons un tel $j$. On a alors:
+Récurrence: supposons que $exists j in NN, Fp(i) = Fp(i-j)  Fp(j) + sum_(k=1)^p Fp(i-j-k) Fp(j+k-p-1)$ et posons un tel $j$. On a alors:
 
 $ &Fp(i) = Fp(i-j) Fp(j) + sum_(k=1)^p Fp(i-j-k) Fp(j+k-p-1) \
  &= (Fp(i-j-1) + Fp(i-j-p)) Fp(j) + sum_(k=0)^(p-1) Fp(i-j-k-1) Fp(j+k+1-p-1) \
@@ -559,15 +558,15 @@ $ &Fp(i) = Fp(i-j) Fp(j) + sum_(k=1)^p Fp(i-j-k) Fp(j+k-p-1) \
   &= Fp(i-j-1) (Fp(j) + Fp(j-p)) + sum_(k=1)^p Fp(i-j-k-1) Fp(j+k+1-p-1) \
   &= Fp(i-(j+1)) Fp(j+1) + sum_(k=1)^p Fp(i-(j+1)-k) Fp((j+1)+k-p-1) $
 
-On a alors prouvé que la formule est valable pour $j+1$, donc, par récurence sur $j$ (et comme cela est vrai pour tout $i$ et pour tout $p$):
+On a alors prouvé que la formule est valable pour $j+1$, donc, par récurrence sur $j$ (et comme cela est vrai pour tout $i$ et pour tout $p$):
 
   $ forall p,i in NN, forall j in [|0,i|], Fp(i) = Fp(i-j) Fp(j) + sum_(k=1)^p Fp(i-j-k) Fp(j+k-p-1) $  
 #QED
 
 * Application *
 
-Cette formule, lorsque bien utilisée, permet de calculer en temps $O(p*log(n))$ le terme $n$ de la suite $F(p)$,
-en ne manipulant que des entiers, et sans connaiscance préalable de la suite (par exemple les racines du polynôme caractéristique)
+Cette formule permet de calculer en complexité temporelle $O(p times log(n))$ le $n$-ième terme de la suite $F^((p))$,
+en ne manipulant que des entiers, et sans connaissance préalable de la suite (par exemple les racines du polynôme caractéristique)
 (voir algo_jump.c)
 
 
