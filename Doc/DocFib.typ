@@ -216,7 +216,8 @@ $ forall n in NN, sum_(k=0)^(n+1) binom(n,k) = 2^n = F_n^((0)) $
 #lr((250pt,-355pt), k2, 130pt)[10]
 
 #v(-32em)
-On retrouve, comme pour Fibonacci, que la suite revient à sommer les diagonales du triangle de Pascal, mais avec une diagonale de plus en plus penché en fonction de $p$, exemple ci-dessus.
+On retrouve, comme pour Fibonacci, le faite que revient à sommer les valeurs du triangle de Pascale avec une diagonale qui est de plus en plus penché en fonction de $p$ pour retrouver les termes de la suite d'ordre $p$, exemple ci-dessus
+
 
 #align(center, text[= Sur les limites de quotients des $(Fnp)$])
 Le ratio de deux termes successifs de la suite de Fibonacci a toujours été porteur de mystère et d'ésotérisme, néanmoins il en reste intéressant de s'y intéresser.\
