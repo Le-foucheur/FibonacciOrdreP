@@ -579,15 +579,9 @@ On a alors prouvé que la formule est valable pour $j+1$, donc, par récurence s
 
 * Application *
 
-Cette formule, lorsque bien utilisée, permet de calculer en temps $O(p*log(n))$ le terme $n$ de la suite $F(p)$,
+Cette formule, lorsque bien utilisée, permet de calculer en temps $O(p^2 *log(n))$ le terme $n$ de la suite $F(p)$,
 en ne manipulant que des entiers, et sans connaiscance préalable de la suite (par exemple les racines du polynôme caractéristique)
 (voir algo_jump.c)
-
-
-
-
-
-
 
 
 
