@@ -17,7 +17,7 @@
 
 #align(left)[Gaspar Daguet\ Julien Thillard\ Louwen Fricout\ Albin Chaboissier]
 
-#align(center, text(20pt)[TITRE])
+#align(center, text(20pt)[Une généralisation de la suite de Fibonacci])
 
 #align(center,text[= Introduction])
 
