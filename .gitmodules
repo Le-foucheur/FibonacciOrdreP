@@ -1,0 +1,3 @@
+[submodule "algo/src/external/C-Thread-Pool"]
+	path = algo/src/external/C-Thread-Pool
+	url = https://github.com/Pithikos/C-Thread-Pool/

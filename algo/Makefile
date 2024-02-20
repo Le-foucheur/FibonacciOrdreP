@@ -11,10 +11,9 @@ RELEASE_FLAGS=-O3 -march=native -mtune=native
 DEBUG_FLAGS=-ggdb -g3 -O0 -fno-inline
 
 SOURCES=
-SOURCES+=external/c_threads_lib/thread_pool/thread_pool.c
-SOURCES+=external/c_threads_lib/blocking_queue/linked_queue/linked_queue.c 
-SOURCES+=external/c_threads_lib/blocking_queue/blocking_queue.c
+SOURCES+=external/C-Thread-Pool/thpool.c
 SOURCES+=lib_fibo_jump.c
+SOURCES+=demo.c
 
 
 OBJECTS  := $(patsubst %.c,build/%.o,$(SOURCES))
@@ -41,12 +40,11 @@ help:
 	@echo "    make help        Displays this help"
 
 fibo_calc: $(OBJECTS) src/external/gmp-6.3.0/.libs/libgmp.a
-	@$(CC) $(OBJECTS) $(LDFLAGS) -lgmp -I src/external/gmp-6.3.0/.libs -o fibo_calc
+	$(CC) $^ $(LDFLAGS) -I src/external/gmp-6.3.0/.libs -o fibo_calc
 	@echo "La compilation a réussie! Le programme s'apelle fibo_calc, lancez le en terminal avec la commande ./fibo_calc"
 
 build:
-	@mkdir -p build/external/c_threads_lib/thread_pool
-	@mkdir -p build/external/c_threads_lib/blocking_queue/linked_queue
+	@mkdir -p build/external/C-Thread-Pool
 
 
 build/%.o: src/%.c Makefile build

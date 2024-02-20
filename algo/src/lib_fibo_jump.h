@@ -7,6 +7,14 @@
 typedef __mpz_struct *mpz_array;
 typedef unsigned long long ull ;
 
+
+/* initialize the thread pool used to calulate fibonacci numbers
+  MUST be called once at program start
+
+  Return non-zero on error
+*/
+int fibo_init_thread_pool(size_t size);
+
 /* Calcule le n-ième (et les p suivant) termes de la suite de fibonacci d'ordre p
 *  Arguments: 
 *    n: terme de la suite a calculer (pour des raisons d'optimisation, cette version ne supporte que les n>=0)
