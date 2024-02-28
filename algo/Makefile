@@ -14,34 +14,62 @@ SOURCES=
 SOURCES+=external/C-Thread-Pool/thpool.c
 SOURCES+=lib_fibo_jump.c
 SOURCES+=demo.c
+OBJECTS+=$(patsubst %.c,build/%.o,$(SOURCES))
+
+SOURCES_M2=
+SOURCES_M2+=external/C-Thread-Pool/thpool.c
+SOURCES_M2+=lib_fibo_jump_mod2.c
+SOURCES_M2+=demo_mod2.c
+OBJECTS_M2+=$(patsubst %.c,build/%.o,$(SOURCES_M2))
 
 
-OBJECTS  := $(patsubst %.c,build/%.o,$(SOURCES))
-DEPFILES := $(patsubst %.o,%.d,$(OBJECTS))
+.PHONY: all main main_prog main_debug mod2 mod2_debug mod2_prog debug help clean mpropper
 
-.PHONY: all debug help clean mpropper
+all: help
 
-all: CFLAGS+=$(RELEASE_FLAGS)
-all: LDFLAGS+=-s $(RELEASE_FLAGS)
-all: src/external/gmp-6.3.0/.libs/libgmp.a fibo_calc
+-include build/external/C-Thread-Pool/thpool.d
+-include biuld/*.d
 
--include $(DEPFILES)
+main: CFLAGS+=$(RELEASE_FLAGS)
+main: LDFLAGS+=-s $(RELEASE_FLAGS)
+main: main_prog
 
-debug: CFLAGS+=$(DEBUG_FLAGS)
-debug: LDFLAGS+=$(DEBUG_FLAGS)
-debug: src/external/gmp-6.3.0/.libs/libgmp.a fibo_calc
+main_prog: src/external/gmp-6.3.0/.libs/libgmp.a fibo_calc
+
+main_debug: CFLAGS+=$(DEBUG_FLAGS)
+main_debug: LDFLAGS+=$(DEBUG_FLAGS)
+main_debug: main_prog
+
+mod2: CFLAGS+=$(RELEASE_FLAGS)
+mod2: LDFLAGS+=-s $(RELEASE_FLAGS)
+mod2: mod2_prog
+
+mod2_prog: CFLAGS+=-std=gnu2x
+mod2_prog: src/external/gmp-6.3.0/.libs/libgmp.a fibo_calc_mod2
+
+mod2_debug: CFLAGS+=$(DEBUG_FLAGS)
+mod2_debug: LDFLAGS+=$(DEBUG_FLAGS)
+mod2_debug: mod2_prog
+
 
 help:
 	@echo "TLDR; Makefile help"
-	@echo "    make             Compiles and links the program (stripped)"
-	@echo "    make debug       Compiles and links the program with debugging flags"
+	@echo "    make main        Compiles and links the calculation program (stripped)"
+	@echo "    make main_debug  Compiles and links the calculation program with debugging flags"
+	@echo "    make mod2        Compiles and links the calculation program (stripped)"
+	@echo "    make mod2_debug  Compiles and links the calculation program with debugging flags"
 	@echo "    make clean       Cleans compilation temporary files (slow down subsequent ones)"
-	@echo "    make mpropper    Cleans compilation files and executable"
+	@echo "    make mpropper    Cleans compilation files and executable and gmp compiled files"
 	@echo "    make help        Displays this help"
 
 fibo_calc: $(OBJECTS) src/external/gmp-6.3.0/.libs/libgmp.a
 	$(CC) $^ $(LDFLAGS) -I src/external/gmp-6.3.0/.libs -o fibo_calc
 	@echo "La compilation a réussie! Le programme s'apelle fibo_calc, lancez le en terminal avec la commande ./fibo_calc"
+
+fibo_calc_mod2: $(OBJECTS_M2) src/external/gmp-6.3.0/.libs/libgmp.a
+	$(CC) $^ $(LDFLAGS) -I src/external/gmp-6.3.0/.libs -o fibo_calc_mod2
+	@echo "La compilation a réussie! Le programme s'apelle fibo_calc_mod2, lancez le en terminal avec la commande ./fibo_calc_mod2"
+
 
 build:
 	@mkdir -p build/external/C-Thread-Pool
@@ -55,6 +83,7 @@ clean:
 
 mpropper: clean
 	-rm fibo_calc
+	-rm fibo_calc_mod2
 	-rm -rf src/external/gmp-6.3.0
 
 src/external/gmp-6.3.0/.libs/libgmp.a:

@@ -1,4 +1,5 @@
 .DS_Store
 algo/build
 algo/fibo_calc
+alog/fibo_calc_mod2
 algo/src/external/gmp-6.3.0/
