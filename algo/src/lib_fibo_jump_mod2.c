@@ -1,7 +1,5 @@
 #include "lib_fibo_jump_mod2.h"
 #include "external/C-Thread-Pool/thpool.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -13,7 +11,7 @@
 #endif
 
 //Protos:
-void jump_formula_internal(size_t k,size_t ints_addr, size_t bit_addr,uint64_t result);
+void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bit_addr_shift,uint64_t result);
 void jump_formula_plus1(void* k);
 void jump_formula(void* k);
 void refill_big_from_little(size_t last_valid);
@@ -86,17 +84,17 @@ unsigned char* array_realoc(unsigned char* array,size_t old_size,size_t new_size
 
 
 
-unsigned char implem_array_getc(unsigned char* array,size_t index){  return array[-index];}
-unsigned char implem_array_reverse_getc(unsigned char* array,size_t index){  return array[index];}
+unsigned char implem_array_getc(unsigned char* array,ptrdiff_t index){  return array[-index];}
+unsigned char implem_array_reverse_getc(unsigned char* array,ptrdiff_t index){  return array[index];}
 
-uint64_t implem_array_geti(unsigned char* array,size_t index){  return * ((uint64_t*)(array-index-7));}
-uint64_t implem_array_reverse_geti(unsigned char* array,size_t index){  return * ((uint64_t*)(array+index));}
+uint64_t implem_array_geti(unsigned char* array,ptrdiff_t index){  return * ((uint64_t*)(array-index-7));}
+uint64_t implem_array_reverse_geti(unsigned char* array,ptrdiff_t index){  return * ((uint64_t*)(array+index));}
 
-void implem_array_setc(unsigned char* array,size_t index,unsigned char set){  array[-index]=set;}
-void implem_array_reverse_setc(unsigned char* array,size_t index,unsigned char set){  array[index]=set;}
+void implem_array_setc(unsigned char* array,ptrdiff_t index,unsigned char set){  array[-index]=set;}
+void implem_array_reverse_setc(unsigned char* array,ptrdiff_t index,unsigned char set){  array[index]=set;}
 
-void implem_array_seti(unsigned char* array,size_t index,uint64_t set){  *(uint64_t*)(array-index-7)=set;}
-void implem_array_reverse_seti(unsigned char* array,size_t index,uint64_t set){  *(uint64_t*)(array+index)=set;}
+void implem_array_seti(unsigned char* array,ptrdiff_t index,uint64_t set){  *(uint64_t*)(array-index-7)=set;}
+void implem_array_reverse_seti(unsigned char* array,ptrdiff_t index,uint64_t set){  *(uint64_t*)(array+index)=set;}
 
 void arr_set7c(unsigned char* array,size_t index,uint64_t set){
   for (unsigned char i=0;i<7;i++){
@@ -116,44 +114,360 @@ bool int_getb(uint64_t it,unsigned char index){ return (bool)((it>>index)&1);}
 
 bool arr_getb2(unsigned char* array,size_t arr_index,unsigned char c_index){  return char_getb(arr_getc(array,arr_index), c_index);}
 bool arr_getb(unsigned char* array,size_t index){return arr_getb2(array, index>>3, (unsigned char)(index&0b111));}
-/*uint64_t arr_get7c(unsigned char* array,size_t index){return arr_geti(array,index) & MASK_LOW;}
 
-uint64_t arr_get_unaligned_7c(unsigned char* array,size_t index,unsigned char shift){
-  uint64_t result=arr_geti(array,index);
-  result>>=shift;
-  result&= MASK_LOW;
+
+#ifdef __AVX512F__
+//fastest AVX-512 implem
+typedef __m512i accumulator ;
+__attribute__((always_inline)) inline accumulator loop_once(accumulator acc,char condition, uint64_t bits);
+__attribute__((always_inline)) inline uint64_t finalize(accumulator acc);
+
+#define zero_acc() _mm512_setzero_epi32()
+__attribute__((always_inline)) inline
+accumulator loop_once(accumulator acc,char condition, uint64_t bits){
+  __m512i temp = _mm512_maskz_set1_epi64(condition,bits);
+  return _mm512_xor_epi64(acc,temp);
+}
+__attribute__((always_inline)) inline
+uint64_t finalize(accumulator acc){
+  __m256i temp1 = _mm512_extracti64x4_epi64 (acc, 1);
+  temp1=_mm256_srli_epi64 (temp1, 4);
+  __m256i temp2 = _mm512_extracti64x4_epi64 (acc, 0);
+  temp2 = _mm256_xor_si256(temp1,temp2);
+  
+  __m128i temp3 = _mm256_extracti128_si256 (temp2, 1);
+  temp3 = _mm_srli_epi64(temp3,2);
+  temp2 = _mm256_xor_si256 (temp2, _mm256_castsi128_si256(temp3));
+
+  uint64_t result = _mm256_extract_epi64 (temp2, 0);
+  result ^= _mm256_extract_epi64 (temp2, 1)>>1;
   return result;
-}*/
+}
 
-/* Applique la formule du jump, et calcule la range Fp(2n-8k **+2** ) à Fp(2n-8(k+7)+1 +2 ),placés dans little buffer, etant donné big_buffer rempli de suffiseament de Fp(n) et indices inférieurs
-*
-*/
-void jump_formula_internal(size_t k,size_t ints_addr, size_t bit_addr,uint64_t result){
-  for (size_t i=0;i<(p>>3);i++){
-    uint64_t bits=arr_geti(big_buffer,ints_addr);
-    for (unsigned char j=0; j<8; j++) {
-      if (arr_getb(big_buffer,bit_addr-j)) {
-        result^=bits>>j;
-      }
+void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bit_addr_shift,uint64_t result0){
+  ptrdiff_t i_base=0;
+  accumulator accu = zero_acc();  
+  
+  for (;i_base<((ptrdiff_t)(p/8))-7;i_base+=7){
+    uint64_t cond_bits = arr_geti(big_buffer,bit_addr-7)>>(bit_addr_shift);
+  
+    for (signed char i=6;i>=0;i--){
+      unsigned char cond_bits_c =  (char)(cond_bits>>(8*i));
+      uint64_t bits=arr_geti(big_buffer,ints_addr);
+      accu = loop_once(accu, cond_bits_c, bits);      
+      ints_addr++;
     }
-    bit_addr-=8;
+    bit_addr-=7;
+  }
+
+  uint64_t cond_bits = arr_geti(big_buffer,bit_addr-7)>>(bit_addr_shift);
+  
+  for (unsigned char i=0;i<(p/8)-i_base;i++){
+    unsigned char cond_bits_c =  (char)(cond_bits>>(8*(6-i)));
+    uint64_t bits=arr_geti(big_buffer,ints_addr);
+    accu = loop_once(accu, cond_bits_c, bits);
     ints_addr++;
   }
+  
+  unsigned char cond_bits_c =  (char)(cond_bits>>(8*(6-((p/8)-i_base))));
+  cond_bits_c &= 0xFF<<(8 - (p&0b111));
   uint64_t bits=arr_geti(big_buffer,ints_addr);
-    for (unsigned char j=0; j<(p&0b111); j++) {
-      if (arr_getb(big_buffer,bit_addr-j)) {
-        result^=bits>>j;
-    }
-  }
-  arr_set7c(little_buffer, k, result);
+  accu = loop_once(accu, cond_bits_c, bits);
+  
+  result0 = result0^finalize(accu); 
+  arr_set7c(little_buffer, k, result0);
 }
+
+#else
+//#define __AVX2__
+#ifdef __AVX2__
+//fast AVX implem
+typedef struct {
+    __m256i part0;
+    __m256i part1;
+    __m256i zeros;
+} accumulator;
+
+__attribute__((always_inline)) inline accumulator zero_acc(void);
+__attribute__((always_inline)) inline uint64_t finalize(accumulator acc);
+
+__attribute__((always_inline)) inline
+accumulator zero_acc(){
+  return (accumulator){_mm256_setzero_si256(),_mm256_setzero_si256(),_mm256_setzero_si256()};
+}
+
+static char cond_mask[32];
+static char p_mask[32];
+
+__attribute__((always_inline)) inline
+uint64_t finalize(accumulator acc){
+  //Due to an inversion during condition mask expending,
+  //part0 contain, in this order, ints to be shifted of 3,2,1 and 0 bit,
+  //while part1 contain the 7,6,5,4 ones 
+  acc.part1=_mm256_srli_epi64 (acc.part1, 4); //now 3,2,1,0 as 4 done
+  acc.part0=_mm256_xor_si256 (acc.part0, acc.part1); //xor-ing together as same shift to be donne
+  __m128i second_half = _mm256_extracti128_si256 (acc.part0, 1); //contain 1,0
+  __m128i first_half = _mm256_castsi256_si128(acc.part0);        //contain 3,2
+  first_half = _mm_srli_epi64(first_half,2);                     //now 1,0
+  first_half = _mm_xor_si128(first_half, second_half);           //xoring together, contain 1,0
+      
+  uint64_t result = _mm_extract_epi64 (first_half, 0)>>1;      //extracting 1, so sift it
+  result ^= _mm_extract_epi64 (first_half, 1);                 //xoring the two 0 together
+  return result;
+}
+
+void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bit_addr_shift,uint64_t result0){
+  char boundary_align=ints_addr%4; //to perform optimized 32-bit aligned memory read
+  ints_addr-=boundary_align;
+  boundary_align*=8;
+  ptrdiff_t i_base=0;
+  accumulator accu = zero_acc();
+  uint64_t int_1=arr_geti(big_buffer,ints_addr)>>boundary_align;
+  __m256i cond_m = _mm256_load_si256((__m256i*)cond_mask);
+  
+  
+  for (;i_base<p/32;i_base++){
+    uint64_t cond_bits = arr_geti(big_buffer,bit_addr-4)>>(bit_addr_shift);
+    __m256i cond_reg = _mm256_set_epi8(cond_bits>>(3*8),cond_bits>>(3*8),cond_bits>>(3*8),cond_bits>>(3*8),cond_bits>>(3*8),cond_bits>>(3*8),cond_bits>>(3*8),cond_bits>>(3*8),
+                  cond_bits>>(2*8),cond_bits>>(2*8),cond_bits>>(2*8),cond_bits>>(2*8),cond_bits>>(2*8),cond_bits>>(2*8),cond_bits>>(2*8),cond_bits>>(2*8),
+                  cond_bits>>(1*8),cond_bits>>(1*8),cond_bits>>(1*8),cond_bits>>(1*8),cond_bits>>(1*8),cond_bits>>(1*8),cond_bits>>(1*8),cond_bits>>(1*8),
+                  cond_bits,cond_bits,cond_bits,cond_bits,cond_bits,cond_bits,cond_bits,cond_bits);
+    cond_reg = _mm256_and_si256(cond_reg,cond_m);
+
+     cond_reg = _mm256_cmpeq_epi8(cond_reg,accu.zeros);
+    __m128i cond_reg1 = _mm256_extracti128_si256 (cond_reg, 1);
+    __m128i cond_reg2 = _mm256_castsi256_si128 (cond_reg);
+
+
+    uint64_t int_2=arr_geti(big_buffer,ints_addr+8);
+    if (boundary_align!=0)
+      int_1 |= int_2<<(64-boundary_align);
+    int_2 >>= boundary_align;
+    __m128i int_reg=_mm_set_epi64x(int_2, int_1);
+  
+    cond_reg1 = _mm_shuffle_epi32(cond_reg1, ROTATOR1);
+    __m256i cond_reg64 = _mm256_cvtepi8_epi64(cond_reg1);
+    __m256i temp = _mm256_permute4x64_epi64(_mm256_castsi128_si256(int_reg), 0);
+    temp = _mm256_andnot_si256 (cond_reg64, temp);
+    accu.part0 = _mm256_xor_si256(accu.part0, temp);
+
+    cond_reg1 = _mm_shuffle_epi32(cond_reg1, ROTATOR2);
+    cond_reg64 = _mm256_cvtepi8_epi64(cond_reg1);
+    temp = _mm256_permute4x64_epi64(_mm256_castsi128_si256(int_reg), 0);
+    temp = _mm256_andnot_si256 (cond_reg64, temp);
+    accu.part1 = _mm256_xor_si256(accu.part1, temp);
+
+    int_reg = _mm_srli_si128(int_reg,1);
+    cond_reg1 = _mm_shuffle_epi32(cond_reg1, ROTATOR2);  
+    cond_reg64 = _mm256_cvtepi8_epi64(cond_reg1);
+    temp = _mm256_permute4x64_epi64(_mm256_castsi128_si256(int_reg), 0);
+    temp = _mm256_andnot_si256 (cond_reg64, temp);
+    accu.part0 = _mm256_xor_si256(accu.part0, temp);
+  
+    cond_reg1 = _mm_shuffle_epi32(cond_reg1, ROTATOR2);
+    cond_reg64 = _mm256_cvtepi8_epi64(cond_reg1);
+    temp = _mm256_permute4x64_epi64(_mm256_castsi128_si256(int_reg), 0);
+    temp = _mm256_andnot_si256 (cond_reg64, temp);
+    accu.part1 = _mm256_xor_si256(accu.part1, temp);
+
+    int_reg = _mm_srli_si128(int_reg,1);
+    cond_reg2 = _mm_shuffle_epi32(cond_reg2, ROTATOR1);  //rotate hi <- lo (lowest<-highest)
+    cond_reg64 = _mm256_cvtepi8_epi64(cond_reg2);
+    temp = _mm256_permute4x64_epi64(_mm256_castsi128_si256(int_reg), 0);
+    temp = _mm256_andnot_si256 (cond_reg64, temp);
+    accu.part0 = _mm256_xor_si256(accu.part0, temp);
+
+    cond_reg2 = _mm_shuffle_epi32(cond_reg2, ROTATOR2);  //rotate hi <- lo (lowest<-highest)
+    cond_reg64 = _mm256_cvtepi8_epi64(cond_reg2);
+    temp = _mm256_permute4x64_epi64(_mm256_castsi128_si256(int_reg), 0);
+    temp = _mm256_andnot_si256 (cond_reg64, temp);
+    accu.part1 = _mm256_xor_si256(accu.part1, temp);
+
+    int_reg = _mm_srli_si128(int_reg,1);
+    cond_reg2 = _mm_shuffle_epi32(cond_reg2, ROTATOR2);  //rotate hi <- lo (lowest<-highest)    
+    cond_reg64 = _mm256_cvtepi8_epi64(cond_reg2);
+    temp = _mm256_permute4x64_epi64(_mm256_castsi128_si256(int_reg), 0);
+    temp = _mm256_andnot_si256 (cond_reg64, temp);
+    accu.part0 = _mm256_xor_si256(accu.part0, temp);
+
+    cond_reg2 = _mm_shuffle_epi32(cond_reg2, ROTATOR2);  //rotate hi <- lo (lowest<-highest)    
+    cond_reg64 = _mm256_cvtepi8_epi64(cond_reg2);
+    temp = _mm256_permute4x64_epi64(_mm256_castsi128_si256(int_reg), 0);
+    temp = _mm256_andnot_si256 (cond_reg64, temp);
+    accu.part1 = _mm256_xor_si256(accu.part1, temp);
+        
+
+    bit_addr-=4;
+    ints_addr+=4;
+    int_1=(int_1>>32) | (int_2<<32);
+  }
+
+
+  uint64_t cond_bits = arr_geti(big_buffer,bit_addr-4)>>(bit_addr_shift);
+  __m256i cond_reg = _mm256_set_epi8(cond_bits>>(3*8),cond_bits>>(3*8),cond_bits>>(3*8),cond_bits>>(3*8),cond_bits>>(3*8),cond_bits>>(3*8),cond_bits>>(3*8),cond_bits>>(3*8),
+                cond_bits>>(2*8),cond_bits>>(2*8),cond_bits>>(2*8),cond_bits>>(2*8),cond_bits>>(2*8),cond_bits>>(2*8),cond_bits>>(2*8),cond_bits>>(2*8),
+                cond_bits>>(1*8),cond_bits>>(1*8),cond_bits>>(1*8),cond_bits>>(1*8),cond_bits>>(1*8),cond_bits>>(1*8),cond_bits>>(1*8),cond_bits>>(1*8),
+                cond_bits,cond_bits,cond_bits,cond_bits,cond_bits,cond_bits,cond_bits,cond_bits);
+  cond_reg = _mm256_and_si256(cond_reg,cond_m);
+
+  __m256i p_m_reg = _mm256_load_si256((__m256i*)p_mask);
+  cond_reg = _mm256_and_si256(p_m_reg,cond_reg);
+  
+  cond_reg = _mm256_cmpeq_epi8(cond_reg,accu.zeros);
+  __m128i cond_reg1 = _mm256_extracti128_si256 (cond_reg, 1);
+  __m128i cond_reg2 = _mm256_castsi256_si128 (cond_reg);
+
+
+  uint64_t int_2=arr_geti(big_buffer,ints_addr+8);
+  if (boundary_align!=0)
+    int_1 |= int_2<<(64-boundary_align);
+  int_2 >>= boundary_align;
+  __m128i int_reg=_mm_set_epi64x(int_2, int_1);
+  
+  cond_reg1 = _mm_shuffle_epi32(cond_reg1, ROTATOR1);
+  __m256i cond_reg64 = _mm256_cvtepi8_epi64(cond_reg1);
+  __m256i temp = _mm256_permute4x64_epi64(_mm256_castsi128_si256(int_reg), 0);
+  temp = _mm256_andnot_si256 (cond_reg64, temp);
+  accu.part0 = _mm256_xor_si256(accu.part0, temp);
+
+  cond_reg1 = _mm_shuffle_epi32(cond_reg1, ROTATOR2);
+  cond_reg64 = _mm256_cvtepi8_epi64(cond_reg1);
+  temp = _mm256_permute4x64_epi64(_mm256_castsi128_si256(int_reg), 0);
+  temp = _mm256_andnot_si256 (cond_reg64, temp);
+  accu.part1 = _mm256_xor_si256(accu.part1, temp);
+
+  int_reg = _mm_srli_si128(int_reg,1);
+  cond_reg1 = _mm_shuffle_epi32(cond_reg1, ROTATOR2);  
+  cond_reg64 = _mm256_cvtepi8_epi64(cond_reg1);
+  temp = _mm256_permute4x64_epi64(_mm256_castsi128_si256(int_reg), 0);
+  temp = _mm256_andnot_si256 (cond_reg64, temp);
+  accu.part0 = _mm256_xor_si256(accu.part0, temp);
+  
+  cond_reg1 = _mm_shuffle_epi32(cond_reg1, ROTATOR2);
+  cond_reg64 = _mm256_cvtepi8_epi64(cond_reg1);
+  temp = _mm256_permute4x64_epi64(_mm256_castsi128_si256(int_reg), 0);
+  temp = _mm256_andnot_si256 (cond_reg64, temp);
+  accu.part1 = _mm256_xor_si256(accu.part1, temp);
+
+  int_reg = _mm_srli_si128(int_reg,1);
+  cond_reg2 = _mm_shuffle_epi32(cond_reg2, ROTATOR1);  //rotate hi <- lo (lowest<-highest)
+  cond_reg64 = _mm256_cvtepi8_epi64(cond_reg2);
+  temp = _mm256_permute4x64_epi64(_mm256_castsi128_si256(int_reg), 0);
+  temp = _mm256_andnot_si256 (cond_reg64, temp);
+  accu.part0 = _mm256_xor_si256(accu.part0, temp);
+
+  cond_reg2 = _mm_shuffle_epi32(cond_reg2, ROTATOR2);  //rotate hi <- lo (lowest<-highest)
+  cond_reg64 = _mm256_cvtepi8_epi64(cond_reg2);
+  temp = _mm256_permute4x64_epi64(_mm256_castsi128_si256(int_reg), 0);
+  temp = _mm256_andnot_si256 (cond_reg64, temp);
+  accu.part1 = _mm256_xor_si256(accu.part1, temp);
+
+  int_reg = _mm_srli_si128(int_reg,1);
+  cond_reg2 = _mm_shuffle_epi32(cond_reg2, ROTATOR2);  //rotate hi <- lo (lowest<-highest)    
+  cond_reg64 = _mm256_cvtepi8_epi64(cond_reg2);
+  temp = _mm256_permute4x64_epi64(_mm256_castsi128_si256(int_reg), 0);
+  temp = _mm256_andnot_si256 (cond_reg64, temp);
+  accu.part0 = _mm256_xor_si256(accu.part0, temp);
+
+  cond_reg2 = _mm_shuffle_epi32(cond_reg2, ROTATOR2);  //rotate hi <- lo (lowest<-highest)    
+  cond_reg64 = _mm256_cvtepi8_epi64(cond_reg2);
+  temp = _mm256_permute4x64_epi64(_mm256_castsi128_si256(int_reg), 0);
+  temp = _mm256_andnot_si256 (cond_reg64, temp);
+  accu.part1 = _mm256_xor_si256(accu.part1, temp);
+  
+  
+  result0 = result0^finalize(accu); 
+  arr_set7c(little_buffer, k, result0);
+}
+
+
+
+#else 
+
+//slowest 64bits only implem
+typedef struct {
+    uint64_t part0;
+    uint64_t part1;
+    uint64_t part2;
+    uint64_t part3;
+    uint64_t part4;
+    uint64_t part5;
+    uint64_t part6;
+    uint64_t part7;
+} accumulator;
+
+__attribute__((always_inline)) inline accumulator zero_acc(void);
+__attribute__((always_inline)) inline accumulator loop_once(accumulator acc,char condition, uint64_t bits);
+__attribute__((always_inline)) inline uint64_t finalize(accumulator acc);
+
+__attribute__((always_inline)) inline
+accumulator zero_acc(){  return (accumulator){0, 0, 0, 0, 0, 0, 0, 0};}
+
+#define LOOP_INNER(j) if ((condition&1<<(7-j))) {acc.part##j^=bits;}
+__attribute__((always_inline)) inline
+accumulator loop_once(accumulator acc,char condition, uint64_t bits){
+  LOOP_INNER(0)
+  LOOP_INNER(1)
+  LOOP_INNER(2)
+  LOOP_INNER(3)
+  LOOP_INNER(4)
+  LOOP_INNER(5)
+  LOOP_INNER(6)
+  LOOP_INNER(7)
+  return acc;
+}
+
+__attribute__((always_inline)) inline
+uint64_t finalize(accumulator acc){
+  return acc.part0^(acc.part1>>1)^(acc.part2>>2)^(acc.part3>>3)^(acc.part4>>4)^(acc.part5>>5)
+    ^(acc.part6>>6)^(acc.part7>>7); 
+}
+
+
+void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bit_addr_shift,uint64_t result0){
+  ptrdiff_t i_base=0;
+  accumulator accu = zero_acc();  
+  
+  for (;i_base<((ptrdiff_t)(p/8))-7;i_base+=7){
+    uint64_t cond_bits = arr_geti(big_buffer,bit_addr-7)>>(bit_addr_shift);
+  
+    for (signed char i=6;i>=0;i--){
+      unsigned char cond_bits_c =  (char)(cond_bits>>(8*i));
+      uint64_t bits=arr_geti(big_buffer,ints_addr);
+      accu = loop_once(accu, cond_bits_c, bits);      
+      ints_addr++;
+    }
+    bit_addr-=7;
+  }
+
+  uint64_t cond_bits = arr_geti(big_buffer,bit_addr-7)>>(bit_addr_shift);
+  
+  for (unsigned char i=0;i<(p/8)-i_base;i++){
+    unsigned char cond_bits_c =  (char)(cond_bits>>(8*(6-i)));
+    uint64_t bits=arr_geti(big_buffer,ints_addr);
+    accu = loop_once(accu, cond_bits_c, bits);
+    ints_addr++;
+  }
+  
+  unsigned char cond_bits_c =  (char)(cond_bits>>(8*(6-((p/8)-i_base))));
+  cond_bits_c &= 0xFF<<(8 - (p&0b111));
+  uint64_t bits=arr_geti(big_buffer,ints_addr);
+  accu = loop_once(accu, cond_bits_c, bits);
+  
+  result0 = result0^finalize(accu); 
+  arr_set7c(little_buffer, k, result0);
+}
+
+#endif
+#endif
+
 
 void jump_formula_plus1(void* k_arg){
   size_t k=(size_t)k_arg;
 
   uint64_t result=0;
   size_t ints_addr;
-  size_t bit_addr;
+  ptrdiff_t bit_addr;
   
   if (k==0){
     //n=-1, n_p = 0
@@ -163,7 +477,7 @@ void jump_formula_plus1(void* k_arg){
         result =  result<<1 | ((result&1) ^ arr_getb(big_buffer, p) );
     }//           for n = -1, left shift, and we calculate the rightmost
     ints_addr=0; //(n+1)/8
-    bit_addr=p; //p+n_p
+    bit_addr=p+1; //p+n_p  +1 for index
     
   } else {
     size_t n=(k/2)*8 - 1; //to be easier in int reading, must be a multiple of 8 less 1...
@@ -173,9 +487,9 @@ void jump_formula_plus1(void* k_arg){
       result = arr_geti(big_buffer,n/8)>>(n%8);
     
     ints_addr=(n+1)/8;
-    bit_addr=n_p+p;
+    bit_addr=n_p+p+1; //plus 1 because passing from 0 based indexing to 1 based (internal of jump_formulae_internal)
   }
-  jump_formula_internal(k,ints_addr , bit_addr,result);
+  jump_formula_internal(k,ints_addr , bit_addr/8,bit_addr%8,result);
 }
 
 /* Applique la formule du jump, et calcule la range Fp(2n-8k **+0** ) à Fp(2n-8(k+7)+1 +0 ),placés dans little buffer, etant donné big_buffer rempli de suffiseament de Fp(n) et indices inférieurs
@@ -188,7 +502,7 @@ void jump_formula(void* k_arg){
 
   uint64_t result=0;
   size_t ints_addr;
-  size_t bit_addr;
+  ptrdiff_t bit_addr;
   
   if (k==0){
     //to be easier in int reading,n must be a multiple of 8 less 1... so we trick and add one to n_p in exchange
@@ -198,7 +512,7 @@ void jump_formula(void* k_arg){
         result =  result<<1 | ((result&1) ^ arr_getb(big_buffer, p) );
     }//           for n = -1, left shift, and we calculate the rightmost
     ints_addr=0; //(n+1)/8
-    bit_addr=p+1; //p+n_p
+    bit_addr=p+1+1; //p+n_p  +1 for index
     
   } else {
     size_t n=(k/2)*8 - 1; //to be easier in int reading, must be a multiple of 8 less 1... so we trick and add one to n_p in exchange
@@ -208,9 +522,9 @@ void jump_formula(void* k_arg){
       result = arr_geti(big_buffer,n/8)>>(n%8);
     
     ints_addr=(n+1)/8;
-    bit_addr=n_p+p;
+    bit_addr=n_p+p+1; //plus 1 because passing from 0 based indexing to 1 based (internal of jump_formulae_internal)
   }
-  jump_formula_internal(k,ints_addr , bit_addr,result);
+  jump_formula_internal(k,ints_addr , bit_addr/8,bit_addr%8,result);
   
 }
 
@@ -275,7 +589,7 @@ unsigned char* fibo_mod2(size_t p_arg,mpz_t n){
     printf("negative integers not yet supported, abborting");
     return NULL;
   }
-  size_t min_valid_size = MIN(2*p_arg+3,p_arg+36+p_arg/2) ;
+  size_t min_valid_size = 2*(MIN(2*p_arg+3,p_arg+36+p_arg/2)) ;
   if (p!=p_arg || little_buffer==NULL || big_buffer==NULL){
 
     array_free(big_buffer, big_buffer_size);
@@ -317,6 +631,21 @@ unsigned char* fibo_mod2(size_t p_arg,mpz_t n){
   return big_buffer;}
   //launch the big machine ...
 
+  //specific AVX initialisation
+  #ifdef __AVX512F__
+
+  #elif defined (__AVX2__)
+  __m256i temp = _mm256_set_epi8(-128,64,32,16,8,4,2,1,-128,64,32,16,8,4,2,1,-128,64,32,16,8,4,2,1,-128,64,32,16,8,4,2,1);
+  _mm256_store_si256 ((__m256i *)cond_mask, temp);
+  #define MASK_IF(value,index) (-(char)((value%32)>index))
+  temp = _mm256_set_epi8(MASK_IF(p,0),MASK_IF(p,1),MASK_IF(p,2),MASK_IF(p,3),MASK_IF(p,4),MASK_IF(p,5),MASK_IF(p,6),MASK_IF(p,7),
+    MASK_IF(p,8),MASK_IF(p,9),MASK_IF(p,10),MASK_IF(p,11),MASK_IF(p,12),MASK_IF(p,13),MASK_IF(p,14),MASK_IF(p,15),
+    MASK_IF(p,16),MASK_IF(p,17),MASK_IF(p,18),MASK_IF(p,19),MASK_IF(p,20),MASK_IF(p,21),MASK_IF(p,22),MASK_IF(p,23),
+    MASK_IF(p,24),MASK_IF(p,25),MASK_IF(p,26),MASK_IF(p,27),MASK_IF(p,28),MASK_IF(p,29),MASK_IF(p,30),MASK_IF(p,31));
+   _mm256_store_si256 ((__m256i *)p_mask, temp);
+  
+  #endif
+  
 
   //the point is to get to have work_buffer_2 filled up with value from n to n-p
   //to do that, we can: shift left (aka multiply by two) by using the jump formulae or shift left and add two (jump_plus2)
@@ -349,7 +678,7 @@ unsigned char* fibo_mod2(size_t p_arg,mpz_t n){
       jump_function= (&jump_formula_plus1);
     else
       jump_function= (&jump_formula);
-
+    
     for (size_t i=0;i<little_buffer_size;i+=7){
       thpool_add_work(calcul_pool, jump_function, (void*)i);
     }

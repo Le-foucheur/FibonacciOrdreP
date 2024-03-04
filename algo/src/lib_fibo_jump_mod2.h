@@ -9,6 +9,8 @@
 #include <endian.h>
 #include <assert.h>
 #include <limits.h>
+#include <emmintrin.h>
+#include <immintrin.h>
 #include "external/gmp-6.3.0/gmp.h"
 
 #ifndef __UINT64_TYPE__
@@ -22,8 +24,31 @@
 #define MASK_LOW 0xFFFFFFFFFFFFFFULL
 #define MASK_UP 0xFFFFFFFFFFFFFF00ULL
 
+//autocompletion purpose, remove in production
+//#define __AVX2__
+
+#ifndef __AVX512F__
+#ifndef __AVX2__
+#ifdef __SSE4_1__
+#warning "Your CPU do not support AVX2, slow code (using SSE4.1 only) will be used"
+#else //SSE
+#warning "Your CPU do not support AVX2, nor SSE4.1, slow code will be used"
+#endif //SSE
+#else //AVX2
+#warning "Your CPU do not support AVX512, slow code (using AVX2 only) will be used"
+#endif //AVX2
+#endif //AVX512
 
 #if BYTE_ORDER == LITTLE_ENDIAN
+
+//due to endianness, cond_reg[1,2] contain the tests in the folowing order:
+    // (23),(01) = 3,2,1,0 (64 bits pack,into 32) ... so we rotate as: 
+    //          dest   3 2 1 0    the first time to put them back in order
+    //           src   0 1 2 3    then we rotate by symply tacking the next one
+    #define ROTATOR1 0b00011011
+    #define ROTATOR2 0b00111001
+//AVX2 implementation problem
+
 #define NORMAL _reverse
 struct char8 {
     char char8;
@@ -36,6 +61,14 @@ struct char8 {
     char char1;
 };
 #elif BYTE_ORDER == BIG_ENDIAN
+// cond_reg[1,2] contain the tests in the folowing order: (maybe? need testing)
+    // 3,2,1,0 (64 bits pack) ... so we rotate as: 
+    //          dest   3 2 1 0    the first time to put them back in order
+    //           src   0 1 2 3    then we rotate by symply tacking the next one
+    #define ROTATOR1 0b00011011
+    #define ROTATOR2 0b00111001
+
+
 #define NORMAL 
 struct char8 {
     char char1;
@@ -68,20 +101,20 @@ unsigned char* array_create(size_t size);
 void array_free(unsigned char* array,size_t size);
 unsigned char* array_realoc(unsigned char* array,size_t old_size,size_t new_size);
 
-unsigned char implem_array_getc(unsigned char* array,size_t index);
-unsigned char implem_array_reverse_getc(unsigned char* array,size_t index);
+unsigned char implem_array_getc(unsigned char* array,ptrdiff_t index);
+unsigned char implem_array_reverse_getc(unsigned char* array,ptrdiff_t index);
 #define arr_getc concat(implem_array, NORMAL, _getc)
 
-uint64_t implem_array_geti(unsigned char* array,size_t index);
-uint64_t implem_array_reverse_geti(unsigned char* array,size_t index);
+uint64_t implem_array_geti(unsigned char* array,ptrdiff_t index);
+uint64_t implem_array_reverse_geti(unsigned char* array,ptrdiff_t index);
 #define arr_geti concat(implem_array, NORMAL, _geti)
 
-void implem_array_setc(unsigned char* array,size_t index,unsigned char set);
-void implem_array_reverse_setc(unsigned char* array,size_t index,unsigned char set);
+void implem_array_setc(unsigned char* array,ptrdiff_t index,unsigned char set);
+void implem_array_reverse_setc(unsigned char* array,ptrdiff_t index,unsigned char set);
 #define arr_setc concat(implem_array, NORMAL, _setc)
 
-void implem_array_seti(unsigned char* array,size_t index,uint64_t set);
-void implem_array_reverse_seti(unsigned char* array,size_t index,uint64_t set);
+void implem_array_seti(unsigned char* array,ptrdiff_t index,uint64_t set);
+void implem_array_reverse_seti(unsigned char* array,ptrdiff_t index,uint64_t set);
 #define arr_seti concat(implem_array, NORMAL, _seti)
 
 bool char_getb(unsigned char ch,unsigned char index);
