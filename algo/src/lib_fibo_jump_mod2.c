@@ -583,6 +583,16 @@ size_t mpz_get_siz(mpz_t z)
       return ret;
 }
 
+unsigned char* rust_fibo_mod2(size_t p_arg, const char* n);
+
+unsigned char* rust_fibo_mod2(size_t p_arg, const char* n) {
+    mpz_t n_mpz;
+    mpz_init(n_mpz);
+    mpz_set_str(n_mpz, n, 10);
+    unsigned char* result = fibo_mod2(p_arg, n_mpz);
+    mpz_clear(n_mpz);
+    return result;
+}
 
 unsigned char* fibo_mod2(size_t p_arg,mpz_t n){
   if (mpz_cmp_ui(n,0)<0){
