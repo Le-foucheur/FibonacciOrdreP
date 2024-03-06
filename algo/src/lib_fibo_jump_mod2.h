@@ -29,8 +29,12 @@
 //autocompletion purpose, remove in production
 //#define __AVX2__
 
-#ifndef __AVX512F__
-#ifndef __AVX2__
+#ifdef FIBO_NO_AVX
+  #define FIBO_NO_AVX512
+#endif
+
+#if  (!defined(__AVX512F__)) || defined(FIBO_NO_AVX512) 
+#if (!defined(__AVX2__)) || defined (FIBO_NO_AVX) 
 #ifdef __SSE4_1__
 #warning "Your CPU do not support AVX2, slow code (using SSE4.1 only) will be used"
 #else //SSE

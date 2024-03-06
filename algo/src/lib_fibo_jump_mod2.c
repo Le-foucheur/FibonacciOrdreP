@@ -1,5 +1,8 @@
 #include "lib_fibo_jump_mod2.h"
 #include "external/C-Thread-Pool/thpool.h"
+#include <smmintrin.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -115,7 +118,7 @@ bool int_getb(uint64_t it,unsigned char index){ return (bool)((it>>index)&1);}
 bool arr_getb2(unsigned char* array,size_t arr_index,unsigned char c_index){  return char_getb(arr_getc(array,arr_index), c_index);}
 bool arr_getb(unsigned char* array,size_t index){return arr_getb2(array, index>>3, (unsigned char)(index&0b111));}
 
-#ifdef __AVX512F__
+#if  defined(__AVX512F__) && (!defined (FIBO_NO_AVX512))
 //fastest AVX-512 implem
 typedef __m512i accumulator ;
 __attribute__((always_inline)) inline accumulator loop_once(accumulator acc,char condition, uint64_t bits);
@@ -148,7 +151,7 @@ void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bi
   ptrdiff_t i_base=0;
   accumulator accu = zero_acc();  
   
-  for (;i_base<((ptrdiff_t)(p/8))-7;i_base+=7){
+  for (;i_base<=((ptrdiff_t)(p/8))-7;i_base+=7){
     uint64_t cond_bits = arr_geti(big_buffer,bit_addr-7)>>(bit_addr_shift);
   
     for (signed char i=6;i>=0;i--){
@@ -170,7 +173,7 @@ void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bi
   }
   
   unsigned char cond_bits_c =  (char)(cond_bits>>(8*(6-((p/8)-i_base))));
-  cond_bits_c &= 0xFF<<(8 - (p&0b111));
+  cond_bits_c &= (int)(0xFF)<<(8 - (p&0b111));
   uint64_t bits=arr_geti(big_buffer,ints_addr);
   accu = loop_once(accu, cond_bits_c, bits);
   
@@ -180,27 +183,55 @@ void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bi
 
 #else
 //#define __AVX2__
-#ifdef __AVX2__
+#if defined(__AVX2__) && (!defined (FIBO_NO_AVX))
 //fast AVX implem
 typedef struct {
     __m256i part0;
     __m256i part1;
-    __m256i zeros;
+    __m256i part2;
+    __m256i part3;
+    __m256i part4;
+    __m256i part5;
+    __m256i part6;
+    __m256i part7;
 } accumulator;
 
 __attribute__((always_inline)) inline accumulator zero_acc(void);
 __attribute__((always_inline)) inline uint64_t finalize(accumulator acc);
+__attribute__((always_inline)) inline void arr_set31c(__m256i value,ptrdiff_t base_index);
 
 __attribute__((always_inline)) inline
 accumulator zero_acc(){
-  return (accumulator){_mm256_setzero_si256(),_mm256_setzero_si256(),_mm256_setzero_si256()};
+  return (accumulator){_mm256_setzero_si256(),_mm256_setzero_si256(),
+  _mm256_setzero_si256(),_mm256_setzero_si256(),
+  _mm256_setzero_si256(),_mm256_setzero_si256(),
+  _mm256_setzero_si256(),_mm256_setzero_si256()
+};}
+
+__attribute__((always_inline)) inline
+void arr_set31c(__m256i value,ptrdiff_t base_index){
+  arr_seti(little_buffer,base_index,_mm256_extract_epi64(value, 0));
+  arr_seti(little_buffer,base_index+8,_mm256_extract_epi64(value, 1));
+  arr_seti(little_buffer,base_index+16,_mm256_extract_epi64(value, 2));
+  arr_set7c(little_buffer, base_index+24, _mm256_extract_epi64(value, 3));
 }
+
 
 static char cond_mask[32];
 static char p_mask[32];
 
 __attribute__((always_inline)) inline
+
+#define finalize1(j) 
+
 uint64_t finalize(accumulator acc){
+  __m256i temp;
+  
+  temp = _mm256_slli_epi64(acc.part1,64-1);
+  acc.part1 = _mm256_srli_epi64(acc.part1,1);
+  acc.part1 = _mm256_xor_si256(acc.part1,temp);
+
+  
   //Due to an inversion during condition mask expending,
   //part0 contain, in this order, ints to be shifted of 3,2,1 and 0 bit,
   //while part1 contain the 7,6,5,4 ones 
@@ -428,7 +459,7 @@ void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bi
   ptrdiff_t i_base=0;
   accumulator accu = zero_acc();  
   
-  for (;i_base<((ptrdiff_t)(p/8))-7;i_base+=7){
+  for (;i_base<=((ptrdiff_t)(p/8))-7;i_base+=7){
     uint64_t cond_bits = arr_geti(big_buffer,bit_addr-7)>>(bit_addr_shift);
   
     for (signed char i=6;i>=0;i--){
@@ -589,7 +620,7 @@ unsigned char* fibo_mod2(size_t p_arg,mpz_t n){
     printf("negative integers not yet supported, abborting");
     return NULL;
   }
-  size_t min_valid_size = 2*(MIN(2*p_arg+3,p_arg+36+p_arg/2)) ;
+  size_t min_valid_size = 10*(MIN(2*p_arg+3,p_arg+36+p_arg/2)) ;
   if (p!=p_arg || little_buffer==NULL || big_buffer==NULL){
 
     array_free(big_buffer, big_buffer_size);
