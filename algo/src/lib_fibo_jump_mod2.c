@@ -280,7 +280,7 @@ void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bi
 void jump_formula_plus1(void* k_arg){
   size_t k=(size_t)k_arg;
 
-  bytes_t result;
+  bytes_t result= byte_zero;
   size_t ints_addr;
   ptrdiff_t bit_addr;
   
@@ -316,7 +316,7 @@ void jump_formula_plus1(void* k_arg){
 void jump_formula(void* k_arg){
   size_t k=(size_t)k_arg;
 
-  bytes_t result;
+  bytes_t result = byte_zero;
   size_t ints_addr;
   ptrdiff_t bit_addr;
   

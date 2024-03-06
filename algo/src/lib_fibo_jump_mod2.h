@@ -65,6 +65,7 @@
   
 
   typedef uint64_t bytes_t;
+  #define byte_zero 0
   #define get_bytes arr_geti
   #define arr_set_result arr_set7c
   //number of bytes treated as once in one jump_formula call
@@ -90,6 +91,7 @@
   __attribute__((always_inline)) inline void arr_set31c(unsigned char* array,ptrdiff_t base_index,__m256i value);
   #define arr_get8i concat(implem_array, NORMAL, _get8i)
   typedef __m256i bytes_t;
+  #define byte_zero _mm256_setzero_si256()
   #define get_bytes arr_get8i
   #define arr_set_result arr_set31c
   //number of bytes treated as once in one jump_formula call
@@ -101,6 +103,7 @@
 #else //AVX512
   typedef __m512i accumulator ;
   typedef uint64_t bytes_t;
+  #define byte_zero 0
   #define get_bytes arr_geti
   #define arr_set_result arr_set7c
   //number of bytes treated as once in one jump_formula call
