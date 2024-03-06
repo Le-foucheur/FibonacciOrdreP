@@ -14,7 +14,7 @@
 #endif
 
 //Protos:
-void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bit_addr_shift,uint64_t result);
+void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bit_addr_shift,bytes_t result);
 void jump_formula_plus1(void* k);
 void jump_formula(void* k);
 void refill_big_from_little(size_t last_valid);
@@ -76,6 +76,11 @@ unsigned char* implem_array_reverse_get_false_addr(unsigned char* real_addr,size
 unsigned char* implem_array_get_real_addr(unsigned char* array,size_t size){  return array-size+1-8;}
 unsigned char* implem_array_reverse_get_real_addr(unsigned char* array, size_t size){  return array-8;}
 
+__attribute__((always_inline)) inline accumulator zero_acc(void);
+__attribute__((always_inline)) inline bytes_t finalize(accumulator acc, bytes_t result0);
+__attribute__((always_inline)) inline accumulator loop_once(accumulator acc,char condition, bytes_t bits);
+
+
 unsigned char* array_create(size_t size){  
   unsigned char* array = calloc(size+15,1);
   if (array==NULL) {
@@ -108,7 +113,7 @@ void arr_set7c(unsigned char* array,size_t index,uint64_t set){
 bool char_getb(unsigned char ch,unsigned char index){  return (bool)((ch>>index)&1);}
 unsigned char char_setb(unsigned char ch,unsigned char index,bool set){  return (ch & MASK8(index)) | (set<<index);}
 
-void arr_setb(unsigned char* array,size_t index,bool set){
+void arr_setb(unsigned char* array,ptrdiff_t index,bool set){
   arr_setc(array,index>>3,char_setb(arr_getc(array,index>>3), index&0b111, set));
 }
 
@@ -117,21 +122,19 @@ bool int_getb(uint64_t it,unsigned char index){ return (bool)((it>>index)&1);}
 
 bool arr_getb2(unsigned char* array,size_t arr_index,unsigned char c_index){  return char_getb(arr_getc(array,arr_index), c_index);}
 bool arr_getb(unsigned char* array,size_t index){return arr_getb2(array, index>>3, (unsigned char)(index&0b111));}
-
 #if  defined(__AVX512F__) && (!defined (FIBO_NO_AVX512))
 //fastest AVX-512 implem
-typedef __m512i accumulator ;
-__attribute__((always_inline)) inline accumulator loop_once(accumulator acc,char condition, uint64_t bits);
-__attribute__((always_inline)) inline uint64_t finalize(accumulator acc);
 
 #define zero_acc() _mm512_setzero_epi32()
+
 __attribute__((always_inline)) inline
-accumulator loop_once(accumulator acc,char condition, uint64_t bits){
+accumulator loop_once(accumulator acc,char condition, bytes_t bits){
   __m512i temp = _mm512_maskz_set1_epi64(condition,bits);
   return _mm512_xor_epi64(acc,temp);
 }
+
 __attribute__((always_inline)) inline
-uint64_t finalize(accumulator acc){
+bytes_t finalize(accumulator acc, bytes_t result0){
   //due to inversion when using masks, acc contain bits to be shifted of 7,6,5,4,3,2,1,0, in this order
   __m256i temp1 = _mm512_extracti64x4_epi64 (acc, 0);
   temp1=_mm256_srli_epi64 (temp1, 4);
@@ -142,64 +145,14 @@ uint64_t finalize(accumulator acc){
   temp2 = _mm256_srli_epi64(temp2,2);
   temp2 = _mm256_xor_si256 (temp2, _mm256_castsi128_si256(temp3));  //contain 1,0,useless,useless
 
-  uint64_t result = _mm256_extract_epi64 (temp2, 1);
-  result ^= _mm256_extract_epi64 (temp2, 0)>>1;
-  return result;
-}
-
-void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bit_addr_shift,uint64_t result0){
-  ptrdiff_t i_base=0;
-  accumulator accu = zero_acc();  
-  
-  for (;i_base<=((ptrdiff_t)(p/8))-7;i_base+=7){
-    uint64_t cond_bits = arr_geti(big_buffer,bit_addr-7)>>(bit_addr_shift);
-  
-    for (signed char i=6;i>=0;i--){
-      unsigned char cond_bits_c =  (char)(cond_bits>>(8*i));
-      uint64_t bits=arr_geti(big_buffer,ints_addr);
-      accu = loop_once(accu, cond_bits_c, bits);      
-      ints_addr++;
-    }
-    bit_addr-=7;
-  }
-
-  uint64_t cond_bits = arr_geti(big_buffer,bit_addr-7)>>(bit_addr_shift);
-  
-  for (unsigned char i=0;i<(p/8)-i_base;i++){
-    unsigned char cond_bits_c =  (char)(cond_bits>>(8*(6-i)));
-    uint64_t bits=arr_geti(big_buffer,ints_addr);
-    accu = loop_once(accu, cond_bits_c, bits);
-    ints_addr++;
-  }
-  
-  unsigned char cond_bits_c =  (char)(cond_bits>>(8*(6-((p/8)-i_base))));
-  cond_bits_c &= (int)(0xFF)<<(8 - (p&0b111));
-  uint64_t bits=arr_geti(big_buffer,ints_addr);
-  accu = loop_once(accu, cond_bits_c, bits);
-  
-  result0 = result0^finalize(accu); 
-  arr_set7c(little_buffer, k, result0);
+  result0 = _mm256_extract_epi64 (temp2, 1) ^ (result0>>7);
+  result0 ^= _mm256_extract_epi64 (temp2, 0)>>1;
+  return result0;
 }
 
 #else
-#define __AVX2__
 #if defined(__AVX2__) && (!defined (FIBO_NO_AVX))
-//fast AVX implem
-typedef struct {
-    __m256i part0;
-    __m256i part1;
-    __m256i part2;
-    __m256i part3;
-    __m256i part4;
-    __m256i part5;
-    __m256i part6;
-    __m256i part7;
-} accumulator;
-
-__attribute__((always_inline)) inline accumulator zero_acc(void);
-__attribute__((always_inline)) inline __m256i finalize(accumulator acc);
-__attribute__((always_inline)) inline void arr_set31c(__m256i value,ptrdiff_t base_index);
-__attribute__((always_inline)) inline accumulator loop_once(accumulator acc,char condition, __m256i bits);
+//fast? AVX implem
 
 __attribute__((always_inline)) inline
 accumulator zero_acc(){
@@ -210,16 +163,12 @@ accumulator zero_acc(){
 };}
 
 __attribute__((always_inline)) inline
-void arr_set31c(__m256i value,ptrdiff_t base_index){
-  arr_seti(little_buffer,base_index,_mm256_extract_epi64(value, 0));
-  arr_seti(little_buffer,base_index+8,_mm256_extract_epi64(value, 1));
-  arr_seti(little_buffer,base_index+16,_mm256_extract_epi64(value, 2));
-  arr_set7c(little_buffer, base_index+24, _mm256_extract_epi64(value, 3));
+void arr_set31c(unsigned char* array,ptrdiff_t base_index,__m256i value){
+  arr_seti(array,base_index,_mm256_extract_epi64(value, 0));
+  arr_seti(array,base_index+8,_mm256_extract_epi64(value, 1));
+  arr_seti(array,base_index+16,_mm256_extract_epi64(value, 2));
+  arr_set7c(array, base_index+24, _mm256_extract_epi64(value, 3));
 }
-
-
-static char cond_mask[32];
-static char p_mask[32];
 
 
 #define finalize1(j) temp = _mm256_slli_epi64(acc.part##j,64-j); \
@@ -230,7 +179,7 @@ static char p_mask[32];
 
 
 __attribute__((always_inline)) inline
-__m256i finalize(accumulator acc){
+bytes_t finalize(accumulator acc,bytes_t result0){
   __m256i temp;
   
   finalize1(1)
@@ -239,8 +188,9 @@ __m256i finalize(accumulator acc){
   finalize1(4)
   finalize1(5)
   finalize1(6)
+  acc.part7 = _mm256_xor_si256(acc.part7, result0);
   finalize1(7)
-
+  
   return acc.part0;
 }
 
@@ -252,7 +202,7 @@ __m256i implem_array_reverse_get8i(unsigned char* array,ptrdiff_t index){  retur
 
 
 __attribute__((always_inline)) inline
-accumulator loop_once(accumulator acc,char condition, __m256i bits){
+accumulator loop_once(accumulator acc,char condition, bytes_t bits){
   LOOP_INNER(0)
   LOOP_INNER(1)
   LOOP_INNER(2)
@@ -263,31 +213,16 @@ accumulator loop_once(accumulator acc,char condition, __m256i bits){
   LOOP_INNER(7)
   return acc;
 }
-
 #else 
-
 //slowest 64bits only implem
-typedef struct {
-    uint64_t part0;
-    uint64_t part1;
-    uint64_t part2;
-    uint64_t part3;
-    uint64_t part4;
-    uint64_t part5;
-    uint64_t part6;
-    uint64_t part7;
-} accumulator;
 
-__attribute__((always_inline)) inline accumulator zero_acc(void);
-__attribute__((always_inline)) inline accumulator loop_once(accumulator acc,char condition, uint64_t bits);
-__attribute__((always_inline)) inline uint64_t finalize(accumulator acc);
 
 __attribute__((always_inline)) inline
 accumulator zero_acc(){  return (accumulator){0, 0, 0, 0, 0, 0, 0, 0};}
 
 #define LOOP_INNER(j) if ((condition&1<<(7-j))) {acc.part##j^=bits;}
 __attribute__((always_inline)) inline
-accumulator loop_once(accumulator acc,char condition, uint64_t bits){
+accumulator loop_once(accumulator acc,char condition, bytes_t bits){
   LOOP_INNER(0)
   LOOP_INNER(1)
   LOOP_INNER(2)
@@ -300,13 +235,14 @@ accumulator loop_once(accumulator acc,char condition, uint64_t bits){
 }
 
 __attribute__((always_inline)) inline
-uint64_t finalize(accumulator acc){
+bytes_t finalize(accumulator acc,bytes_t result0){
   return acc.part0^(acc.part1>>1)^(acc.part2>>2)^(acc.part3>>3)^(acc.part4>>4)^(acc.part5>>5)
-    ^(acc.part6>>6)^(acc.part7>>7); 
+    ^(acc.part6>>6)^((result0^acc.part7)>>7); 
 }
 
-
-void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bit_addr_shift,uint64_t result0){
+#endif
+#endif
+void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bit_addr_shift,bytes_t result0){
   ptrdiff_t i_base=0;
   accumulator accu = zero_acc();  
   
@@ -315,7 +251,7 @@ void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bi
   
     for (signed char i=6;i>=0;i--){
       unsigned char cond_bits_c =  (char)(cond_bits>>(8*i));
-      uint64_t bits=arr_geti(big_buffer,ints_addr);
+      bytes_t bits=get_bytes(big_buffer,ints_addr);
       accu = loop_once(accu, cond_bits_c, bits);      
       ints_addr++;
     }
@@ -326,28 +262,25 @@ void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bi
   
   for (unsigned char i=0;i<(p/8)-i_base;i++){
     unsigned char cond_bits_c =  (char)(cond_bits>>(8*(6-i)));
-    uint64_t bits=arr_geti(big_buffer,ints_addr);
+    bytes_t bits=get_bytes(big_buffer,ints_addr);
     accu = loop_once(accu, cond_bits_c, bits);
     ints_addr++;
   }
   
   unsigned char cond_bits_c =  (char)(cond_bits>>(8*(6-((p/8)-i_base))));
-  cond_bits_c &= 0xFF<<(8 - (p&0b111));
-  uint64_t bits=arr_geti(big_buffer,ints_addr);
+  cond_bits_c &= (int)(0xFF)<<(8 - (p&0b111));
+  bytes_t bits=get_bytes(big_buffer,ints_addr);
   accu = loop_once(accu, cond_bits_c, bits);
   
-  result0 = result0^finalize(accu); 
-  arr_set7c(little_buffer, k, result0);
+  result0 = finalize(accu,result0); 
+  arr_set_result(little_buffer, k, result0);
 }
-
-#endif
-#endif
 
 
 void jump_formula_plus1(void* k_arg){
   size_t k=(size_t)k_arg;
 
-  uint64_t result=0;
+  bytes_t result;
   size_t ints_addr;
   ptrdiff_t bit_addr;
   
@@ -355,8 +288,9 @@ void jump_formula_plus1(void* k_arg){
     //n=-1, n_p = 0
 
     if (arr_getb(big_buffer, 0)) { //0 bc that is the value of n_p
-        result = arr_geti(big_buffer, 0);
-        result =  result<<1 | ((result&1) ^ arr_getb(big_buffer, p) );
+        //we know we have some margin: lets use it (i know thats ugly ... but anyway)
+        arr_setb(big_buffer,-1,(arr_getb(big_buffer, 0) ^ arr_getb(big_buffer, p) ));
+        result = get_bytes(big_buffer, -1); //jump formulae internal know it should be right shifted of 7
     }//           for n = -1, left shift, and we calculate the rightmost
     ints_addr=0; //(n+1)/8
     bit_addr=p+1; //p+n_p  +1 for index
@@ -366,7 +300,7 @@ void jump_formula_plus1(void* k_arg){
     size_t n_p = ((k+1)/2)*8;
 
     if (arr_getb(big_buffer, n_p))
-      result = arr_geti(big_buffer,n/8)>>(n%8);
+      result = get_bytes(big_buffer,n/8);
     
     ints_addr=(n+1)/8;
     bit_addr=n_p+p+1; //plus 1 because passing from 0 based indexing to 1 based (internal of jump_formulae_internal)
@@ -382,7 +316,7 @@ void jump_formula_plus1(void* k_arg){
 void jump_formula(void* k_arg){
   size_t k=(size_t)k_arg;
 
-  uint64_t result=0;
+  bytes_t result;
   size_t ints_addr;
   ptrdiff_t bit_addr;
   
@@ -390,8 +324,9 @@ void jump_formula(void* k_arg){
     //to be easier in int reading,n must be a multiple of 8 less 1... so we trick and add one to n_p in exchange
     //n=-1, n_p = 1 
     if (arr_getb(big_buffer, 1)) { //1 bc that is the value of n_p
-        result = arr_geti(big_buffer, 0);
-        result =  result<<1 | ((result&1) ^ arr_getb(big_buffer, p) );
+        //we know we have some margin: lets use it (i know thats ugly ... but anyway)
+        arr_setb(big_buffer,-1,(arr_getb(big_buffer, 0) ^ arr_getb(big_buffer, p) ));
+        result = get_bytes(big_buffer, -1); //jump formulae internal know it should be right shifted of 7
     }//           for n = -1, left shift, and we calculate the rightmost
     ints_addr=0; //(n+1)/8
     bit_addr=p+1+1; //p+n_p  +1 for index
@@ -401,7 +336,7 @@ void jump_formula(void* k_arg){
     size_t n_p = ((k+1)/2)*8 +1 ;
   
     if (arr_getb(big_buffer, n_p))
-      result = arr_geti(big_buffer,n/8)>>(n%8);
+      result = get_bytes(big_buffer,n/8);
     
     ints_addr=(n+1)/8;
     bit_addr=n_p+p+1; //plus 1 because passing from 0 based indexing to 1 based (internal of jump_formulae_internal)
@@ -465,8 +400,6 @@ size_t mpz_get_siz(mpz_t z)
       return ret;
 }
 
-unsigned char* rust_fibo_mod2(size_t p_arg, const char* n);
-
 unsigned char* rust_fibo_mod2(size_t p_arg, const char* n) {
     mpz_t n_mpz;
     mpz_init(n_mpz);
@@ -527,14 +460,6 @@ unsigned char* fibo_mod2(size_t p_arg,mpz_t n){
   #ifdef __AVX512F__
 
   #elif defined (__AVX2__)
-  __m256i temp = _mm256_set_epi8(-128,64,32,16,8,4,2,1,-128,64,32,16,8,4,2,1,-128,64,32,16,8,4,2,1,-128,64,32,16,8,4,2,1);
-  _mm256_store_si256 ((__m256i *)cond_mask, temp);
-  #define MASK_IF(value,index) (-(char)((value%32)>index))
-  temp = _mm256_set_epi8(MASK_IF(p,0),MASK_IF(p,1),MASK_IF(p,2),MASK_IF(p,3),MASK_IF(p,4),MASK_IF(p,5),MASK_IF(p,6),MASK_IF(p,7),
-    MASK_IF(p,8),MASK_IF(p,9),MASK_IF(p,10),MASK_IF(p,11),MASK_IF(p,12),MASK_IF(p,13),MASK_IF(p,14),MASK_IF(p,15),
-    MASK_IF(p,16),MASK_IF(p,17),MASK_IF(p,18),MASK_IF(p,19),MASK_IF(p,20),MASK_IF(p,21),MASK_IF(p,22),MASK_IF(p,23),
-    MASK_IF(p,24),MASK_IF(p,25),MASK_IF(p,26),MASK_IF(p,27),MASK_IF(p,28),MASK_IF(p,29),MASK_IF(p,30),MASK_IF(p,31));
-   _mm256_store_si256 ((__m256i *)p_mask, temp);
   
   #endif
   
