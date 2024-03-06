@@ -1,6 +1,7 @@
 #ifndef LIB_FIBO_JUMP2_H
 #define LIB_FIBO_JUMP2_H
 
+
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -12,6 +13,7 @@
 #include <emmintrin.h>
 #include <immintrin.h>
 #include "external/gmp-6.3.0/gmp.h"
+
 
 #ifndef __UINT64_TYPE__
   #error "This program was deeply optimzed for 64 bits, sry"

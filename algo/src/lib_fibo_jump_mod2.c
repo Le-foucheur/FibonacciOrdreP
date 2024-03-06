@@ -115,7 +115,6 @@ bool int_getb(uint64_t it,unsigned char index){ return (bool)((it>>index)&1);}
 bool arr_getb2(unsigned char* array,size_t arr_index,unsigned char c_index){  return char_getb(arr_getc(array,arr_index), c_index);}
 bool arr_getb(unsigned char* array,size_t index){return arr_getb2(array, index>>3, (unsigned char)(index&0b111));}
 
-
 #ifdef __AVX512F__
 //fastest AVX-512 implem
 typedef __m512i accumulator ;
@@ -130,17 +129,18 @@ accumulator loop_once(accumulator acc,char condition, uint64_t bits){
 }
 __attribute__((always_inline)) inline
 uint64_t finalize(accumulator acc){
-  __m256i temp1 = _mm512_extracti64x4_epi64 (acc, 1);
+  //due to inversion when using masks, acc contain bits to be shifted of 7,6,5,4,3,2,1,0, in this order
+  __m256i temp1 = _mm512_extracti64x4_epi64 (acc, 0);
   temp1=_mm256_srli_epi64 (temp1, 4);
-  __m256i temp2 = _mm512_extracti64x4_epi64 (acc, 0);
-  temp2 = _mm256_xor_si256(temp1,temp2);
+  __m256i temp2 = _mm512_extracti64x4_epi64 (acc, 1);
+  temp2 = _mm256_xor_si256(temp1,temp2);  //contain to be shifted by 3,2,1,0
   
-  __m128i temp3 = _mm256_extracti128_si256 (temp2, 1);
-  temp3 = _mm_srli_epi64(temp3,2);
-  temp2 = _mm256_xor_si256 (temp2, _mm256_castsi128_si256(temp3));
+  __m128i temp3 = _mm256_extracti128_si256 (temp2, 1);  //contain 1,0
+  temp2 = _mm256_srli_epi64(temp2,2);
+  temp2 = _mm256_xor_si256 (temp2, _mm256_castsi128_si256(temp3));  //contain 1,0,useless,useless
 
-  uint64_t result = _mm256_extract_epi64 (temp2, 0);
-  result ^= _mm256_extract_epi64 (temp2, 1)>>1;
+  uint64_t result = _mm256_extract_epi64 (temp2, 1);
+  result ^= _mm256_extract_epi64 (temp2, 0)>>1;
   return result;
 }
 

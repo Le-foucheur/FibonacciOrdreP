@@ -4,11 +4,11 @@ WARNINGS := -Wall -Wextra -pedantic -Wshadow -Wpointer-arith -Wcast-align \
             -Wstrict-prototypes
 			#-Wconversion
 
-CFLAGS=-lpthread $(WARNINGS) -Isrc/ 
-LDFLAGS=-lpthread ${WARNINGS} 
+CFLAGS+=-lpthread $(WARNINGS) -Isrc/
+LDFLAGS+=-lpthread ${WARNINGS}
 
 RELEASE_FLAGS=-O3 -march=native -mtune=native
-DEBUG_FLAGS=-ggdb -g3 -O0 -fno-inline
+DEBUG_FLAGS=-ggdb -g3 -O0 -fno-inline -march=native
 
 SOURCES=
 SOURCES+=external/C-Thread-Pool/thpool.c
@@ -23,7 +23,7 @@ SOURCES_M2+=demo_mod2.c
 OBJECTS_M2+=$(patsubst %.c,build/%.o,$(SOURCES_M2))
 
 
-.PHONY: all main main_prog main_debug mod2 mod2_debug mod2_prog debug help clean mpropper
+.PHONY: all main main_prog main_debug mod2 mod2_debug mod2_prog debug help clean mpropper main_archive mod2_archive
 
 all: help
 
@@ -36,6 +36,11 @@ main: main_prog
 
 main_prog: src/external/gmp-6.3.0/.libs/libgmp.a fibo_calc
 
+
+main_archive: CFLAGS+=$(RELEASE_FLAGS)
+main_archive: LDFLAGS+=-s $(RELEASE_FLAGS)
+main_archive: src/external/gmp-6.3.0/.libs/libgmp.a fibo.a
+
 main_debug: CFLAGS+=$(DEBUG_FLAGS)
 main_debug: LDFLAGS+=$(DEBUG_FLAGS)
 main_debug: main_prog
@@ -46,6 +51,11 @@ mod2: mod2_prog
 
 mod2_prog: CFLAGS+=-std=gnu2x
 mod2_prog: src/external/gmp-6.3.0/.libs/libgmp.a fibo_calc_mod2
+
+mod2_archive: CFLAGS+=$(RELEASE_FLAGS)
+mod2_archive: LDFLAGS+=-s $(RELEASE_FLAGS)
+mod2_archive: src/external/gmp-6.3.0/.libs/libgmp.a fibo_mod2.a
+
 
 mod2_debug: CFLAGS+=$(DEBUG_FLAGS)
 mod2_debug: LDFLAGS+=$(DEBUG_FLAGS)
@@ -70,6 +80,13 @@ fibo_calc_mod2: $(OBJECTS_M2) src/external/gmp-6.3.0/.libs/libgmp.a
 	$(CC) $^ $(LDFLAGS) -I src/external/gmp-6.3.0/.libs -o fibo_calc_mod2
 	@echo "La compilation a réussie! Le programme s'apelle fibo_calc_mod2, lancez le en terminal avec la commande ./fibo_calc_mod2"
 
+fibo_mod2.a: $(OBJECTS_M2)
+	ar ru $@ $^
+	ranlib $@
+
+fibo.a: $(OBJECTS)
+	ar ru $@ $^
+	ranlib $@
 
 build:
 	@mkdir -p build/external/C-Thread-Pool
