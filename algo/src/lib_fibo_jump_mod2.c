@@ -182,7 +182,7 @@ void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bi
 }
 
 #else
-//#define __AVX2__
+#define __AVX2__
 #if defined(__AVX2__) && (!defined (FIBO_NO_AVX))
 //fast AVX implem
 typedef struct {
@@ -197,8 +197,9 @@ typedef struct {
 } accumulator;
 
 __attribute__((always_inline)) inline accumulator zero_acc(void);
-__attribute__((always_inline)) inline uint64_t finalize(accumulator acc);
+__attribute__((always_inline)) inline __m256i finalize(accumulator acc);
 __attribute__((always_inline)) inline void arr_set31c(__m256i value,ptrdiff_t base_index);
+__attribute__((always_inline)) inline accumulator loop_once(accumulator acc,char condition, __m256i bits);
 
 __attribute__((always_inline)) inline
 accumulator zero_acc(){
@@ -220,198 +221,48 @@ void arr_set31c(__m256i value,ptrdiff_t base_index){
 static char cond_mask[32];
 static char p_mask[32];
 
+
+#define finalize1(j) temp = _mm256_slli_epi64(acc.part##j,64-j); \
+  acc.part0 = _mm256_xor_si256(acc.part0,temp); \
+  acc.part##j = _mm256_srli_epi64(acc.part##j,j); \
+  acc.part##j = _mm256_permute4x64_epi64(acc.part##j,0b00111001); \
+  acc.part0 = _mm256_xor_si256(acc.part0,acc.part##j);
+
+
 __attribute__((always_inline)) inline
-
-#define finalize1(j) 
-
-uint64_t finalize(accumulator acc){
+__m256i finalize(accumulator acc){
   __m256i temp;
   
-  temp = _mm256_slli_epi64(acc.part1,64-1);
-  acc.part1 = _mm256_srli_epi64(acc.part1,1);
-  acc.part1 = _mm256_xor_si256(acc.part1,temp);
+  finalize1(1)
+  finalize1(2)
+  finalize1(3)
+  finalize1(4)
+  finalize1(5)
+  finalize1(6)
+  finalize1(7)
 
-  
-  //Due to an inversion during condition mask expending,
-  //part0 contain, in this order, ints to be shifted of 3,2,1 and 0 bit,
-  //while part1 contain the 7,6,5,4 ones 
-  acc.part1=_mm256_srli_epi64 (acc.part1, 4); //now 3,2,1,0 as 4 done
-  acc.part0=_mm256_xor_si256 (acc.part0, acc.part1); //xor-ing together as same shift to be donne
-  __m128i second_half = _mm256_extracti128_si256 (acc.part0, 1); //contain 1,0
-  __m128i first_half = _mm256_castsi256_si128(acc.part0);        //contain 3,2
-  first_half = _mm_srli_epi64(first_half,2);                     //now 1,0
-  first_half = _mm_xor_si128(first_half, second_half);           //xoring together, contain 1,0
-      
-  uint64_t result = _mm_extract_epi64 (first_half, 0)>>1;      //extracting 1, so sift it
-  result ^= _mm_extract_epi64 (first_half, 1);                 //xoring the two 0 together
-  return result;
+  return acc.part0;
 }
 
-void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bit_addr_shift,uint64_t result0){
-  char boundary_align=ints_addr%4; //to perform optimized 32-bit aligned memory read
-  ints_addr-=boundary_align;
-  boundary_align*=8;
-  ptrdiff_t i_base=0;
-  accumulator accu = zero_acc();
-  uint64_t int_1=arr_geti(big_buffer,ints_addr)>>boundary_align;
-  __m256i cond_m = _mm256_load_si256((__m256i*)cond_mask);
-  
-  
-  for (;i_base<p/32;i_base++){
-    uint64_t cond_bits = arr_geti(big_buffer,bit_addr-4)>>(bit_addr_shift);
-    __m256i cond_reg = _mm256_set_epi8(cond_bits>>(3*8),cond_bits>>(3*8),cond_bits>>(3*8),cond_bits>>(3*8),cond_bits>>(3*8),cond_bits>>(3*8),cond_bits>>(3*8),cond_bits>>(3*8),
-                  cond_bits>>(2*8),cond_bits>>(2*8),cond_bits>>(2*8),cond_bits>>(2*8),cond_bits>>(2*8),cond_bits>>(2*8),cond_bits>>(2*8),cond_bits>>(2*8),
-                  cond_bits>>(1*8),cond_bits>>(1*8),cond_bits>>(1*8),cond_bits>>(1*8),cond_bits>>(1*8),cond_bits>>(1*8),cond_bits>>(1*8),cond_bits>>(1*8),
-                  cond_bits,cond_bits,cond_bits,cond_bits,cond_bits,cond_bits,cond_bits,cond_bits);
-    cond_reg = _mm256_and_si256(cond_reg,cond_m);
-
-     cond_reg = _mm256_cmpeq_epi8(cond_reg,accu.zeros);
-    __m128i cond_reg1 = _mm256_extracti128_si256 (cond_reg, 1);
-    __m128i cond_reg2 = _mm256_castsi256_si128 (cond_reg);
+#define LOOP_INNER(j) if ((condition&1<<(7-j))) {acc.part##j=_mm256_xor_si256(acc.part##j, bits);}
 
 
-    uint64_t int_2=arr_geti(big_buffer,ints_addr+8);
-    if (boundary_align!=0)
-      int_1 |= int_2<<(64-boundary_align);
-    int_2 >>= boundary_align;
-    __m128i int_reg=_mm_set_epi64x(int_2, int_1);
-  
-    cond_reg1 = _mm_shuffle_epi32(cond_reg1, ROTATOR1);
-    __m256i cond_reg64 = _mm256_cvtepi8_epi64(cond_reg1);
-    __m256i temp = _mm256_permute4x64_epi64(_mm256_castsi128_si256(int_reg), 0);
-    temp = _mm256_andnot_si256 (cond_reg64, temp);
-    accu.part0 = _mm256_xor_si256(accu.part0, temp);
-
-    cond_reg1 = _mm_shuffle_epi32(cond_reg1, ROTATOR2);
-    cond_reg64 = _mm256_cvtepi8_epi64(cond_reg1);
-    temp = _mm256_permute4x64_epi64(_mm256_castsi128_si256(int_reg), 0);
-    temp = _mm256_andnot_si256 (cond_reg64, temp);
-    accu.part1 = _mm256_xor_si256(accu.part1, temp);
-
-    int_reg = _mm_srli_si128(int_reg,1);
-    cond_reg1 = _mm_shuffle_epi32(cond_reg1, ROTATOR2);  
-    cond_reg64 = _mm256_cvtepi8_epi64(cond_reg1);
-    temp = _mm256_permute4x64_epi64(_mm256_castsi128_si256(int_reg), 0);
-    temp = _mm256_andnot_si256 (cond_reg64, temp);
-    accu.part0 = _mm256_xor_si256(accu.part0, temp);
-  
-    cond_reg1 = _mm_shuffle_epi32(cond_reg1, ROTATOR2);
-    cond_reg64 = _mm256_cvtepi8_epi64(cond_reg1);
-    temp = _mm256_permute4x64_epi64(_mm256_castsi128_si256(int_reg), 0);
-    temp = _mm256_andnot_si256 (cond_reg64, temp);
-    accu.part1 = _mm256_xor_si256(accu.part1, temp);
-
-    int_reg = _mm_srli_si128(int_reg,1);
-    cond_reg2 = _mm_shuffle_epi32(cond_reg2, ROTATOR1);  //rotate hi <- lo (lowest<-highest)
-    cond_reg64 = _mm256_cvtepi8_epi64(cond_reg2);
-    temp = _mm256_permute4x64_epi64(_mm256_castsi128_si256(int_reg), 0);
-    temp = _mm256_andnot_si256 (cond_reg64, temp);
-    accu.part0 = _mm256_xor_si256(accu.part0, temp);
-
-    cond_reg2 = _mm_shuffle_epi32(cond_reg2, ROTATOR2);  //rotate hi <- lo (lowest<-highest)
-    cond_reg64 = _mm256_cvtepi8_epi64(cond_reg2);
-    temp = _mm256_permute4x64_epi64(_mm256_castsi128_si256(int_reg), 0);
-    temp = _mm256_andnot_si256 (cond_reg64, temp);
-    accu.part1 = _mm256_xor_si256(accu.part1, temp);
-
-    int_reg = _mm_srli_si128(int_reg,1);
-    cond_reg2 = _mm_shuffle_epi32(cond_reg2, ROTATOR2);  //rotate hi <- lo (lowest<-highest)    
-    cond_reg64 = _mm256_cvtepi8_epi64(cond_reg2);
-    temp = _mm256_permute4x64_epi64(_mm256_castsi128_si256(int_reg), 0);
-    temp = _mm256_andnot_si256 (cond_reg64, temp);
-    accu.part0 = _mm256_xor_si256(accu.part0, temp);
-
-    cond_reg2 = _mm_shuffle_epi32(cond_reg2, ROTATOR2);  //rotate hi <- lo (lowest<-highest)    
-    cond_reg64 = _mm256_cvtepi8_epi64(cond_reg2);
-    temp = _mm256_permute4x64_epi64(_mm256_castsi128_si256(int_reg), 0);
-    temp = _mm256_andnot_si256 (cond_reg64, temp);
-    accu.part1 = _mm256_xor_si256(accu.part1, temp);
-        
-
-    bit_addr-=4;
-    ints_addr+=4;
-    int_1=(int_1>>32) | (int_2<<32);
-  }
+__m256i implem_array_get8i(unsigned char* array,ptrdiff_t index){  return _mm256_loadu_si256((__m256i*)(array-index-(8*4+1))) ;}
+__m256i implem_array_reverse_get8i(unsigned char* array,ptrdiff_t index){  return _mm256_loadu_si256((__m256i*)(array+index));}
 
 
-  uint64_t cond_bits = arr_geti(big_buffer,bit_addr-4)>>(bit_addr_shift);
-  __m256i cond_reg = _mm256_set_epi8(cond_bits>>(3*8),cond_bits>>(3*8),cond_bits>>(3*8),cond_bits>>(3*8),cond_bits>>(3*8),cond_bits>>(3*8),cond_bits>>(3*8),cond_bits>>(3*8),
-                cond_bits>>(2*8),cond_bits>>(2*8),cond_bits>>(2*8),cond_bits>>(2*8),cond_bits>>(2*8),cond_bits>>(2*8),cond_bits>>(2*8),cond_bits>>(2*8),
-                cond_bits>>(1*8),cond_bits>>(1*8),cond_bits>>(1*8),cond_bits>>(1*8),cond_bits>>(1*8),cond_bits>>(1*8),cond_bits>>(1*8),cond_bits>>(1*8),
-                cond_bits,cond_bits,cond_bits,cond_bits,cond_bits,cond_bits,cond_bits,cond_bits);
-  cond_reg = _mm256_and_si256(cond_reg,cond_m);
-
-  __m256i p_m_reg = _mm256_load_si256((__m256i*)p_mask);
-  cond_reg = _mm256_and_si256(p_m_reg,cond_reg);
-  
-  cond_reg = _mm256_cmpeq_epi8(cond_reg,accu.zeros);
-  __m128i cond_reg1 = _mm256_extracti128_si256 (cond_reg, 1);
-  __m128i cond_reg2 = _mm256_castsi256_si128 (cond_reg);
-
-
-  uint64_t int_2=arr_geti(big_buffer,ints_addr+8);
-  if (boundary_align!=0)
-    int_1 |= int_2<<(64-boundary_align);
-  int_2 >>= boundary_align;
-  __m128i int_reg=_mm_set_epi64x(int_2, int_1);
-  
-  cond_reg1 = _mm_shuffle_epi32(cond_reg1, ROTATOR1);
-  __m256i cond_reg64 = _mm256_cvtepi8_epi64(cond_reg1);
-  __m256i temp = _mm256_permute4x64_epi64(_mm256_castsi128_si256(int_reg), 0);
-  temp = _mm256_andnot_si256 (cond_reg64, temp);
-  accu.part0 = _mm256_xor_si256(accu.part0, temp);
-
-  cond_reg1 = _mm_shuffle_epi32(cond_reg1, ROTATOR2);
-  cond_reg64 = _mm256_cvtepi8_epi64(cond_reg1);
-  temp = _mm256_permute4x64_epi64(_mm256_castsi128_si256(int_reg), 0);
-  temp = _mm256_andnot_si256 (cond_reg64, temp);
-  accu.part1 = _mm256_xor_si256(accu.part1, temp);
-
-  int_reg = _mm_srli_si128(int_reg,1);
-  cond_reg1 = _mm_shuffle_epi32(cond_reg1, ROTATOR2);  
-  cond_reg64 = _mm256_cvtepi8_epi64(cond_reg1);
-  temp = _mm256_permute4x64_epi64(_mm256_castsi128_si256(int_reg), 0);
-  temp = _mm256_andnot_si256 (cond_reg64, temp);
-  accu.part0 = _mm256_xor_si256(accu.part0, temp);
-  
-  cond_reg1 = _mm_shuffle_epi32(cond_reg1, ROTATOR2);
-  cond_reg64 = _mm256_cvtepi8_epi64(cond_reg1);
-  temp = _mm256_permute4x64_epi64(_mm256_castsi128_si256(int_reg), 0);
-  temp = _mm256_andnot_si256 (cond_reg64, temp);
-  accu.part1 = _mm256_xor_si256(accu.part1, temp);
-
-  int_reg = _mm_srli_si128(int_reg,1);
-  cond_reg2 = _mm_shuffle_epi32(cond_reg2, ROTATOR1);  //rotate hi <- lo (lowest<-highest)
-  cond_reg64 = _mm256_cvtepi8_epi64(cond_reg2);
-  temp = _mm256_permute4x64_epi64(_mm256_castsi128_si256(int_reg), 0);
-  temp = _mm256_andnot_si256 (cond_reg64, temp);
-  accu.part0 = _mm256_xor_si256(accu.part0, temp);
-
-  cond_reg2 = _mm_shuffle_epi32(cond_reg2, ROTATOR2);  //rotate hi <- lo (lowest<-highest)
-  cond_reg64 = _mm256_cvtepi8_epi64(cond_reg2);
-  temp = _mm256_permute4x64_epi64(_mm256_castsi128_si256(int_reg), 0);
-  temp = _mm256_andnot_si256 (cond_reg64, temp);
-  accu.part1 = _mm256_xor_si256(accu.part1, temp);
-
-  int_reg = _mm_srli_si128(int_reg,1);
-  cond_reg2 = _mm_shuffle_epi32(cond_reg2, ROTATOR2);  //rotate hi <- lo (lowest<-highest)    
-  cond_reg64 = _mm256_cvtepi8_epi64(cond_reg2);
-  temp = _mm256_permute4x64_epi64(_mm256_castsi128_si256(int_reg), 0);
-  temp = _mm256_andnot_si256 (cond_reg64, temp);
-  accu.part0 = _mm256_xor_si256(accu.part0, temp);
-
-  cond_reg2 = _mm_shuffle_epi32(cond_reg2, ROTATOR2);  //rotate hi <- lo (lowest<-highest)    
-  cond_reg64 = _mm256_cvtepi8_epi64(cond_reg2);
-  temp = _mm256_permute4x64_epi64(_mm256_castsi128_si256(int_reg), 0);
-  temp = _mm256_andnot_si256 (cond_reg64, temp);
-  accu.part1 = _mm256_xor_si256(accu.part1, temp);
-  
-  
-  result0 = result0^finalize(accu); 
-  arr_set7c(little_buffer, k, result0);
+__attribute__((always_inline)) inline
+accumulator loop_once(accumulator acc,char condition, __m256i bits){
+  LOOP_INNER(0)
+  LOOP_INNER(1)
+  LOOP_INNER(2)
+  LOOP_INNER(3)
+  LOOP_INNER(4)
+  LOOP_INNER(5)
+  LOOP_INNER(6)
+  LOOP_INNER(7)
+  return acc;
 }
-
-
 
 #else 
 
@@ -630,7 +481,7 @@ unsigned char* fibo_mod2(size_t p_arg,mpz_t n){
     printf("negative integers not yet supported, abborting");
     return NULL;
   }
-  size_t min_valid_size = 10*(MIN(2*p_arg+3,p_arg+36+p_arg/2)) ;
+  size_t min_valid_size = 2*(MIN(2*p_arg+3,p_arg+36+p_arg/2)) ;
   if (p!=p_arg || little_buffer==NULL || big_buffer==NULL){
 
     array_free(big_buffer, big_buffer_size);
