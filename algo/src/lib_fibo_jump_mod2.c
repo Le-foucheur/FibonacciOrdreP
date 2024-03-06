@@ -496,7 +496,7 @@ unsigned char* fibo_mod2(size_t p_arg,mpz_t n){
     else
       jump_function= (&jump_formula);
     
-    for (size_t i=0;i<little_buffer_size;i+=7){
+    for (size_t i=0;i<little_buffer_size;i+=BATCH_SIZE){
       thpool_add_work(calcul_pool, jump_function, (void*)i);
     }
     thpool_wait(calcul_pool);
@@ -509,7 +509,7 @@ unsigned char* fibo_mod2(size_t p_arg,mpz_t n){
   else
     jump_function= (&jump_formula);
 
-  for (size_t i=0;i<little_buffer_size;i+=7){
+  for (size_t i=0;i<little_buffer_size;i+=BATCH_SIZE){
     thpool_add_work(calcul_pool, jump_function, (void*)i);
   }
   thpool_wait(calcul_pool);

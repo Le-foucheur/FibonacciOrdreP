@@ -67,7 +67,8 @@
   typedef uint64_t bytes_t;
   #define get_bytes arr_geti
   #define arr_set_result arr_set7c
-
+  //number of bytes treated as once in one jump_formula call
+  #define BATCH_SIZE 7
 #else //AVX2
   #warning "Your CPU do not support AVX512, slow code (using AVX2 only) will be used"
 
@@ -91,7 +92,8 @@
   typedef __m256i bytes_t;
   #define get_bytes arr_get8i
   #define arr_set_result arr_set31c
-  
+  //number of bytes treated as once in one jump_formula call
+  #define BATCH_SIZE 31
 
 
 
@@ -101,6 +103,8 @@
   typedef uint64_t bytes_t;
   #define get_bytes arr_geti
   #define arr_set_result arr_set7c
+  //number of bytes treated as once in one jump_formula call
+  #define BATCH_SIZE 8
   
 
 #endif
