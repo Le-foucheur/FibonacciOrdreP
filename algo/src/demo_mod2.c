@@ -4,6 +4,15 @@
 #include "lib_fibo_jump_mod2.h"
 #include <stdlib.h>
 
+extern unsigned char *fibo_output(size_t p, const char *n){
+  mpz_t n_mpz;
+  mpz_init(n_mpz);
+  mpz_set_str(n_mpz, n, 10);
+  unsigned char *output = fibo_mod2(p, n_mpz);
+  mpz_clear(n_mpz);
+  return output;
+}
+
 int main(int argc, char* argv[]){
   if (argc==1) {
     printf("usage: %s p",argv[0]);
