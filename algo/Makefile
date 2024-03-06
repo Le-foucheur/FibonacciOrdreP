@@ -8,7 +8,7 @@ CFLAGS=-lpthread $(WARNINGS) -Isrc/
 LDFLAGS=-lpthread ${WARNINGS} 
 
 RELEASE_FLAGS=-O3 -march=native -mtune=native
-DEBUG_FLAGS=-ggdb -g3 -O0 -fno-inline
+DEBUG_FLAGS=-ggdb -g3 -O0 -fno-inline -march=native
 
 SOURCES=
 SOURCES+=external/C-Thread-Pool/thpool.c
