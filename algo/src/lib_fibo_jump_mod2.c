@@ -414,7 +414,7 @@ unsigned char* fibo_mod2(size_t p_arg,mpz_t n){
     printf("negative integers not yet supported, abborting");
     return NULL;
   }
-  size_t min_valid_size = 2*(MIN(2*p_arg+3,p_arg+36+p_arg/2)) ;
+  size_t min_valid_size = (MIN(2*p_arg+4,p_arg+p_arg/2+7*BATCH_SIZE+4)) ;
   if (p!=p_arg || little_buffer==NULL || big_buffer==NULL){
 
     array_free(big_buffer, big_buffer_size);
