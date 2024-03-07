@@ -414,7 +414,7 @@ unsigned char* fibo_mod2(size_t p_arg,mpz_t n){
     printf("negative integers not yet supported, abborting");
     return NULL;
   }
-  size_t min_valid_size = (MIN(2*p_arg+4,p_arg+p_arg/2+7*BATCH_SIZE+4)) ;
+  size_t min_valid_size = (MIN(2*p_arg+4,p_arg+p_arg/2+7*BATCH_SIZE*8+4)) ;
   if (p!=p_arg || little_buffer==NULL || big_buffer==NULL){
 
     array_free(big_buffer, big_buffer_size);
@@ -428,10 +428,10 @@ unsigned char* fibo_mod2(size_t p_arg,mpz_t n){
       return NULL;
     }
 
-    big_buffer_size    = ((min_valid_size+7)>>3) +8; //to be sure I dont break anything as i am careless with boundary ...
+    big_buffer_size    = ((min_valid_size+7)>>3) +BATCH_SIZE + 8; //to be sure I dont break anything as i am careless with boundary ...
     big_buffer         = array_create(big_buffer_size);
     little_buffer_size = (p>>3) + 1;
-    little_buffer      = array_create(little_buffer_size);
+    little_buffer      = array_create(little_buffer_size + BATCH_SIZE + 8);
 
     if (big_buffer==NULL||little_buffer==NULL) {
       printf("NOT ENOUGH MEMORY: ABORTING");
