@@ -107,7 +107,7 @@
   #define get_bytes arr_geti
   #define arr_set_result arr_set7c
   //number of bytes treated as once in one jump_formula call
-  #define BATCH_SIZE 8
+  #define BATCH_SIZE 7
   
 
 #endif
