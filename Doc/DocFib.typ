@@ -73,7 +73,7 @@ $ forall n in NN,  F_n^((+oo)) = 1 $
 == Expression fonctionnelle de $(Fnp)_(n in NN)$
 
 Soit $R_1, R_2, . . . , R_(p+1)$ les racines complexes du polynômes $x^(p+1)-x^p-1$\
-Alors $ Fnp = sum_(i=1)^(p+1) R^(n+p)/(display(product_(j =1\ j!=i)^(p+1)R_i - R_j)) $
+Alors $ Fnp = sum_(i=1)^(p+1) R^(n+p)/(display(product_(j =1\ j!=i)^(p+1)(R_i - R_j))) $
 #pagebreak()
 === \
 Pour démontrer cette proposition nous utiliserons la seconde définition de la suite, qui décale les termes de la suites avec $p$ zéros #local_link("def2", "def").\
@@ -100,13 +100,13 @@ lambda_(p+1)) = mat(0;0;0;dots.v;1) $
 On reconnaît la transposée d'une matrice de Vandermonde carré d'ordre $p+1$ dont les coefficients sont deux à deux distincts. Cette matrice est donc inversible, notons $upright(A)$ cette matrice et $Lambda$ la matrice composée des coefficients que l'on cherche. On a alors :
 $ Lambda = upright(A)^(-1) mat(0;0;0;dots.v;1) $
 Ainsi ce produit indique que l'on ne s'intéresse qu'à la dernière colonne de $upright(A)^(-1)$.\
-De plus, on sait que le $i$-ème coefficient de la dernière ligne de l'inverse d'une matrice de Vandermonde @InverVander (colonne ici, car on a la transposée) est égale à : $ 1/display(product_(j=1\ j!=i)^(p+1)R_i-R_j) $  \
+De plus, on sait que le $i$-ème coefficient de la dernière ligne de l'inverse d'une matrice de Vandermonde @InverVander (colonne ici, car on a la transposée) est égale à : $ 1/display(product_(j=1\ j!=i)^(p+1)(R_i-R_j)) $  \
 #pagebreak()
-Donc $ forall i in [|1;p+1|], lambda_i = 1/display(product_(j=1\ j!=i)^(p+1)R_i-R_j) $\
+Donc $ forall i in [|1;p+1|], lambda_i = 1/display(product_(j=1\ j!=i)^(p+1)(R_i-R_j)) $\
 Ainsi en remplacant les $lambda_i$ dans $display(sum_(i=1)^(p+1)) lambda_i R_i^n$, on trouve bien:
-$ F_(n-p)^((p)) = display(sum_(i=1)^(p+1))  R_i^n/display(product_(j=1\ j!=i)^(p+1)R_i-R_j) $
+$ F_(n-p)^((p)) = display(sum_(i=1)^(p+1))  R_i^n/display(product_(j=1\ j!=i)^(p+1)(R_i-R_j)) $
 Ainsi en revenant à la définition :
-$ Fnp = display(sum_(i=1)^(p+1))  R_i^(n+p)/display(product_(j=1\ j!=i)^(p+1)R_i-R_j) $ #QED
+$ Fnp = display(sum_(i=1)^(p+1))  R_i^(n+p)/display(product_(j=1\ j!=i)^(p+1)(R_i-R_j)) $ #QED
 
 == Expression fonctionnelle via le triangle de Pascal
 
@@ -295,7 +295,7 @@ Au delà 1, il devient difficile de calculer algébriquement le quotient, nous p
   })
   On remarque clairement que le quotient tend vers 1. \
   On peut définir l'approximation suivante à partir de cette courbe :
-  $ upright(A)_p = 1 + 1/((1+p)^(log_2(phi))) "avec" phi = (1+sqrt(5))/2 $
+  $ upright(A)_p = 1 + 1/((1+p)^(k)) "avec" k approx 0,710083 $
   Dont voici la courbe représentative : \
   #canvas({
     plot.plot(
@@ -310,7 +310,7 @@ Au delà 1, il devient difficile de calculer algébriquement le quotient, nous p
        legend: "legend.inner-north-east",
        legend-style: (stroke: 0pt, spacing: 1),
        {
-        plot.add(domain: (0,30), x => 1+1/(calc.pow(x+1,calc.log(((1+calc.sqrt(5))/2), base:2))), label: $ upright(A)_p $)
+        plot.add(domain: (0,30), x => 1+1/(calc.pow(x+1,0.710083)), label: $ upright(A)_p $)
         plot.add(
           ((0,2),
             (1,1.618033989),
