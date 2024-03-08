@@ -1,13 +1,13 @@
 WARNINGS := -Wall -Wextra -pedantic -Wshadow -Wpointer-arith -Wcast-align \
             -Wwrite-strings -Wmissing-prototypes -Wmissing-declarations \
             -Wredundant-decls -Wnested-externs -Winline -Wno-long-long \
-            -Wstrict-prototypes
+            -Wstrict-prototypes -Werror=odr -Werror=lto-type-mismatch -Werror=strict-aliasing
 			#-Wconversion
 
 CFLAGS+=-lpthread $(WARNINGS) -Isrc/
 LDFLAGS+=-lpthread ${WARNINGS}
 
-RELEASE_FLAGS=-O3 -march=native -mtune=native
+RELEASE_FLAGS=-O3 -march=native -mtune=native -flto
 DEBUG_FLAGS=-ggdb -g3 -O0 -fno-inline -march=native
 
 SOURCES=
@@ -64,18 +64,18 @@ mod2_debug: mod2_prog
 
 help:
 	@echo "TLDR; Makefile help"
-	@echo "    make main         Compiles and links the calculation program (stripped)"
-	@echo "    make main_debug   Compiles and links the calculation program with debugging flags"
-	@echo "    make main_archive Compiles and produce library for static linkage"
-	@echo "    make mod2         Compiles and links the calculation program (stripped)"
-	@echo "    make mod2_debug   Compiles and links the calculation program with debugging flags"
-	@echo "    make mod2_archive Compiles and produce library for static linkage"
-	@echo "    make clean        Cleans compilation temporary files (slow down subsequent ones)"
-	@echo "    make mpropper     Cleans compilation files and executable and gmp compiled files"
-	@echo "    make help         Displays this help"
+	@echo "    make main          Compiles and links the calculation program (stripped)"
+	@echo "    make main_debug    Compiles and links the calculation program with debugging flags"
+	@echo "    make main_archive  Compiles and produce library for static linkage"
+	@echo "    make mod2          Compiles and links the calculation program (stripped)"
+	@echo "    make mod2_debug    Compiles and links the calculation program with debugging flags"
+	@echo "    make mod2_archive  Compiles and produce library for static linkage"
+	@echo "    make clean         Cleans compilation temporary files (slow down subsequent ones)"
+	@echo "    make mpropper      Cleans compilation files and executable and gmp compiled files"
+	@echo "    make help          Displays this help"
 	@echo "Special compilation flags: pass them using CFLAGS=\"Flags\" make [target]"
-	@echo "   -D FIBO_NO_AVX     disable AVX2 and AVX512 implementations"
-	@echo "   -D FIBO_NO_AVX512  disable AVX512 implementation"
+	@echo "   -D FIBO_NO_AVX      disable AVX2 and AVX512 implementations"
+	@echo "   -D FIBO_NO_AVX512   disable AVX512 implementation"
 
 fibo_calc: $(OBJECTS) src/external/gmp-6.3.0/.libs/libgmp.a
 	$(CC) $^ $(LDFLAGS) -I src/external/gmp-6.3.0/.libs -o fibo_calc
@@ -116,3 +116,7 @@ src/external/gmp-6.3.0/.libs/libgmp.a:
 	export CFLAGS="-O3 -march=native -mtune=native" && \
 	./configure --enable-static=yes --enable-shared=no --disable-cxx && \
 	make
+
+src/external/C-Thread-Pool/thpool.c:
+	cd src/external && \
+	git clone https://github.com/Pithikos/C-Thread-Pool/
