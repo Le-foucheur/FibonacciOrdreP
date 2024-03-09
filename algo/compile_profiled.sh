@@ -1,26 +1,14 @@
-STEPS=3
+#STEPS=1
 
 PROFILE_DIR=$(pwd)/pgo/
 rm -rf PROFILE_DIR
 mkdir -p PROFILE_DIR
-CFLAGS_PROFILE_GEN="-fprofile-generate=${PROFILE_DIR} -Wno-error=coverage-mismatch -fprofile-arcs -fvpt"
-CFLAGS_PROFILE_USE="-fprofile-use=${PROFILE_DIR} -Wno-error=coverage-mismatch -fprofile-correction"
+CFLAGS_PROFILE_GEN="-fprofile-generate=$PROFILE_DIR -Wno-error=coverage-mismatch -fprofile-arcs -fvpt"
+CFLAGS_PROFILE_USE="-fprofile-use -fprofile-dir=$PROFILE_DIR -Wno-error=coverage-mismatch -fprofile-correction"
 LDFLAGS_PROFILE_GEN="-fprofile-arcs"
 
 OLD_CFLAGS="$CFLAGS"
 OLD_LDFLAGS="$LDFLAGS"
-
-
-if [[ "$1" == "mod2" ]]; then
-PROGRAM=fibo_calc_mod2
-else
-  if [[ "$1" == "main" ]]; then
-  PROGRAM=fibo_calc
-  else
-    echo "unrecognized arg, exiting"
-    exit 1
-  fi
-fi
 
 
 make clean

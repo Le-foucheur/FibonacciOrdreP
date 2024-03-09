@@ -35,16 +35,18 @@
 
 #if BYTE_ORDER == LITTLE_ENDIAN
 #define NORMAL _reverse
+#define INDEX_MULT (-1)
 
 #elif BYTE_ORDER == BIG_ENDIAN
-#define NORMAL 
+#define NORMAL
+#define INDEX_MULT 1
 
 #else
   #error "Ce programme ne supporte que le big et le little endian"
 #endif
 
 //autocompletion purpose: comment when building/releasing
-//#define __AVX2__
+#define __AVX2__
 //#define __AVX512F__
 
 #if  (!defined(__AVX512F__)) || defined(FIBO_NO_AVX512) 
@@ -65,11 +67,14 @@
   
 
   typedef uint64_t bytes_t;
+  typedef char cond_t;
   #define byte_zero 0
   #define get_bytes arr_geti
   #define arr_set_result arr_set7c
   //number of bytes treated as once in one jump_formula call
   #define BATCH_SIZE 7
+
+
 #else //AVX2
   #warning "Your CPU do not support AVX512, slow code (using AVX2 only) will be used"
 
@@ -82,6 +87,8 @@
       __m256i part5;
       __m256i part6;
       __m256i part7;
+      __m256i cond;
+  
   } accumulator;
 
 
@@ -91,6 +98,7 @@
   __attribute__((always_inline)) inline void arr_set31c(unsigned char* array,ptrdiff_t base_index,__m256i value);
   #define arr_get8i concat(implem_array, NORMAL, _get8i)
   typedef __m256i bytes_t;
+  typedef struct {} cond_t;
   #define byte_zero _mm256_setzero_si256()
   #define get_bytes arr_get8i
   #define arr_set_result arr_set31c
@@ -103,6 +111,7 @@
 #else //AVX512
   typedef __m512i accumulator ;
   typedef uint64_t bytes_t;
+  typedef char cond_t;
   #define byte_zero 0
   #define get_bytes arr_geti
   #define arr_set_result arr_set7c

@@ -14,12 +14,17 @@
 #endif
 
 //Protos:
+//do the actual heavy work
 void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bit_addr_shift,bytes_t result);
+//calculate the next range adding one (2n+1)
 void jump_formula_plus1(void* k);
+//calculate the next range (2n)
 void jump_formula(void* k);
+//calculate iteratively the previous terms needed for the formula
 void refill_big_from_little(size_t last_valid);
+//initialize big with initial value in range 0-n
 void initialize_big(size_t last_valid,size_t init_max);
-void add_one(void);
+//mpz_t to size_t
 size_t mpz_get_siz(mpz_t z);
 
 unsigned char* big_buffer;
@@ -28,6 +33,7 @@ unsigned char* little_buffer;
 size_t little_buffer_size;
 size_t p;
 
+// get number of available calculation cores
 int getNumCores(void) {
 #ifdef WIN32
     SYSTEM_INFO sysinfo;
@@ -68,7 +74,8 @@ int fibo2_init_thread_pool(size_t size){
   return 0;
 }
 
-//index are always from the end ...
+//packed binary array helper function 
+//index are always from the end ... aka index i if fibo(n-i,p)
 //wich are used beetween normal or _reverse_ function depend on endianness of system (only big and litle endian support)
 
 unsigned char* implem_array_get_false_addr(unsigned char* real_addr,size_t size){   return real_addr+size-1+8;}
@@ -78,7 +85,7 @@ unsigned char* implem_array_reverse_get_real_addr(unsigned char* array, size_t s
 
 __attribute__((always_inline)) inline accumulator zero_acc(void);
 __attribute__((always_inline)) inline bytes_t finalize(accumulator acc, bytes_t result0);
-__attribute__((always_inline)) inline accumulator loop_once(accumulator acc,char condition, bytes_t bits);
+__attribute__((always_inline)) inline accumulator loop_once(accumulator acc,cond_t condition, bytes_t bits);
 
 
 unsigned char* array_create(size_t size){  
@@ -89,7 +96,6 @@ unsigned char* array_create(size_t size){
   return arr_get_false_addr(array,size);}
 void array_free(unsigned char* array,size_t size){ if (array==NULL) return;  free(arr_get_real_addr(array,size));}
 unsigned char* array_realoc(unsigned char* array,size_t old_size,size_t new_size){ return arr_get_false_addr(realloc(arr_get_real_addr(array,old_size), new_size),new_size);}
-
 
 
 unsigned char implem_array_getc(unsigned char* array,ptrdiff_t index){  return array[-index];}
@@ -122,8 +128,10 @@ bool int_getb(uint64_t it,unsigned char index){ return (bool)((it>>index)&1);}
 
 bool arr_getb2(unsigned char* array,size_t arr_index,unsigned char c_index){  return char_getb(arr_getc(array,arr_index), c_index);}
 bool arr_getb(unsigned char* array,size_t index){return arr_getb2(array, index>>3, (unsigned char)(index&0b111));}
+
+
 #if  defined(__AVX512F__) && (!defined (FIBO_NO_AVX512))
-//fastest AVX-512 implem
+//******************************* fastest AVX-512 implem *******************************************
 
 #define zero_acc() _mm512_setzero_epi32()
 
@@ -150,17 +158,54 @@ bytes_t finalize(accumulator acc, bytes_t result0){
   return result0;
 }
 
+void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bit_addr_shift,bytes_t result0){
+  ptrdiff_t i_base=0;
+  accumulator accu = zero_acc();  
+  //the same loop is executed p/8 + 1 times, however condition have memory access economies by getting them by int batchs, so we
+  //exute the loop by batches of 7
+  
+  for (;i_base<=((ptrdiff_t)(p/8))-7;i_base+=7){
+    uint64_t cond_bits = arr_geti(big_buffer,bit_addr-7)>>(bit_addr_shift); //get a pack of 56 condition
+  
+    for (signed char i=6;i>=0;i--){
+      unsigned char cond_bits_c =  (char)(cond_bits>>(8*i));
+      bytes_t bits=get_bytes(big_buffer,ints_addr);   //get corresponding bytes treated by the condition
+      accu = loop_once(accu, cond_bits_c, bits);      //treat 8 condition packed in a char
+      ints_addr++;
+    }
+    bit_addr-=7;
+  }
+
+  uint64_t cond_bits = arr_geti(big_buffer,bit_addr-7)>>(bit_addr_shift); //get the last pack of condition, used for the remainings of the formula
+  
+  for (unsigned char i=0;i<(p/8)-i_base;i++){                             //treat the part of the last 56 conditions wich are still packed by 8
+    unsigned char cond_bits_c =  (char)(cond_bits>>(8*(6-i)));
+    bytes_t bits=get_bytes(big_buffer,ints_addr);
+    accu = loop_once(accu, cond_bits_c, bits);
+    ints_addr++;
+  }
+  
+  unsigned char cond_bits_c =  (char)(cond_bits>>(8*(6-((p/8)-i_base)))); //mask the remainning last few condition
+  cond_bits_c &= (int)(0xFF)<<(8 - (p&0b111));
+  bytes_t bits=get_bytes(big_buffer,ints_addr);
+  accu = loop_once(accu, cond_bits_c, bits);
+  
+  result0 = finalize(accu,result0);         //compact the values in the accumulator and initial value
+  arr_set_result(little_buffer, k, result0);//write to memory
+}
+
+
 #else
 #if defined(__AVX2__) && (!defined (FIBO_NO_AVX))
-//fast? AVX implem
+//************************** fast? AVX implem ********************
+
+#define mm256_blendv_epi64(A,B,M) \
+  _mm256_castpd_si256(_mm256_blendv_pd(_mm256_castsi256_pd(A),_mm256_castsi256_pd(B),_mm256_castsi256_pd(M)))
 
 __attribute__((always_inline)) inline
 accumulator zero_acc(){
-  return (accumulator){_mm256_setzero_si256(),_mm256_setzero_si256(),
-  _mm256_setzero_si256(),_mm256_setzero_si256(),
-  _mm256_setzero_si256(),_mm256_setzero_si256(),
-  _mm256_setzero_si256(),_mm256_setzero_si256()
-};}
+  return (accumulator){_mm256_setzero_si256(),_mm256_setzero_si256(),_mm256_setzero_si256(),_mm256_setzero_si256(),
+                      _mm256_setzero_si256(),_mm256_setzero_si256(),_mm256_setzero_si256(),_mm256_setzero_si256(),_mm256_setzero_si256()};}
 
 __attribute__((always_inline)) inline
 void arr_set31c(unsigned char* array,ptrdiff_t base_index,__m256i value){
@@ -172,14 +217,15 @@ void arr_set31c(unsigned char* array,ptrdiff_t base_index,__m256i value){
 
 
 #define finalize1(j) temp = _mm256_slli_epi64(acc.part##j,64-j); \
+  temp = _mm256_permute4x64_epi64(temp,0b00111001); \
   acc.part0 = _mm256_xor_si256(acc.part0,temp); \
   acc.part##j = _mm256_srli_epi64(acc.part##j,j); \
-  acc.part##j = _mm256_permute4x64_epi64(acc.part##j,0b00111001); \
   acc.part0 = _mm256_xor_si256(acc.part0,acc.part##j);
 
 
 __attribute__((always_inline)) inline
 bytes_t finalize(accumulator acc,bytes_t result0){
+  acc.part7 = _mm256_xor_si256(acc.part7,result0);
   __m256i temp;
   
   finalize1(1)
@@ -188,41 +234,93 @@ bytes_t finalize(accumulator acc,bytes_t result0){
   finalize1(4)
   finalize1(5)
   finalize1(6)
-  acc.part7 = _mm256_xor_si256(acc.part7, result0);
   finalize1(7)
+  
   
   return acc.part0;
 }
 
-#define LOOP_INNER(j) if ((condition&1<<(7-j))) {acc.part##j=_mm256_xor_si256(acc.part##j, bits);}
 
-
-__m256i implem_array_get8i(unsigned char* array,ptrdiff_t index){  return _mm256_loadu_si256((__m256i*)(array-index-(8*4+1))) ;}
+__m256i implem_array_get8i(unsigned char* array,ptrdiff_t index){  return _mm256_loadu_si256((__m256i*)(array-index-(8*4-1))) ;}
 __m256i implem_array_reverse_get8i(unsigned char* array,ptrdiff_t index){  return _mm256_loadu_si256((__m256i*)(array+index));}
+__m256i implem_array_broadload(unsigned char* array,ptrdiff_t index){ return (__m256i)(_mm256_broadcast_sd((double*)(array-index-7)));}
+__m256i implem_array_reverse_broadload(unsigned char* array,ptrdiff_t index){ return (__m256i)(_mm256_broadcast_sd((double*)(array+index)));}
+
+
+
+#define LOOP_INNER(j) temp = _mm256_xor_si256(bits,acc.part##j); \
+    acc.part##j = mm256_blendv_epi64 (acc.part##j, temp, acc.cond); \
+    acc.cond = _mm256_slli_epi64 (acc.cond, 1);
 
 
 __attribute__((always_inline)) inline
-accumulator loop_once(accumulator acc,char condition, bytes_t bits){
-  LOOP_INNER(0)
-  LOOP_INNER(1)
-  LOOP_INNER(2)
-  LOOP_INNER(3)
-  LOOP_INNER(4)
-  LOOP_INNER(5)
-  LOOP_INNER(6)
-  LOOP_INNER(7)
+accumulator loop_once(accumulator acc, cond_t condition, bytes_t bits){
+  
+  __m256i temp;
+    LOOP_INNER(0)
+    LOOP_INNER(1)
+    LOOP_INNER(2)
+    LOOP_INNER(3)
+    LOOP_INNER(4)
+    LOOP_INNER(5)
+    LOOP_INNER(6)
+    LOOP_INNER(7)
   return acc;
 }
-#else 
-//slowest 64bits only implem
 
+void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bit_addr_shift,bytes_t result0){
+  ptrdiff_t i_base=0;
+  accumulator accu = zero_acc();  
+  //the same loop is executed p/8 + 1 times, however condition have memory access economies by getting them by int batchs, so we
+  //exute the loop by batches of 7
+  
+  for (;i_base<=(ptrdiff_t)(p)-56;i_base+=56){
+    //uint64_t cond_bits = arr_geti(big_buffer,bit_addr-7)<<(8-bit_addr_shift); //get a pack of 56 condition
+    //accu.cond = _mm256_set1_epi64x (cond_bits);
+    accu.cond = implem_array_reverse_broadload(big_buffer, bit_addr-7);
+    accu.cond = _mm256_slli_epi64(accu.cond, (8-bit_addr_shift));
+    for (char i=0;i<7;i++){
+      bytes_t bits=get_bytes(big_buffer,ints_addr);   //get corresponding bytes treated by the condition
+      accu = loop_once(accu, (cond_t){}, bits);      //treat 8 condition packed in a char
+      ints_addr++;
+    }
+    bit_addr-=7;
+  }
+
+  //uint64_t cond_bits = arr_geti(big_buffer,bit_addr-7)>>(bit_addr_shift); //get the last pack of condition, used for the remainings of the formula
+  //accu.cond = _mm256_set1_epi64x (cond_bits);
+  accu.cond = implem_array_reverse_broadload(big_buffer, bit_addr-7);
+  //(8-bit_addr_shift) left would keep 56 valid bits. we want to keep p-i_base valid bits
+  //so we shift right of 64-(p-i_base)-(8-bit_addr_shift)
+  //the -(8-bit_addr_shift) would have left aligned the valid bytes, so we go left by 64
+  //less how much we want to keep
+  accu.cond = _mm256_srli_epi64(accu.cond, 64-(p-i_base)-(8-bit_addr_shift));
+  //then we go back by th same amount, and shift left of (8-bit_addr_shift) to left-align
+  //wich sum up to 64-(p-i_base)
+  accu.cond = _mm256_slli_epi64(accu.cond,64-(p-i_base));
+
+  
+  for (;i_base<p;i_base+=8){                          //treat the part of the last 56 conditions wich are still packed by 8
+      bytes_t bits=get_bytes(big_buffer,ints_addr);   //get corresponding bytes treated by the condition
+      accu = loop_once(accu, (cond_t){}, bits);      //treat 8 condition packed in a char
+      ints_addr++;
+  }
+  
+  result0 = finalize(accu,result0);         //compact the values in the accumulator and initial value
+  arr_set_result(little_buffer, k, result0);//write to memory
+}
+
+
+
+#else 
+//*********** slowest 64bits only implem ***********************
 
 __attribute__((always_inline)) inline
 accumulator zero_acc(){  return (accumulator){0, 0, 0, 0, 0, 0, 0, 0};}
 
 #define LOOP_INNER(j) if ((condition&1<<(7-j))) {acc.part##j^=bits;}
 __attribute__((always_inline)) inline
-accumulator loop_once(accumulator acc,char condition, bytes_t bits){
+accumulator loop_once(accumulator acc,cond_t condition, bytes_t bits){
   LOOP_INNER(0)
   LOOP_INNER(1)
   LOOP_INNER(2)
@@ -240,42 +338,45 @@ bytes_t finalize(accumulator acc,bytes_t result0){
     ^(acc.part6>>6)^((result0^acc.part7)>>7); 
 }
 
-#endif
-#endif
 void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bit_addr_shift,bytes_t result0){
   ptrdiff_t i_base=0;
   accumulator accu = zero_acc();  
+  //the same loop is executed p/8 + 1 times, however condition have memory access economies by getting them by int batchs, so we
+  //exute the loop by batches of 7
   
   for (;i_base<=((ptrdiff_t)(p/8))-7;i_base+=7){
-    uint64_t cond_bits = arr_geti(big_buffer,bit_addr-7)>>(bit_addr_shift);
+    uint64_t cond_bits = arr_geti(big_buffer,bit_addr-7)>>(bit_addr_shift); //get a pack of 56 condition
   
     for (signed char i=6;i>=0;i--){
       unsigned char cond_bits_c =  (char)(cond_bits>>(8*i));
-      bytes_t bits=get_bytes(big_buffer,ints_addr);
-      accu = loop_once(accu, cond_bits_c, bits);      
+      bytes_t bits=get_bytes(big_buffer,ints_addr);   //get corresponding bytes treated by the condition
+      accu = loop_once(accu, cond_bits_c, bits);      //treat 8 condition packed in a char
       ints_addr++;
     }
     bit_addr-=7;
   }
 
-  uint64_t cond_bits = arr_geti(big_buffer,bit_addr-7)>>(bit_addr_shift);
+  uint64_t cond_bits = arr_geti(big_buffer,bit_addr-7)>>(bit_addr_shift); //get the last pack of condition, used for the remainings of the formula
   
-  for (unsigned char i=0;i<(p/8)-i_base;i++){
+  for (unsigned char i=0;i<(p/8)-i_base;i++){                             //treat the part of the last 56 conditions wich are still packed by 8
     unsigned char cond_bits_c =  (char)(cond_bits>>(8*(6-i)));
     bytes_t bits=get_bytes(big_buffer,ints_addr);
     accu = loop_once(accu, cond_bits_c, bits);
     ints_addr++;
   }
   
-  unsigned char cond_bits_c =  (char)(cond_bits>>(8*(6-((p/8)-i_base))));
+  unsigned char cond_bits_c =  (char)(cond_bits>>(8*(6-((p/8)-i_base)))); //mask the remainning last few condition
   cond_bits_c &= (int)(0xFF)<<(8 - (p&0b111));
   bytes_t bits=get_bytes(big_buffer,ints_addr);
   accu = loop_once(accu, cond_bits_c, bits);
   
-  result0 = finalize(accu,result0); 
-  arr_set_result(little_buffer, k, result0);
+  result0 = finalize(accu,result0);         //compact the values in the accumulator and initial value
+  arr_set_result(little_buffer, k, result0);//write to memory
 }
 
+#endif
+#endif
+/*************** END SPECIFIC IMPLEMENTATIONS *******************/
 
 void jump_formula_plus1(void* k_arg){
   size_t k=(size_t)k_arg;
@@ -372,17 +473,6 @@ void refill_big_from_little(size_t last_valid){
   for (size_t i=0;i<last_valid-(p+1);i++){
     //TODO can be optimized, especially for big p
     arr_setb(big_buffer,i+p+1, arr_getb(big_buffer,i) ^ arr_getb(big_buffer, i+1) );
-  }
-}
-
-//shift the p+1 last values of litle_buffer
-void add_one(){
-  bool last_bit=arr_getb(little_buffer,p+1) ^ arr_getb2(little_buffer, 0,0);
-  for (size_t i=0;i<little_buffer_size;i+=7){
-    uint64_t temp=arr_geti(little_buffer, i);
-    temp=(temp<<1) + last_bit;
-    last_bit = temp >> (8*7);
-    arr_set7c(little_buffer, i, temp);
   }
 }
 
