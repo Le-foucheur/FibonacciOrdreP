@@ -26,9 +26,6 @@
 #define MASK_LOW 0xFFFFFFFFFFFFFFULL
 #define MASK_UP 0xFFFFFFFFFFFFFF00ULL
 
-//autocompletion purpose, remove in production
-//#define __AVX2__
-
 #ifdef FIBO_NO_AVX
   #define FIBO_NO_AVX512
 #endif
@@ -46,7 +43,7 @@
 #endif
 
 //autocompletion purpose: comment when building/releasing
-#define __AVX2__
+//#define __AVX2__
 //#define __AVX512F__
 
 #if  (!defined(__AVX512F__)) || defined(FIBO_NO_AVX512) 
