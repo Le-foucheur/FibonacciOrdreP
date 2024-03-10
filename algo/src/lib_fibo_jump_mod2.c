@@ -248,23 +248,50 @@ __m256i implem_array_reverse_broadload(unsigned char* array,ptrdiff_t index){ re
 
 
 
-#define LOOP_INNER(j) temp = _mm256_xor_si256(bits,acc.part##j); \
+/* #define LOOP_INNER(j) temp = _mm256_xor_si256(bits,acc.part##j); \
     acc.part##j = mm256_blendv_epi64 (acc.part##j, temp, acc.cond); \
-    acc.cond = _mm256_slli_epi64 (acc.cond, 1);
+    acc.cond = _mm256_slli_epi64 (acc.cond, 1); */
 
 
 __attribute__((always_inline)) inline
 accumulator loop_once(accumulator acc, cond_t condition, bytes_t bits){
+    __m256i temp;
+    __m256i temp2;
+    __m256i tempcond;
+
+    //to try and hide the latency, we mix the intructions from two set of three in order to do shift/xor (other unrelated) blendv
   
-  __m256i temp;
-    LOOP_INNER(0)
-    LOOP_INNER(1)
-    LOOP_INNER(2)
-    LOOP_INNER(3)
-    LOOP_INNER(4)
-    LOOP_INNER(5)
-    LOOP_INNER(6)
-    LOOP_INNER(7)
+    temp = _mm256_xor_si256(bits,acc.part0);                    // 0.1
+    tempcond = _mm256_slli_epi64 (acc.cond, 1);                 //1.0
+    temp2 = _mm256_xor_si256(bits,acc.part1);                   //1.1
+    acc.part0 = mm256_blendv_epi64 (acc.part0, temp, acc.cond); // 0.2
+    acc.part1 = mm256_blendv_epi64 (acc.part1, temp2, tempcond);//1.2
+  
+    acc.cond = _mm256_slli_epi64 (acc.cond, 2);                 //2.0
+    temp = _mm256_xor_si256(bits,acc.part2);                    //2.1
+    tempcond = _mm256_slli_epi64 (tempcond, 2);                 // 3.0
+    temp2 = _mm256_xor_si256(bits,acc.part3);                   // 3.1
+    acc.part2 = mm256_blendv_epi64 (acc.part2, temp, acc.cond); //2.2
+    acc.part3 = mm256_blendv_epi64 (acc.part3, temp2, acc.cond);// 3.2
+  
+    acc.cond = _mm256_slli_epi64 (acc.cond, 2);                 //4.0
+    temp = _mm256_xor_si256(bits,acc.part4);                    //4.1
+    tempcond = _mm256_slli_epi64 (tempcond, 2);                 //5.0
+    temp2 = _mm256_xor_si256(bits,acc.part5);                   //5.1
+    acc.part4 = mm256_blendv_epi64 (acc.part4, temp, acc.cond); //4.2
+    acc.part5 = mm256_blendv_epi64 (acc.part5, temp2, acc.cond);//5.2
+  
+    acc.cond = _mm256_slli_epi64 (acc.cond, 2);                 //6.0
+    temp = _mm256_xor_si256(bits,acc.part6);                    //6.1
+    tempcond = _mm256_slli_epi64 (tempcond, 2);                 //7.0
+    temp2 = _mm256_xor_si256(bits,acc.part7);                   //7.1
+    acc.part6 = mm256_blendv_epi64 (acc.part6, temp, acc.cond); //6.2
+    acc.part7 = mm256_blendv_epi64 (acc.part7, temp2, acc.cond);//7.2
+  
+    acc.cond = _mm256_slli_epi64 (acc.cond, 2);                 //7.3
+  
+  
+    //LOOP_INNER(0)    //LOOP_INNER(1)    //LOOP_INNER(2)    //LOOP_INNER(3)    //LOOP_INNER(4)    //LOOP_INNER(5)    //LOOP_INNER(6)    //LOOP_INNER(7)
   return acc;
 }
 
