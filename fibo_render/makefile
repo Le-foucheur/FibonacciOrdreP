@@ -14,4 +14,4 @@ build:
 clean:
 	cd ../algo && make clean
 	rm -f *.a
-	rm -f gnom.out
+	rm -f gnom.out perf.data perf.data.old

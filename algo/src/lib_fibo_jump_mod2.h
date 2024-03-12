@@ -70,9 +70,9 @@
   typedef char cond_t;
   #define byte_zero 0
   #define get_bytes arr_geti
-  #define arr_set_result arr_set63c
+  #define arr_set_result arr_set7c
   //number of bytes treated as once in one jump_formula call
-  #define BATCH_SIZE 63
+  #define BATCH_SIZE 7
 
 
 #else //AVX2
@@ -135,9 +135,9 @@
   
   #define byte_zero _mm512_setzero_epi32()
   #define get_bytes arr_get8i
-  #define arr_set_result arr_set7c
+  #define arr_set_result arr_set63c
   //number of bytes treated as once in one jump_formula call
-  #define BATCH_SIZE 7
+  #define BATCH_SIZE 63
   
 #else
 //AVX 512 old version
@@ -214,8 +214,4 @@ int fibo2_init_thread_pool(size_t size);
 *    result: pointeur vers p+1 mpz_t valant Fp(n) a Fp(n+p)
 */
 unsigned char* fibo_mod2(size_t p,mpz_t n);
-//same, but passing as string for easier external usage without using gmp internally in other projects
-//still need gmp linking
-unsigned char* rust_fibo_mod2(size_t p_arg, const char* n);
-
 #endif // LIB_FIBO_JUMP2_H

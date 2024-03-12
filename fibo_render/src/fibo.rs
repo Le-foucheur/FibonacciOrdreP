@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 pub struct FiboManager {
     pub p: u64,
     pub sequences: Vec<FiboSequence>,
