@@ -1,14 +1,13 @@
 use std::borrow::BorrowMut;
 
-use gmp_mpfr_sys::gmp::{mpz_init_set_ui, mpz_set_ui};
 use sfml::{
     graphics::{
-        Color, Image, IntRect, RcSprite, RcTexture, RenderTarget, RenderWindow, VertexBufferUsage,
+        Color, Image, IntRect, RcSprite, RcTexture, Rect, RectangleShape, RenderStates, RenderTarget, RenderTexture, RenderWindow, Shape, Transform, Transformable, VertexBufferUsage
     },
     window::Event,
 };
 
-use crate::gmp_utils::{mpz_int_add_u64, mpz_int_from_u64, mpz_int_set_u64};
+use crate::gmp_utils::{mpz_int_from_u64, mpz_int_set_u64};
 
 // use crate::fibo;
 use crate::fibo_fast;
@@ -41,8 +40,8 @@ impl WindowManager {
             current_texture: RcTexture::new().unwrap(),
             show_lines: true,
             line_count: 10,
-            pixel_size: 1.0 / 64.0 * 64.0,
-            start_index: 1_000_000,
+            pixel_size: 1.0 / 64.0,
+            start_index: 1_000_000_000,
             start_p: 0,
             mode: 1,
             fibo: fibo_fast::FiboFastManager::new(),
@@ -180,10 +179,22 @@ impl WindowManager {
     //     );
     // }
 
+    fn fill_buffer(&mut self, buffer: &mut RenderTexture, x: u32, y: u32, size: u32) {
+        let mut rect = RectangleShape::new();
+        rect.set_size((size as f32, size as f32));
+        rect.set_position(((x * size) as f32, (y * size) as f32));
+        rect.set_fill_color(Color::WHITE);
+        buffer.draw(
+            &rect,
+        );
+    }
+
     fn generate_sequences_internal(&mut self, image_width: u32, image_height: u32) {
         let mut mpz_start = mpz_int_from_u64(self.start_index);
 
         let mut buffer = Image::new(image_width, image_height);
+        let mut buffer2 = RenderTexture::new(image_width, image_height).unwrap();
+        buffer2.clear(Color::BLACK);
 
         let upixel_size = self.pixel_size.ceil() as u32;
 
@@ -206,7 +217,7 @@ impl WindowManager {
             // );
             if (image_height / SHOW_IMAGE_TIMES) != 0 && y % (image_height / SHOW_IMAGE_TIMES) == 0
             {
-                self.generate_texture(&buffer);
+                self.generate_texture(&buffer2, image_width, image_height);
                 self.window.draw(&self.current_sprite);
                 self.window.display();
             }
@@ -218,44 +229,26 @@ impl WindowManager {
             );
             for x in 0..(image_width / upixel_size) {
                 if sequence[((x as f32) * (1.0 / self.pixel_size).ceil()) as usize] {
-                    for i in 0..upixel_size {
-                        for j in 0..upixel_size {
-                            unsafe {
-                                buffer.set_pixel(
-                                    (x * upixel_size + i) as u32,
-                                    (y * upixel_size + j) as u32,
-                                    Color::WHITE,
-                                );
-                            }
-                        }
-                    }
+                    self.fill_buffer(&mut buffer2, x, image_height / upixel_size - y, upixel_size);
                 }
             }
 
             // Increment mpz_start
-            // mpz_int_add_u64(&mut mpz_start, (1.0 / self.pixel_size).ceil() as u64);
             mpz_int_set_u64(mpz_start.borrow_mut(), self.start_index + ((y as f32) * (1.0 / self.pixel_size).ceil()) as u64 + self.start_p + 1);
         }
 
-        self.generate_texture(&buffer);
+        self.generate_texture(&buffer2, image_width, image_height);
     }
 
     fn generate_sequences(&mut self) {
         self.generate_sequences_internal(self.window.size().x, self.window.size().y);
     }
 
-    fn generate_texture(&mut self, buffer: &Image) {
-        self.current_texture
-            .load_from_image(
-                &buffer,
-                IntRect {
-                    top: 0,
-                    left: 0,
-                    width: self.window.size().x as i32,
-                    height: self.window.size().y as i32,
-                },
-            )
-            .unwrap();
+    fn generate_texture(&mut self, buffer: &RenderTexture, image_width: u32, image_height: u32) {
+        if !self.current_texture.create(image_width, image_height) {
+            println!("Error");
+        }
+        unsafe { self.current_texture.update_from_texture(buffer.texture(), 0, 0) };
         self.current_sprite = RcSprite::with_texture(&self.current_texture);
     }
 
@@ -291,12 +284,12 @@ impl WindowManager {
                             self.generate_sequences();
                         }
                         sfml::window::Key::Right => {
-                            self.start_index += 1;
+                            self.start_index += 100;
                             self.generate_sequences();
                         }
                         sfml::window::Key::Left => {
                             self.start_index = if self.start_index > 100 {
-                                self.start_index - 1
+                                self.start_index - 100
                             } else {
                                 0
                             };
