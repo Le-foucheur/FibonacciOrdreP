@@ -1,18 +1,14 @@
-use std::{
-    borrow::BorrowMut,
-    ffi::CStr,
-    mem::MaybeUninit,
-    time::{Duration, Instant},
-};
+use std::borrow::BorrowMut;
 
-use gmp_mpfr_sys::gmp::{mpz_clear, mpz_init, mpz_set_str, mpz_t};
-use libc::{c_char, c_void};
+use gmp_mpfr_sys::gmp::{mpz_init_set_ui, mpz_set_ui};
 use sfml::{
     graphics::{
         Color, Image, IntRect, RcSprite, RcTexture, RenderTarget, RenderWindow, VertexBufferUsage,
     },
     window::Event,
 };
+
+use crate::gmp_utils::{mpz_int_add_u64, mpz_int_from_u64, mpz_int_set_u64};
 
 // use crate::fibo;
 use crate::fibo_fast;
@@ -33,7 +29,7 @@ pub struct WindowManager {
 impl WindowManager {
     pub fn new() -> WindowManager {
         let mut window = RenderWindow::new(
-            (600, 10),
+            (300, 10),
             "Fibonacci sequence modulo 2",
             sfml::window::Style::DEFAULT,
             &Default::default(),
@@ -45,8 +41,8 @@ impl WindowManager {
             current_texture: RcTexture::new().unwrap(),
             show_lines: true,
             line_count: 10,
-            pixel_size: 1.0 / 64.0,
-            start_index: 1_000_000_000,
+            pixel_size: 1.0 / 64.0 * 64.0,
+            start_index: 1_000_000,
             start_p: 0,
             mode: 1,
             fibo: fibo_fast::FiboFastManager::new(),
@@ -102,134 +98,153 @@ impl WindowManager {
         }
     }
 
-    fn generate_sequences(&mut self) {
-        let now = Instant::now();
-        let mut generation_time = Duration::new(0, 0);
+    // fn generate_sequences(&mut self) {
+    //     let now = Instant::now();
+    //     let mut generation_time = Duration::new(0, 0);
 
-        let window_width = self.window.size().x;
-        let window_height = self.window.size().y;
-        let sequence_width = (window_width as f32 / self.pixel_size).ceil() as u32;
+    //     let window_width = self.window.size().x;
+    //     let window_height = self.window.size().y;
+    //     let sequence_width = (window_width as f32 / self.pixel_size).ceil() as u32;
 
-        let sequence_size = 1. / self.pixel_size;
+    //     let sequence_size = 1. / self.pixel_size;
 
-        // Initialize C library mpz_t
-        let temp = format!("{}\0", self.start_index);
-        let temp = temp.as_bytes();
-        let n_uchar = CStr::from_bytes_with_nul(temp).unwrap();
-        let k = n_uchar.as_ptr();
-        let mut mpz_start2 = unsafe {
-            let mut mpz_start2 = MaybeUninit::uninit();
-            mpz_init(mpz_start2.as_mut_ptr());
-            mpz_start2.assume_init()
-        };
-        unsafe {
-            mpz_set_str(mpz_start2.borrow_mut(), k, 10);
-        }
+    //     let mut mpz_start = mpz_int_from_u64(self.start_index);
 
-        println!(
-            "Start generation with min_p: {}, max_p={}, min_n={}, max_n={}",
-            self.start_p,
-            self.start_p + (window_height as f32 * sequence_size) as u64,
-            self.start_index,
-            self.start_index + (window_width as f32 * sequence_size) as u64
-        );
+    //     println!(
+    //         "Start generation with min_p: {}, max_p={}, min_n={}, max_n={}",
+    //         self.start_p,
+    //         self.start_p + (window_height as f32 * sequence_size) as u64,
+    //         self.start_index,
+    //         self.start_index + (window_width as f32 * sequence_size) as u64
+    //     );
 
-        const SHOW_IMAGE_TIMES: u32 = 20;
-        // Create buffer to draw the sequence
-        let mut buffer = Image::new(window_width, window_height);
+    //     const SHOW_IMAGE_TIMES: u32 = 20;
+    //     // Create buffer to draw the sequence
+    //     let mut buffer = Image::new(window_width, window_height);
+
+    //     // progress bar
+    //     const PROGRESS_BAR_SIZE: u32 = 100;
+    //     print!("Progress: [{}] 0%", " ".repeat(PROGRESS_BAR_SIZE as usize));
+    //     match self.mode {
+    //         1 => {
+    //             // take only a cell and skip the others
+    //             for y in 0..window_height {
+    //                 // Compute progress with a pow
+    //                 let progress = (y as f32).powf(2.0) / (window_height as f32).powf(2.0);
+    //                 print!(
+    //                     "\rProgress: [{}{}] {:.2}%",
+    //                     "#".repeat((progress * PROGRESS_BAR_SIZE as f32) as usize),
+    //                     " ".repeat(
+    //                         (PROGRESS_BAR_SIZE as f32 - progress * PROGRESS_BAR_SIZE as f32)
+    //                             as usize
+    //                     ),
+    //                     progress * 100.
+    //                 );
+    //                 if (window_height / SHOW_IMAGE_TIMES) != 0
+    //                     && y % (window_height / SHOW_IMAGE_TIMES) == 0
+    //                 {
+    //                     self.gen_texture(&buffer);
+    //                     self.window.draw(&self.current_sprite);
+    //                     self.window.display();
+    //                 }
+    //                 let generation_now = Instant::now();
+    //                 let sequence = self.fibo.generate(
+    //                     (y as f32 * sequence_size).floor() as u64 + self.start_p + 1,
+    //                     sequence_width as u64 + self.start_index,
+    //                     self.start_index,
+    //                     mpz_start,
+    //                 );
+    //                 unsafe { mpz_add_ui(mpz_start.borrow_mut(), mpz_start.borrow(), sequence_size.floor() as u64) };
+    //                 generation_time += generation_now.elapsed();
+    //                 for x in 0..window_width {
+    //                     if sequence[(x as f32 * sequence_size).floor() as usize] {
+    //                         // Draw a pixel with pixel_size
+    //                         unsafe {
+    //                             buffer.set_pixel(x, y, Color::WHITE);
+    //                         }
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //         _ => {}
+    //     }
+    //     unsafe { mpz_clear(mpz_start.borrow_mut()) };
+    //     print!("\r\x1b[K");
+
+    //     // Render the buffer
+    //     self.gen_texture(&buffer);
+    //     println!("Time to generate sequence: {:?}", generation_time);
+    //     println!(
+    //         "Time to draw sequence: {:?}",
+    //         now.elapsed() - generation_time
+    //     );
+    // }
+
+    fn generate_sequences_internal(&mut self, image_width: u32, image_height: u32) {
+        let mut mpz_start = mpz_int_from_u64(self.start_index);
+
+        let mut buffer = Image::new(image_width, image_height);
+
+        let upixel_size = self.pixel_size.ceil() as u32;
 
         // progress bar
+        const SHOW_IMAGE_TIMES: u32 = 20;
         const PROGRESS_BAR_SIZE: u32 = 100;
-        print!("Progress: [{}] 0%", " ".repeat(PROGRESS_BAR_SIZE as usize));
-        match self.mode {
-            0 => {
-                // take the average of the sequence
-                for y in 0..window_height {
-                    let generation_now = Instant::now();
-                    let mut sequences = vec![];
-                    for k in 0..sequence_size.ceil() as u64 {
-                        sequences.push(self.fibo.generate(
-                            (y as f32 * sequence_size) as u64 + self.start_p + 1 + k,
-                            sequence_width as u64 + self.start_index,
-                            self.start_index,
-                            mpz_start2,
-                        ));
-                    }
-                    generation_time += generation_now.elapsed();
-                    for x in 0..window_width {
-                        // Compute the average of all the computed cells
-                        let mut average = 0;
-                        for l in 0..sequence_size.ceil() as u32 {
-                            for k in 0..sequence_size.ceil() as u32 {
-                                average += sequences[l as usize]
-                                    [((x as f32 * sequence_size).floor() as u32 + k) as usize]
-                                    as u32
-                            }
-                        }
-                        let color = ((average as f32 / (sequence_size * sequence_size)) * 255.)
-                            .ceil() as u8;
+        // print!("Progress: [{}] 0%", " ".repeat(PROGRESS_BAR_SIZE as usize));
 
-                        // Draw a pixel with pixel_size
-                        unsafe {
-                            buffer.set_pixel(x, y, Color::rgb(color, color, color));
-                        }
-                    }
-                }
+        // Loop over the image size divided by the pixel size
+        for y in 0..(image_height / upixel_size) {
+            // Compute progress with a pow
+            // let progress = (y as f32).powf(2.0) / (image_height as f32).powf(2.0);
+            // print!(
+            //     "\rProgress: [{}{}] {:.2}%",
+            //     "#".repeat((progress * PROGRESS_BAR_SIZE as f32) as usize),
+            //     " ".repeat(
+            //         (PROGRESS_BAR_SIZE as f32 - progress * PROGRESS_BAR_SIZE as f32) as usize
+            //     ),
+            //     progress * 100.
+            // );
+            if (image_height / SHOW_IMAGE_TIMES) != 0 && y % (image_height / SHOW_IMAGE_TIMES) == 0
+            {
+                self.generate_texture(&buffer);
+                self.window.draw(&self.current_sprite);
+                self.window.display();
             }
-            1 => {
-                // take only a cell and skip the others
-                for y in 0..window_height {
-                    // Compute progress with a pow
-                    let progress = (y as f32).powf(2.0) / (window_height as f32).powf(2.0);
-                    print!(
-                        "\rProgress: [{}{}] {:.2}%",
-                        "#".repeat((progress * PROGRESS_BAR_SIZE as f32) as usize),
-                        " ".repeat(
-                            (PROGRESS_BAR_SIZE as f32 - progress * PROGRESS_BAR_SIZE as f32)
-                                as usize
-                        ),
-                        progress * 100.
-                    );
-                    if (window_height / SHOW_IMAGE_TIMES) != 0
-                        && y % (window_height / SHOW_IMAGE_TIMES) == 0
-                    {
-                        self.gen_texture(&buffer);
-                        self.window.draw(&self.current_sprite);
-                        self.window.display();
-                    }
-                    let generation_now = Instant::now();
-                    let sequence = self.fibo.generate(
-                        (y as f32 * sequence_size).floor() as u64 + self.start_p + 1,
-                        sequence_width as u64 + self.start_index,
-                        self.start_index,
-                        mpz_start2,
-                    );
-                    generation_time += generation_now.elapsed();
-                    for x in 0..window_width {
-                        if sequence[(x as f32 * sequence_size).floor() as usize] {
-                            // Draw a pixel with pixel_size
+            let sequence = self.fibo.generate(
+                ((y as f32) * (1.0 / self.pixel_size).ceil()) as u64 + self.start_p + 1,
+                ((image_width as f32) * (1.0 / self.pixel_size).ceil()) as u64,
+                self.start_index,
+                mpz_start,
+            );
+            for x in 0..(image_width / upixel_size) {
+                if sequence[((x as f32) * (1.0 / self.pixel_size).ceil()) as usize] {
+                    for i in 0..upixel_size {
+                        for j in 0..upixel_size {
                             unsafe {
-                                buffer.set_pixel(x, y, Color::WHITE);
+                                buffer.set_pixel(
+                                    (x * upixel_size + i) as u32,
+                                    (y * upixel_size + j) as u32,
+                                    Color::WHITE,
+                                );
                             }
                         }
                     }
                 }
             }
-            _ => {}
-        }
-        unsafe { mpz_clear(mpz_start2.borrow_mut()) };
-        print!("\r\x1b[K");
 
-        // Render the buffer
-        self.gen_texture(&buffer);
-        println!("Time to generate sequence: {:?}", generation_time);
-        println!(
-            "Time to draw sequence: {:?}",
-            now.elapsed() - generation_time
-        );
+            // Increment mpz_start
+            // mpz_int_add_u64(&mut mpz_start, (1.0 / self.pixel_size).ceil() as u64);
+            mpz_int_set_u64(mpz_start.borrow_mut(), self.start_index + ((y as f32) * (1.0 / self.pixel_size).ceil()) as u64 + self.start_p + 1);
+        }
+
+        self.generate_texture(&buffer);
     }
 
-    fn gen_texture(&mut self, buffer: &Image) {
+    fn generate_sequences(&mut self) {
+        self.generate_sequences_internal(self.window.size().x, self.window.size().y);
+    }
+
+    fn generate_texture(&mut self, buffer: &Image) {
         self.current_texture
             .load_from_image(
                 &buffer,
@@ -276,12 +291,12 @@ impl WindowManager {
                             self.generate_sequences();
                         }
                         sfml::window::Key::Right => {
-                            self.start_index += 100;
+                            self.start_index += 1;
                             self.generate_sequences();
                         }
                         sfml::window::Key::Left => {
                             self.start_index = if self.start_index > 100 {
-                                self.start_index - 100
+                                self.start_index - 1
                             } else {
                                 0
                             };
@@ -307,10 +322,6 @@ impl WindowManager {
                             } else {
                                 1
                             };
-                        }
-                        sfml::window::Key::E => {
-                            self.mode = (self.mode + 1) % 3;
-                            self.generate_sequences();
                         }
                         _ => {}
                     },

@@ -1,7 +1,7 @@
 use crate::window_manager::WindowManager;
 mod fibo;
 mod fibo_fast;
-mod fibo_test;
+mod gmp_utils;
 mod window_manager;
 
 #[link(name = "fibo_mod2", kind = "static")]
@@ -10,9 +10,10 @@ extern "C" {
 }
 
 fn main() {
+    // Initialize the C library
     unsafe { fibo2_init_thread_pool(0) };
 
     // Create the window
-    let mut rw = WindowManager::new();
-    rw.run();
+    let mut wm = WindowManager::new();
+    wm.run();
 }

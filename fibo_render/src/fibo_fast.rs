@@ -2,7 +2,7 @@ extern crate libc;
 
 use gmp_mpfr_sys::gmp::mpz_t;
 use libc::c_uchar;
-use std::borrow::BorrowMut;
+use std::{borrow::BorrowMut, cmp::min};
 #[link(name = "fibo_mod2", kind = "static")]
 extern "C" {
     fn fibo_mod2(p: isize, n: *mut mpz_t) -> *mut c_uchar;
@@ -47,22 +47,21 @@ impl FiboFastSequence {
 
     pub fn generate(&mut self, n: u64, start: u64, mut mpz_start: mpz_t) -> Vec<bool> {
         if self.p == 1 {
-            return vec![false; (n - start + self.p) as usize];
+            return vec![false; n as usize];
         }
 
         let c_buf: *mut c_uchar =
             unsafe { fibo_mod2((self.p - 1).try_into().unwrap(), mpz_start.borrow_mut()) };
         // Use arr_getb to get the result
-        let mut result = vec![false; (self.p + 1) as usize];
-        for i in 0..self.p + 1 {
+        let mut result = vec![false; n as usize];
+
+        for i in 0..min(self.p + 1, n) {
             result[i as usize] = unsafe { arr_getb(c_buf, (self.p - i).try_into().unwrap()) };
         }
         // If the sequence is too short, extend it
-        let size = result.len();
-        result.resize((n - start + self.p) as usize, false);
-        for i in size..(n - start + self.p) as usize {
+        for i in (self.p + 1) as usize..n as usize {
             result[i] = result[i - 1] ^ result[i - self.p as usize];
         }
-        result[self.p as usize..].to_vec()
+        result
     }
 }
