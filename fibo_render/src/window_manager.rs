@@ -1,5 +1,12 @@
-use std::time::{Duration, Instant};
+use std::{
+    borrow::BorrowMut,
+    ffi::CStr,
+    mem::MaybeUninit,
+    time::{Duration, Instant},
+};
 
+use gmp_mpfr_sys::gmp::{mpz_clear, mpz_init, mpz_set_str, mpz_t};
+use libc::{c_char, c_void};
 use sfml::{
     graphics::{
         Color, Image, IntRect, RcSprite, RcTexture, RenderTarget, RenderWindow, VertexBufferUsage,
@@ -38,7 +45,7 @@ impl WindowManager {
             current_texture: RcTexture::new().unwrap(),
             show_lines: true,
             line_count: 10,
-            pixel_size: 1.0 / 256.0,
+            pixel_size: 1.0 / 64.0,
             start_index: 1_000_000_000,
             start_p: 0,
             mode: 1,
@@ -105,7 +112,27 @@ impl WindowManager {
 
         let sequence_size = 1. / self.pixel_size;
 
-        println!("Start generation with min_p: {}, max_p={}, min_n={}, max_n={}", self.start_p, self.start_p + (window_height as f32 * sequence_size) as u64, self.start_index, self.start_index + (window_width as f32 * sequence_size) as u64);
+        // Initialize C library mpz_t
+        let temp = format!("{}\0", self.start_index);
+        let temp = temp.as_bytes();
+        let n_uchar = CStr::from_bytes_with_nul(temp).unwrap();
+        let k = n_uchar.as_ptr();
+        let mut mpz_start2 = unsafe {
+            let mut mpz_start2 = MaybeUninit::uninit();
+            mpz_init(mpz_start2.as_mut_ptr());
+            mpz_start2.assume_init()
+        };
+        unsafe {
+            mpz_set_str(mpz_start2.borrow_mut(), k, 10);
+        }
+
+        println!(
+            "Start generation with min_p: {}, max_p={}, min_n={}, max_n={}",
+            self.start_p,
+            self.start_p + (window_height as f32 * sequence_size) as u64,
+            self.start_index,
+            self.start_index + (window_width as f32 * sequence_size) as u64
+        );
 
         const SHOW_IMAGE_TIMES: u32 = 20;
         // Create buffer to draw the sequence
@@ -125,6 +152,7 @@ impl WindowManager {
                             (y as f32 * sequence_size) as u64 + self.start_p + 1 + k,
                             sequence_width as u64 + self.start_index,
                             self.start_index,
+                            mpz_start2,
                         ));
                     }
                     generation_time += generation_now.elapsed();
@@ -157,11 +185,14 @@ impl WindowManager {
                         "\rProgress: [{}{}] {:.2}%",
                         "#".repeat((progress * PROGRESS_BAR_SIZE as f32) as usize),
                         " ".repeat(
-                            (PROGRESS_BAR_SIZE as f32 - progress * PROGRESS_BAR_SIZE as f32) as usize
+                            (PROGRESS_BAR_SIZE as f32 - progress * PROGRESS_BAR_SIZE as f32)
+                                as usize
                         ),
                         progress * 100.
                     );
-                    if (window_height / SHOW_IMAGE_TIMES) != 0 && y % (window_height / SHOW_IMAGE_TIMES) == 0 {
+                    if (window_height / SHOW_IMAGE_TIMES) != 0
+                        && y % (window_height / SHOW_IMAGE_TIMES) == 0
+                    {
                         self.gen_texture(&buffer);
                         self.window.draw(&self.current_sprite);
                         self.window.display();
@@ -171,26 +202,7 @@ impl WindowManager {
                         (y as f32 * sequence_size).floor() as u64 + self.start_p + 1,
                         sequence_width as u64 + self.start_index,
                         self.start_index,
-                    );
-                    generation_time += generation_now.elapsed();
-                    for x in 0..window_width {
-                        if sequence[(x as f32 * sequence_size).floor() as usize] {
-                            // Draw a pixel with pixel_size
-                            unsafe {
-                                buffer.set_pixel(x, y, Color::WHITE);
-                            }
-                        }
-                    }
-                }
-            }
-            2 => {
-                // take only a cell and skip the others
-                for y in 0..window_height {
-                    let generation_now = Instant::now();
-                    let sequence = self.fibo.generate(
-                        (1.001_f32).powf(y as f32 * sequence_size + (self.start_p + 1) as f32).floor() as u64,
-                        sequence_width as u64 + self.start_index,
-                        self.start_index,
+                        mpz_start2,
                     );
                     generation_time += generation_now.elapsed();
                     for x in 0..window_width {
@@ -205,6 +217,7 @@ impl WindowManager {
             }
             _ => {}
         }
+        unsafe { mpz_clear(mpz_start2.borrow_mut()) };
         print!("\r\x1b[K");
 
         // Render the buffer
@@ -230,66 +243,6 @@ impl WindowManager {
             .unwrap();
         self.current_sprite = RcSprite::with_texture(&self.current_texture);
     }
-
-    // fn generate_sequences(1&mut self) {
-    //     let now = Instant::now();
-    //     let mut generation_time = Duration::new(0, 0);
-    //     // Get window width to determine sequence length
-    //     let window_width = self.window.size().x;
-    //     let width = (window_width as f32 / self.pixel_size).ceil() as u32;
-    //     let window_height = self.window.size().y;
-    //     let height = (window_height as f32 / self.pixel_size).ceil() as u32;
-
-    //     let display_pixel_size = self.pixel_size.ceil() as u32;
-    //     // Create buffer to draw the sequence
-    //     let mut buffer = Image::new(window_width, window_height);
-
-    //     for i in 0..height {
-    //         let generation_now = Instant::now();
-    //         let sequence = self.fibo.generate(
-    //             i as u64 + self.start_p + 1,
-    //             width as u64 + self.start_index,
-    //             self.start_index,
-    //         );
-    //         generation_time += generation_now.elapsed();
-    //         for j in 0..width {
-    //             if sequence[j as usize] {
-    //                 // Draw a pixel with pixel_size
-    //                 for k in 0..display_pixel_size {
-    //                     for l in 0..display_pixel_size {
-    //                         let x = (j as f32 * self.pixel_size).ceil() as u32 + k;
-    //                         let y = (i as f32 * self.pixel_size).ceil() as u32 + l;
-    //                         if x < window_width && y < window_height {
-    //                             unsafe {
-    //                                 buffer.set_pixel(x, y, Color::WHITE);
-    //                             }
-    //                         }
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //     }
-
-    //     // Render the buffer
-    //     self.current_texture
-    //         .load_from_image(
-    //             &buffer,
-    //             IntRect {
-    //                 top: 0,
-    //                 left: 0,
-    //                 width: window_width as i32,
-    //                 height: window_height as i32,
-    //             },
-    //         )
-    //         .unwrap();
-
-    //     self.current_sprite = RcSprite::with_texture(&self.current_texture);
-    //     println!("Time to generate sequence: {:?}", generation_time);
-    //     println!(
-    //         "Time to draw sequence: {:?}",
-    //         now.elapsed() - generation_time
-    //     );
-    // }
 
     pub fn run(&mut self) {
         self.generate_sequences();

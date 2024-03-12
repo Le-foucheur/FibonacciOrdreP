@@ -7,3 +7,6 @@ gmon.out
 *.png
 
 *.a
+
+perf.data
+perf.data.old

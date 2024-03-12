@@ -179,8 +179,4 @@ int fibo2_init_thread_pool(size_t size);
 *    result: pointeur vers p+1 mpz_t valant Fp(n) a Fp(n+p)
 */
 unsigned char* fibo_mod2(size_t p,mpz_t n);
-//same, but passing as string for easier external usage without using gmp internally in other projects
-//still need gmp linking
-unsigned char* rust_fibo_mod2(size_t p_arg, const char* n);
-
 #endif // LIB_FIBO_JUMP2_H

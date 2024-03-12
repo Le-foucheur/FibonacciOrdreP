@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::fibo::{generate_fibo, FiboSequence};
 
 /// Find the length before a repetition of the pattern
