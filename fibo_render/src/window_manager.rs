@@ -37,7 +37,7 @@ impl WindowManager {
             Some(image) => {
                 println!("Saving image...");
                 if image.save_to_file("fibo_sequence.png") {
-                    println!("Image saved successfully");
+                    println!("Image saved successfully as fibo_sequence.png");
                 } else {
                     println!("Error while saving the image");
                 }
