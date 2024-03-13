@@ -427,7 +427,7 @@ bytes_t finalize(accumulator acc,bytes_t result0){
   return acc.part0;
 }
 
-__m256i arr_get8i(unsigned char* array,ptrdiff_t index){  return _mm256_loadu_si512((__m256i*)(array+(index*INDEX_MULT)-(INDEX_FLAT*(8*4-1)))) ;}
+__m256i arr_get8i(unsigned char* array,ptrdiff_t index){  return _mm256_loadu_si256((__m256i*)(array+(index*INDEX_MULT)-(INDEX_FLAT*(8*4-1)))) ;}
 __m256i arr_broadload(unsigned char* array,ptrdiff_t index){ return (__m256i)(_mm256_broadcast_sd((double*)(array+(index*INDEX_MULT)-(INDEX_FLAT*7))));}
 
 
