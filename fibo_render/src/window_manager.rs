@@ -71,9 +71,7 @@ impl WindowManager {
                     }
                     Event::KeyPressed { code, .. } => match code {
                         sfml::window::Key::P => {
-                            self.generate_sequences();
                             self.save_image();
-                            self.generate_sequences();
                         }
                         sfml::window::Key::Down => {
                             self.renderer.start_p += 100;

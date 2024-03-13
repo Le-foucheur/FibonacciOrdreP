@@ -1,12 +1,13 @@
 use std::env;
 
-use crate::window_manager::WindowManager;
+use crate::{help::HELP_MESSAGE, window_manager::WindowManager};
 mod fibo;
 mod fibo_fast;
 mod gmp_utils;
 mod progressbar;
 mod renderer;
 mod window_manager;
+mod help;
 
 #[link(name = "fibo_mod2", kind = "static")]
 extern "C" {
@@ -47,7 +48,7 @@ fn main() {
             args.remove(0);
             args.remove(0);
         } else if args[0] == "-h" || args[0] == "--help" {
-            println!("Usage: fibo2 \n\t-n <n_start_index>: start index of the sequence (default=0) \n\t-p <p_start_index>: start index of the p order (default=0) \n\t-zoom <zoom_factor>: zoom factor (default=1.0) n\t-izoom <izoom_factor>: invert zoom factor \n\t-h: display this help message");
+            println!("{}", HELP_MESSAGE);
             return;
         } else {
             println!("Unknown argument: {}", args[0]);

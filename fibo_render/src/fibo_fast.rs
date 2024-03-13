@@ -38,16 +38,19 @@ impl FiboFastManager {
 #[derive(Clone)]
 pub struct FiboFastSequence {
     pub p: u64,
+    pub saved: Vec<bool>,
 }
 
 impl FiboFastSequence {
     pub fn new(p: u64) -> FiboFastSequence {
-        FiboFastSequence { p }
+        FiboFastSequence { p, saved: vec![] }
     }
 
     pub fn generate(&mut self, n: u64, mut mpz_end: mpz_t) -> Vec<bool> {
         if self.p == 1 {
-            return vec![false; n as usize];
+            let mut result = vec![false; n as usize];
+            result[0] = true;
+            return result;
         }
 
         let c_buf: *mut c_uchar =
