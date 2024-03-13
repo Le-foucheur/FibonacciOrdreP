@@ -44,20 +44,38 @@ impl FiboFastSequence {
     pub fn new(p: u64) -> FiboFastSequence {
         FiboFastSequence { p }
     }
+    
+    // pub fn generate(&mut self, n: u64, mut mpz_start: mpz_t) -> Vec<bool> {
 
-    pub fn generate(&mut self, n: u64, mut mpz_start: mpz_t) -> Vec<bool> {
+    //     let c_buf: *mut c_uchar =
+    //         unsafe { fibo_mod2((self.p - 1).try_into().unwrap(), mpz_start.borrow_mut()) };
+    //     // Use arr_getb to get the result
+    //     let mut result = vec![false; n as usize];
+
+    //     for i in 0..min(self.p + 1, n) {
+    //         result[i as usize] = unsafe { arr_getb(c_buf, (self.p - i).try_into().unwrap()) };
+    //     }
+    //     // If the sequence is too short, extend it
+    //     for i in (self.p + 1) as usize..n as usize {
+    //         result[i] = result[i - 1] ^ result[i - self.p as usize];
+    //     }
+    //     result
+    // }
+
+    pub fn generate(&mut self, n: u64, mut mpz_end: mpz_t) -> Vec<bool> {
 
         let c_buf: *mut c_uchar =
-            unsafe { fibo_mod2((self.p - 1).try_into().unwrap(), mpz_start.borrow_mut()) };
+            unsafe { fibo_mod2((self.p - 1).try_into().unwrap(), mpz_end.borrow_mut()) };
         // Use arr_getb to get the result
         let mut result = vec![false; n as usize];
 
-        for i in 0..min(self.p + 1, n) {
+        // Load the result in the end of the array
+        for i in (n - min(self.p, n))..n {
             result[i as usize] = unsafe { arr_getb(c_buf, (self.p - i).try_into().unwrap()) };
         }
-        // If the sequence is too short, extend it
-        for i in (self.p + 1) as usize..n as usize {
-            result[i] = result[i - 1] ^ result[i - self.p as usize];
+        // If the sequence is too short, extend it from right to left
+        for i in (n - min(self.p, n)) as usize..0 {
+            result[i] = result[i + self.p as usize] ^ result[i + self.p as usize - 1]
         }
         result
     }
