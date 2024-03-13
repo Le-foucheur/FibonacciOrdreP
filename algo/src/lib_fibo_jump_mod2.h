@@ -31,14 +31,14 @@
 #endif
 
 #if BYTE_ORDER == LITTLE_ENDIAN
-#define NORMAL _reverse
-#define INDEX_MULT (-1)
-#define INDEX_FLAT 1
-
-#elif BYTE_ORDER == BIG_ENDIAN
-#define NORMAL
+//#define NORMAL _reverse
 #define INDEX_MULT 1
 #define INDEX_FLAT 0
+
+#elif BYTE_ORDER == BIG_ENDIAN
+//#define NORMAL
+#define INDEX_MULT (-1)
+#define INDEX_FLAT 1
 
 #else
   #error "Ce programme ne supporte que le big et le little endian"
@@ -46,8 +46,8 @@
 
 //autocompletion purpose: comment when building/releasing
 //#define __AVX2__
-//#define __AVX512F__
-//#define FIBO_AVX512_TEST
+#define __AVX512F__
+#define FIBO_AVX512_TEST
 
 #if  (!defined(__AVX512F__)) || defined(FIBO_NO_AVX512) 
 #if (!defined(__AVX2__)) || defined (FIBO_NO_AVX) 
@@ -93,13 +93,9 @@
 
 
   //AVX2 specific function
-  __m256i implem_array_get8i(unsigned char* array,ptrdiff_t index);
-  __m256i implem_array_reverse_get8i(unsigned char* array,ptrdiff_t index);
+  __m256i arr_get8i(unsigned char* array,ptrdiff_t index);
   __attribute__((always_inline)) inline void arr_set31c(unsigned char* array,ptrdiff_t base_index,__m256i value);
-  #define arr_get8i concat(implem_array, NORMAL, _get8i)
-  __m256i implem_array_broadload(unsigned char* array,ptrdiff_t index);
-  __m256i implem_array_reverse_broadload(unsigned char* array,ptrdiff_t index);
-  #define arr_broadload concat(implem_array, NORMAL, _broadload)
+  __m256i arr_broadload(unsigned char* array,ptrdiff_t index);
 
   typedef __m256i bytes_t;
   typedef struct {} cond_t;
@@ -126,9 +122,7 @@
       __m512i part7;
   } accumulator;
 
-  __m512i implem_array_get8i(unsigned char* array,ptrdiff_t index);
-  __m512i implem_array_reverse_get8i(unsigned char* array,ptrdiff_t index);
-  #define arr_get8i concat(implem_array, NORMAL, _get8i)
+  __m512i arr_get8i(unsigned char* array,ptrdiff_t index);
   
   typedef __m512i bytes_t;
   typedef __mmask16 cond_t;
@@ -157,34 +151,15 @@ static_assert(8==sizeof(uint64_t), "There is uncontrolled padding or oversized u
 
 int getNumCores(void);
 
-unsigned char* implem_array_get_false_addr(unsigned char* real_addr,size_t size);
-unsigned char* implem_array_reverse_get_false_addr(unsigned char* real_addr,size_t size);
-#define arr_get_false_addr concat(implem_array, NORMAL, _get_false_addr)
-
-unsigned char* implem_array_get_real_addr(unsigned char* array,size_t size);
-unsigned char* implem_array_reverse_get_real_addr(unsigned char* array, size_t size);
-#define arr_get_real_addr concat(implem_array, NORMAL, _get_real_addr)
-
+unsigned char* arr_get_false_addr(unsigned char* real_addr,size_t size);
+unsigned char* arr_get_real_addr(unsigned char* array,size_t size);
 unsigned char* array_create(size_t size);
 void array_free(unsigned char* array,size_t size);
 unsigned char* array_realoc(unsigned char* array,size_t old_size,size_t new_size);
-
-unsigned char implem_array_getc(unsigned char* array,ptrdiff_t index);
-unsigned char implem_array_reverse_getc(unsigned char* array,ptrdiff_t index);
-#define arr_getc concat(implem_array, NORMAL, _getc)
-
-uint64_t implem_array_geti(unsigned char* array,ptrdiff_t index);
-uint64_t implem_array_reverse_geti(unsigned char* array,ptrdiff_t index);
-#define arr_geti concat(implem_array, NORMAL, _geti)
-
-void implem_array_setc(unsigned char* array,ptrdiff_t index,unsigned char set);
-void implem_array_reverse_setc(unsigned char* array,ptrdiff_t index,unsigned char set);
-#define arr_setc concat(implem_array, NORMAL, _setc)
-
-void implem_array_seti(unsigned char* array,ptrdiff_t index,uint64_t set);
-void implem_array_reverse_seti(unsigned char* array,ptrdiff_t index,uint64_t set);
-#define arr_seti concat(implem_array, NORMAL, _seti)
-
+unsigned char arr_getc(unsigned char* array,ptrdiff_t index);
+uint64_t arr_geti(unsigned char* array,ptrdiff_t index);
+void arr_setc(unsigned char* array,ptrdiff_t index,unsigned char set);
+void arr_seti(unsigned char* array,ptrdiff_t index,uint64_t set);
 bool char_getb(unsigned char ch,unsigned char index);
 unsigned char char_setb(unsigned char ch,unsigned char index,bool set);
 void arr_setb(unsigned char* array,ptrdiff_t index,bool set);

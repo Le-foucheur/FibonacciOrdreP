@@ -76,12 +76,10 @@ int fibo2_init_thread_pool(size_t size){
 
 //packed binary array helper function 
 //index are always from the end ... aka index i if fibo(n-i,p)
-//wich are used beetween normal or _reverse_ function depend on endianness of system (only big and litle endian support)
 
-unsigned char* implem_array_get_false_addr(unsigned char* real_addr,size_t size){   return real_addr+size-1+8;}
-unsigned char* implem_array_reverse_get_false_addr(unsigned char* real_addr,size_t size){    return real_addr+8;}
-unsigned char* implem_array_get_real_addr(unsigned char* array,size_t size){  return array-size+1-8;}
-unsigned char* implem_array_reverse_get_real_addr(unsigned char* array, size_t size){  return array-8;}
+unsigned char* arr_get_false_addr(unsigned char* real_addr,size_t size){    return real_addr+8+(size-1)*INDEX_FLAT;}
+
+unsigned char* arr_get_real_addr(unsigned char* array, size_t size){  return array-8-(size+1)*INDEX_FLAT;}
 
 __attribute__((always_inline)) inline accumulator zero_acc(void);
 __attribute__((always_inline)) inline bytes_t finalize(accumulator acc, bytes_t result0);
@@ -98,17 +96,13 @@ void array_free(unsigned char* array,size_t size){ if (array==NULL) return;  fre
 unsigned char* array_realoc(unsigned char* array,size_t old_size,size_t new_size){ return arr_get_false_addr(realloc(arr_get_real_addr(array,old_size), new_size),new_size);}
 
 
-unsigned char implem_array_getc(unsigned char* array,ptrdiff_t index){  return array[-index];}
-unsigned char implem_array_reverse_getc(unsigned char* array,ptrdiff_t index){  return array[index];}
+unsigned char arr_getc(unsigned char* array,ptrdiff_t index){  return array[index*INDEX_MULT];}
 
-uint64_t implem_array_geti(unsigned char* array,ptrdiff_t index){  return * ((uint64_t*)(array-index-7));}
-uint64_t implem_array_reverse_geti(unsigned char* array,ptrdiff_t index){  return * ((uint64_t*)(array+index));}
+uint64_t arr_geti(unsigned char* array,ptrdiff_t index){  return * ((uint64_t*)(array+(index*INDEX_MULT)-(7*INDEX_FLAT)));}
 
-void implem_array_setc(unsigned char* array,ptrdiff_t index,unsigned char set){  array[-index]=set;}
-void implem_array_reverse_setc(unsigned char* array,ptrdiff_t index,unsigned char set){  array[index]=set;}
+void arr_setc(unsigned char* array,ptrdiff_t index,unsigned char set){  array[index*INDEX_MULT]=set;}
 
-void implem_array_seti(unsigned char* array,ptrdiff_t index,uint64_t set){  *(uint64_t*)(array-index-7)=set;}
-void implem_array_reverse_seti(unsigned char* array,ptrdiff_t index,uint64_t set){  *(uint64_t*)(array+index)=set;}
+void arr_seti(unsigned char* array,ptrdiff_t index,uint64_t set){  *(uint64_t*)(array+index*INDEX_MULT-7*INDEX_FLAT)=set;}
 
 void arr_set7c(unsigned char* array,size_t index,uint64_t set){
   for (unsigned char i=0;i<7;i++){
@@ -133,8 +127,7 @@ bool arr_getb(unsigned char* array,size_t index){return arr_getb2(array, index>>
 #if  defined(__AVX512F__) && (!defined (FIBO_NO_AVX512))
 #if defined(FIBO_AVX512_TEST)
 //******************************* AVX512 new test *************************************************
-__m512i implem_array_get8i(unsigned char* array,ptrdiff_t index){  return _mm512_loadu_si512((__m512i*)(array-index-(8*8-1))) ;}
-__m512i implem_array_reverse_get8i(unsigned char* array,ptrdiff_t index){  return _mm512_loadu_si512((__m512i*)(array+index));}
+__m512i arr_get8i(unsigned char* array,ptrdiff_t index){  return _mm512_loadu_si512((__m512i*)(array+(index*INDEX_MULT)-(INDEX_FLAT*(8*8-1)))) ;}
 
 __attribute__((always_inline)) inline
 void arr_set63c(unsigned char* array,ptrdiff_t base_index,__m512i value){
@@ -172,54 +165,54 @@ bytes_t finalize(accumulator acc, bytes_t result0){
    0|1|2|3|4|5|6|7
   
 a0 7|6|5|4|3|2|1|0
-c1 0|7|6|5|4|3|2|1
-c2 1|0|7|6|5|4|3|2
-.3 2|1|0|7|6|5|4|3
+c1 6|5|4|3|2|1|0|7
+c2 5|4|3|2|1|0|7|6
+.3 4|3|2|1|0|7|6|5
 p4 3|2|1|0|7|6|5|4
-a5 4|3|2|1|0|7|6|5
-r6 5|4|3|2|1|0|7|6
-t7 6|5|4|3|2|1|0|7
+a5 2|1|0|7|6|5|4|3
+r6 1|0|7|6|5|4|3|2
+t7 0|7|6|5|4|3|2|1
 
 r0 7|7|7|7|7|7|7|7
 */
   result0 = _mm512_srli_epi64(result0, 7);
-  __m512i shifter = _mm512_set_epi64(7,6,5,4,3,2,1,0);
-  __m512i one = _mm512_set1_epi64(1);
+  __m512i shifter = _mm512_set_epi64(0,1,2,3,4,5,6,7);
+  __m512i less_one = _mm512_set1_epi64(-1);
   __m512i eight = _mm512_set1_epi64(8); //dont worry, it will be 8 soon
 
-  __m512i next_shifter=_mm512_add_epi64(shifter,one);
+  __m512i next_shifter=_mm512_add_epi64(shifter,less_one);
   
   acc.part0 = _mm512_srlv_epi64(acc.part0,shifter);
   
   shifter = _mm512_and_epi64(next_shifter,eight);
   result0 = _mm512_xor_epi64(result0,acc.part0);
-  next_shifter = _mm512_add_epi64(next_shifter,one);
+  next_shifter = _mm512_add_epi64(next_shifter,less_one);
   acc.part1 = _mm512_srlv_epi64(acc.part1,shifter);
   
   shifter = _mm512_and_epi64(next_shifter,eight);
   result0 = _mm512_xor_epi64(result0,acc.part1);
   
-  next_shifter = _mm512_add_epi64(next_shifter,one);
+  next_shifter = _mm512_add_epi64(next_shifter,less_one);
   acc.part2 = _mm512_srlv_epi64(acc.part2,shifter);
   
   shifter = _mm512_and_epi64(next_shifter,eight);
   result0 = _mm512_xor_epi64(result0,acc.part2);
-  next_shifter = _mm512_add_epi64(next_shifter,one);
+  next_shifter = _mm512_add_epi64(next_shifter,less_one);
   acc.part3 = _mm512_srlv_epi64(acc.part3,shifter);
   
   shifter = _mm512_and_epi64(next_shifter,eight);
   result0 = _mm512_xor_epi64(result0,acc.part3);
-  next_shifter = _mm512_add_epi64(next_shifter,one);
+  next_shifter = _mm512_add_epi64(next_shifter,less_one);
   acc.part4 = _mm512_srlv_epi64(acc.part4,shifter);
   
   shifter = _mm512_and_epi64(next_shifter,eight);
   result0 = _mm512_xor_epi64(result0,acc.part4);
-  next_shifter = _mm512_add_epi64(next_shifter,one);
+  next_shifter = _mm512_add_epi64(next_shifter,less_one);
   acc.part5 = _mm512_srlv_epi64(acc.part5,shifter);
   
   shifter = _mm512_and_epi64(next_shifter,eight);
   result0 = _mm512_xor_epi64(result0,acc.part5);
-  next_shifter = _mm512_add_epi64(next_shifter,one);
+  next_shifter = _mm512_add_epi64(next_shifter,less_one);
   acc.part6 = _mm512_srlv_epi64(acc.part6,shifter);
   
   shifter = _mm512_and_epi64(next_shifter,eight);
@@ -280,7 +273,7 @@ void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bi
   }
 
     uint64_t cond_bits = arr_geti(big_buffer,bit_addr-7)>>(bit_addr_shift); //get a pack of 56 condition
-    cond_bits &= 0xFFFFFFFFFFFFFFFFUL<<(p-i_base);
+    cond_bits &= 0xFFFFFFFFFFFFFFFFUL<<(56-(p-i_base));
     uint64_t part1 = cond_bits & MASK_135;
     cond_bits &= MASK_0246;
     part1 *= PACKER;
@@ -381,7 +374,6 @@ void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bi
   unsigned char cond_bits_c =  (char)(cond_bits>>(8*(6-((p/8)-i_base)))); //mask the remainning last few condition
   cond_bits_c &= (int)(0xFF)<<(8 - (p&0b111));
   bytes_t bits=get_bytes(big_buffer,ints_addr);
-  accu = loop_once(accu, cond_bits_c, bits);
   __m512i temp = _mm512_maskz_set1_epi64(cond_bits_c,bits);
   accu = _mm512_xor_epi64(accu,temp);
   
@@ -435,11 +427,8 @@ bytes_t finalize(accumulator acc,bytes_t result0){
   return acc.part0;
 }
 
-
-__m256i implem_array_get8i(unsigned char* array,ptrdiff_t index){  return _mm256_loadu_si256((__m256i*)(array-index-(8*4-1))) ;}
-__m256i implem_array_reverse_get8i(unsigned char* array,ptrdiff_t index){  return _mm256_loadu_si256((__m256i*)(array+index));}
-__m256i implem_array_broadload(unsigned char* array,ptrdiff_t index){ return (__m256i)(_mm256_broadcast_sd((double*)(array-index-7)));}
-__m256i implem_array_reverse_broadload(unsigned char* array,ptrdiff_t index){ return (__m256i)(_mm256_broadcast_sd((double*)(array+index)));}
+__m256i arr_get8i(unsigned char* array,ptrdiff_t index){  return _mm256_loadu_si512((__m256i*)(array+(index*INDEX_MULT)-(INDEX_FLAT*(8*4-1)))) ;}
+__m256i arr_broadload(unsigned char* array,ptrdiff_t index){ return (__m256i)(_mm256_broadcast_sd((double*)(array+(index*INDEX_MULT)-(INDEX_FLAT*7))));}
 
 
 
@@ -499,7 +488,7 @@ void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bi
   for (;i_base<=(ptrdiff_t)(p)-56;i_base+=56){
     //uint64_t cond_bits = arr_geti(big_buffer,bit_addr-7)<<(8-bit_addr_shift); //get a pack of 56 condition
     //accu.cond = _mm256_set1_epi64x (cond_bits);
-    accu.cond = implem_array_reverse_broadload(big_buffer, bit_addr-7);
+    accu.cond = arr_broadload(big_buffer, bit_addr-7);
     accu.cond = _mm256_slli_epi64(accu.cond, (8-bit_addr_shift));
     for (char i=0;i<7;i++){
       bytes_t bits=get_bytes(big_buffer,ints_addr);   //get corresponding bytes treated by the condition
@@ -511,7 +500,7 @@ void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bi
 
   //uint64_t cond_bits = arr_geti(big_buffer,bit_addr-7)>>(bit_addr_shift); //get the last pack of condition, used for the remainings of the formula
   //accu.cond = _mm256_set1_epi64x (cond_bits);
-  accu.cond = implem_array_reverse_broadload(big_buffer, bit_addr-7);
+  accu.cond = arr_broadload(big_buffer, bit_addr-7);
   //(8-bit_addr_shift) left would keep 56 valid bits. we want to keep p-i_base valid bits
   //so we shift right of 64-(p-i_base)-(8-bit_addr_shift)
   //the -(8-bit_addr_shift) would have left aligned the valid bytes, so we go left by 64

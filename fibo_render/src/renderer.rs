@@ -5,7 +5,11 @@ use sfml::graphics::{
     Transformable, VertexBufferUsage,
 };
 
-use crate::{fibo_fast, gmp_utils::{mpz_int_from_u64, mpz_int_set_u64}, progressbar};
+use crate::{
+    fibo_fast,
+    gmp_utils::{mpz_int_from_u64, mpz_int_set_u64},
+    progressbar,
+};
 
 pub struct Renderer {
     pub current_sprite: RcSprite,
@@ -14,6 +18,7 @@ pub struct Renderer {
     pub start_index: u64,
     pub start_p: u64,
     pub fibo: fibo_fast::FiboFastManager,
+    pub mode: u8,
 }
 
 impl Renderer {
@@ -25,6 +30,7 @@ impl Renderer {
             start_index,
             start_p,
             fibo: fibo_fast::FiboFastManager::new(),
+            mode: 0
         }
     }
 
@@ -59,11 +65,22 @@ impl Renderer {
         }
     }
 
-    pub fn fill_buffer(&mut self, buffer: &mut RenderTexture, x: u32, y: u32, size: u32) {
+    pub fn fill_buffer(
+        &mut self,
+        buffer: &mut RenderTexture,
+        x: u32,
+        y: f32,
+        size: u32,
+        color: f32,
+    ) {
         let mut rect = RectangleShape::new();
         rect.set_size((size as f32, size as f32));
-        rect.set_position(((x * size) as f32, (y * size) as f32));
-        rect.set_fill_color(Color::WHITE);
+        rect.set_position(((x * size) as f32, y * size as f32));
+        rect.set_fill_color(Color::rgb(
+            (255.0 * color).ceil() as u8,
+            (255.0 * color).ceil() as u8,
+            (255.0 * color).ceil() as u8,
+        ));
         buffer.draw(&rect);
     }
 
@@ -115,8 +132,33 @@ impl Renderer {
                 mpz_start,
             );
             for x in 0..(image_width / upixel_size) {
-                if sequence[((x as f32) * (1.0 / self.pixel_size).ceil()) as usize] {
-                    self.fill_buffer(&mut buffer, x, image_height / upixel_size -1 - y, upixel_size);
+                match self.mode {
+                    0 => {
+                        let mut sum = 0;
+                        for i in 0..(1.0 / self.pixel_size).ceil() as usize {
+                            sum +=
+                                sequence[((x as f32) * (1.0 / self.pixel_size).ceil()) as usize + i] as u32;
+                        }
+                        self.fill_buffer(
+                            &mut buffer,
+                            x,
+                            image_height as f32 / upixel_size as f32 - 1.0 - y as f32,
+                            upixel_size,
+                            sum as f32 / (1.0 / self.pixel_size).ceil() as f32,
+                        );
+                    }
+                    1 => {
+                        if sequence[((x as f32) * (1.0 / self.pixel_size).ceil()) as usize] {
+                            self.fill_buffer(
+                                &mut buffer,
+                                x,
+                                image_height as f32 / upixel_size as f32 - 1.0 - y as f32,
+                                upixel_size,
+                                1.0,
+                            );
+                        }
+                    }
+                    _ => {}
                 }
             }
             progressbar.clear();
@@ -124,7 +166,8 @@ impl Renderer {
             // Increment mpz_start
             mpz_int_set_u64(
                 mpz_start.borrow_mut(),
-                self.start_index + 1
+                self.start_index
+                    + 1
                     + ((y as f32) * (1.0 / self.pixel_size).ceil()) as u64
                     + self.start_p
                     + 1,
@@ -132,5 +175,9 @@ impl Renderer {
         }
 
         self.generate_texture(&buffer, image_width, image_height);
+    }
+
+    pub fn change_mode(&mut self) {
+        self.mode = (self.mode + 1) % 3;
     }
 }
