@@ -1,6 +1,7 @@
 use std::io::{self, Write};
 
-const PROGRESS_BAR_SIZE: u32 = 100;
+use crate::constants::PROGRESS_BAR_SIZE;
+
 
 pub struct Progressbar {
     progress: f32, // Value between 0 and 1

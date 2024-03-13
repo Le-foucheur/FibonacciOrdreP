@@ -2,9 +2,8 @@ use sfml::graphics::{
     Color, Image, RcSprite, RcTexture, RenderTarget, RenderWindow, VertexBufferUsage,
 };
 
-use crate::{fibo_fast, gmp_utils::mpz_int_from_u64, progressbar};
+use crate::{constants::SHOW_IMAGE_TIMES, fibo_fast, gmp_utils::mpz_int_from_u64, progressbar};
 
-const SHOW_IMAGE_TIMES: u32 = 5;
 
 pub struct Renderer {
     pub current_sprite: RcSprite,
@@ -92,9 +91,20 @@ impl Renderer {
         image_height: u32,
         window: &mut RenderWindow,
     ) {
+        let texture_generation_time = std::time::Instant::now();
         // Round pixel size for easier computation
         let upixel_size = self.pixel_size.ceil() as f32;
 
+        let delta_n = (image_width as f32 / self.pixel_size).floor() as u64;
+        let delta_p = (((image_height as f32 / upixel_size).floor() - 1.0) * (1.0 / self.pixel_size).ceil()) as u64 + 1;
+        println!(
+            "Start generating texture with pixel size: {}, n: {}, p: {}, delta_n: {}, delta_p: {}",
+            self.pixel_size, self.start_index, self.start_p,
+            delta_n,
+            delta_p
+        );
+
+        // Initialize the mpz at the right side of the generation
         let mpz_start = mpz_int_from_u64(
             self.start_index + image_width as u64 * (1.0 / self.pixel_size).ceil() as u64 - 1,
         );
@@ -102,11 +112,11 @@ impl Renderer {
         // Initialize buffer
         let mut buffer = Image::new(image_width, image_height);
 
-        // progress bar
         let mut progressbar = progressbar::Progressbar::new();
 
         // Loop over the image size divided by the pixel size
         for y in 0_u32..(image_height as f32 / upixel_size).floor() as u32 {
+            // Update progress bar and show the image sometimes
             progressbar.update(y.pow(2) as f32 / (image_height / upixel_size as u32).pow(2) as f32);
             progressbar.show();
             if (image_height / SHOW_IMAGE_TIMES) != 0 && y % (image_height / SHOW_IMAGE_TIMES) == 0
@@ -155,6 +165,11 @@ impl Renderer {
             progressbar.clear();
         }
         self.generate_texture(&buffer, image_width, image_height);
+
+        println!(
+            "End generating texture in {:.2} seconds",
+            texture_generation_time.elapsed().as_secs_f32()
+        );
     }
 
     pub fn change_mode(&mut self) {

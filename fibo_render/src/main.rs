@@ -8,6 +8,7 @@ mod progressbar;
 mod renderer;
 mod window_manager;
 mod help;
+mod constants;
 
 #[link(name = "fibo_mod2", kind = "static")]
 extern "C" {

@@ -3,7 +3,7 @@ use sfml::{
     window::{Event, Key},
 };
 
-use crate::renderer::Renderer;
+use crate::{constants::MOVE_STEP, renderer::Renderer};
 
 pub struct WindowManager {
     window: RenderWindow,
@@ -74,24 +74,24 @@ impl WindowManager {
                             self.save_image();
                         }
                         sfml::window::Key::Down => {
-                            self.renderer.start_p += 100;
+                            self.renderer.start_p += MOVE_STEP;
                             self.generate_sequences();
                         }
                         sfml::window::Key::Up => {
-                            self.renderer.start_p = if self.renderer.start_p > 100 {
-                                self.renderer.start_p - 100
+                            self.renderer.start_p = if self.renderer.start_p > MOVE_STEP {
+                                self.renderer.start_p - MOVE_STEP
                             } else {
                                 0
                             };
                             self.generate_sequences();
                         }
                         sfml::window::Key::Right => {
-                            self.renderer.start_index += 100;
+                            self.renderer.start_index += MOVE_STEP;
                             self.generate_sequences();
                         }
                         sfml::window::Key::Left => {
-                            self.renderer.start_index = if self.renderer.start_index > 100 {
-                                self.renderer.start_index - 100
+                            self.renderer.start_index = if self.renderer.start_index > MOVE_STEP {
+                                self.renderer.start_index - MOVE_STEP
                             } else {
                                 0
                             };

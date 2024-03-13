@@ -2,7 +2,7 @@ extern crate libc;
 
 use gmp_mpfr_sys::gmp::mpz_t;
 use libc::c_uchar;
-use std::{borrow::BorrowMut, cmp::max};
+use std::borrow::BorrowMut;
 #[link(name = "fibo_mod2", kind = "static")]
 extern "C" {
     fn fibo_mod2(p: isize, n: *mut mpz_t) -> *mut c_uchar;
@@ -47,30 +47,35 @@ impl FiboFastSequence {
     }
 
     pub fn generate(&mut self, n: u64, mut mpz_end: mpz_t) -> Vec<bool> {
+        // Manage this special case lonely, because it crash the C library
         if self.p == 1 {
             let mut result = vec![false; n as usize];
             result[0] = true;
             return result;
         }
 
+        // Call the C library
         let c_buf: *mut c_uchar =
             unsafe { fibo_mod2((self.p - 1).try_into().unwrap(), mpz_end.borrow_mut()) };
 
-        let gen_limit = max(self.p, n) as u64;
-
-        // Use arr_getb to get the result
+        // Initialize the result array
         let mut result = vec![false; n as usize];
 
         // Load the result in the end of the array
+        // Start variable is useful when self.p is bigger than the asked size n
         let start = if self.p + 1 < n { 0 } else { self.p + 1 - n };
         for i in start..self.p + 1 {
+            // Use arr_getb to get the result
             result[(n + i - self.p - 1) as usize] =
                 unsafe { arr_getb(c_buf, (self.p - i).try_into().unwrap()) };
         }
+
         // If the sequence is too short, extend it from right to left
-        for i in 0..(gen_limit - self.p) as usize {
-            result[(gen_limit - self.p) as usize - i - 1] =
-                result[gen_limit as usize - i - 1] ^ result[gen_limit as usize - i - 2]
+        if self.p < n {
+            for i in 0..(n - self.p) as usize {
+                result[(n - self.p) as usize - i - 1] =
+                    result[n as usize - i - 1] ^ result[n as usize - i - 2]
+            }
         }
         result
     }
