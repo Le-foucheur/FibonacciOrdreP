@@ -172,54 +172,54 @@ bytes_t finalize(accumulator acc, bytes_t result0){
    0|1|2|3|4|5|6|7
   
 a0 7|6|5|4|3|2|1|0
-c1 0|7|6|5|4|3|2|1
-c2 1|0|7|6|5|4|3|2
-.3 2|1|0|7|6|5|4|3
+c1 6|5|4|3|2|1|0|7
+c2 5|4|3|2|1|0|7|6
+.3 4|3|2|1|0|7|6|5
 p4 3|2|1|0|7|6|5|4
-a5 4|3|2|1|0|7|6|5
-r6 5|4|3|2|1|0|7|6
-t7 6|5|4|3|2|1|0|7
+a5 2|1|0|7|6|5|4|3
+r6 1|0|7|6|5|4|3|2
+t7 0|7|6|5|4|3|2|1
 
 r0 7|7|7|7|7|7|7|7
 */
   result0 = _mm512_srli_epi64(result0, 7);
-  __m512i shifter = _mm512_set_epi64(7,6,5,4,3,2,1,0);
-  __m512i one = _mm512_set1_epi64(1);
+  __m512i shifter = _mm512_set_epi64(0,1,2,3,4,5,6,7);
+  __m512i less_one = _mm512_set1_epi64(-1);
   __m512i eight = _mm512_set1_epi64(8); //dont worry, it will be 8 soon
 
-  __m512i next_shifter=_mm512_add_epi64(shifter,one);
+  __m512i next_shifter=_mm512_add_epi64(shifter,less_one);
   
   acc.part0 = _mm512_srlv_epi64(acc.part0,shifter);
   
   shifter = _mm512_and_epi64(next_shifter,eight);
   result0 = _mm512_xor_epi64(result0,acc.part0);
-  next_shifter = _mm512_add_epi64(next_shifter,one);
+  next_shifter = _mm512_add_epi64(next_shifter,less_one);
   acc.part1 = _mm512_srlv_epi64(acc.part1,shifter);
   
   shifter = _mm512_and_epi64(next_shifter,eight);
   result0 = _mm512_xor_epi64(result0,acc.part1);
   
-  next_shifter = _mm512_add_epi64(next_shifter,one);
+  next_shifter = _mm512_add_epi64(next_shifter,less_one);
   acc.part2 = _mm512_srlv_epi64(acc.part2,shifter);
   
   shifter = _mm512_and_epi64(next_shifter,eight);
   result0 = _mm512_xor_epi64(result0,acc.part2);
-  next_shifter = _mm512_add_epi64(next_shifter,one);
+  next_shifter = _mm512_add_epi64(next_shifter,less_one);
   acc.part3 = _mm512_srlv_epi64(acc.part3,shifter);
   
   shifter = _mm512_and_epi64(next_shifter,eight);
   result0 = _mm512_xor_epi64(result0,acc.part3);
-  next_shifter = _mm512_add_epi64(next_shifter,one);
+  next_shifter = _mm512_add_epi64(next_shifter,less_one);
   acc.part4 = _mm512_srlv_epi64(acc.part4,shifter);
   
   shifter = _mm512_and_epi64(next_shifter,eight);
   result0 = _mm512_xor_epi64(result0,acc.part4);
-  next_shifter = _mm512_add_epi64(next_shifter,one);
+  next_shifter = _mm512_add_epi64(next_shifter,less_one);
   acc.part5 = _mm512_srlv_epi64(acc.part5,shifter);
   
   shifter = _mm512_and_epi64(next_shifter,eight);
   result0 = _mm512_xor_epi64(result0,acc.part5);
-  next_shifter = _mm512_add_epi64(next_shifter,one);
+  next_shifter = _mm512_add_epi64(next_shifter,less_one);
   acc.part6 = _mm512_srlv_epi64(acc.part6,shifter);
   
   shifter = _mm512_and_epi64(next_shifter,eight);
@@ -280,7 +280,7 @@ void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bi
   }
 
     uint64_t cond_bits = arr_geti(big_buffer,bit_addr-7)>>(bit_addr_shift); //get a pack of 56 condition
-    cond_bits &= 0xFFFFFFFFFFFFFFFFUL<<(p-i_base);
+    cond_bits &= 0xFFFFFFFFFFFFFFFFUL<<(56-(p-i_base));
     uint64_t part1 = cond_bits & MASK_135;
     cond_bits &= MASK_0246;
     part1 *= PACKER;
@@ -381,7 +381,6 @@ void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bi
   unsigned char cond_bits_c =  (char)(cond_bits>>(8*(6-((p/8)-i_base)))); //mask the remainning last few condition
   cond_bits_c &= (int)(0xFF)<<(8 - (p&0b111));
   bytes_t bits=get_bytes(big_buffer,ints_addr);
-  accu = loop_once(accu, cond_bits_c, bits);
   __m512i temp = _mm512_maskz_set1_epi64(cond_bits_c,bits);
   accu = _mm512_xor_epi64(accu,temp);
   
