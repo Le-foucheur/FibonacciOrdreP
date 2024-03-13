@@ -40,9 +40,18 @@ fn main() {
             );
             args.remove(0);
             args.remove(0);
+        } else if args[0] == "-izoom" {
+            zoom = 1.0 / args[1].parse::<f32>().expect(
+                "Invalid argument for -izoom. Please provide a valid number for the zoom factor",
+            );
+            args.remove(0);
+            args.remove(0);
+        } else if args[0] == "-h" || args[0] == "--help" {
+            println!("Usage: fibo2 \n\t-n <n_start_index>: start index of the sequence (default=0) \n\t-p <p_start_index>: start index of the p order (default=0) \n\t-zoom <zoom_factor>: zoom factor (default=1.0) n\t-izoom <izoom_factor>: invert zoom factor \n\t-h: display this help message");
+            return;
         } else {
             println!("Unknown argument: {}", args[0]);
-            args.remove(0);
+            return;
         }
     }
 
