@@ -11,6 +11,8 @@ use crate::{
     progressbar,
 };
 
+const SHOW_IMAGE_TIMES: u32 = 20;
+
 pub struct Renderer {
     pub current_sprite: RcSprite,
     pub current_texture: RcTexture,
@@ -30,7 +32,7 @@ impl Renderer {
             start_index,
             start_p,
             fibo: fibo_fast::FiboFastManager::new(),
-            mode: 0
+            mode: 0,
         }
     }
 
@@ -86,7 +88,7 @@ impl Renderer {
 
     fn generate_texture(&mut self, buffer: &RenderTexture, image_width: u32, image_height: u32) {
         if !self.current_texture.create(image_width, image_height) {
-            println!("Error");
+            panic!("Error creating texture");
         }
         unsafe {
             self.current_texture
@@ -101,7 +103,7 @@ impl Renderer {
         image_height: u32,
         window: &mut RenderWindow,
     ) {
-        let mut mpz_start = mpz_int_from_u64(self.start_index + 1);
+        let mut mpz_start = mpz_int_from_u64(self.start_index + self.start_p + 1);
 
         // Initialize buffer
         let mut buffer = RenderTexture::new(image_width, image_height).unwrap();
@@ -111,11 +113,10 @@ impl Renderer {
         let upixel_size = self.pixel_size.ceil() as u32;
 
         // progress bar
-        const SHOW_IMAGE_TIMES: u32 = 20;
         let mut progressbar = progressbar::Progressbar::new();
 
         // Loop over the image size divided by the pixel size
-        for y in 0..(image_height / upixel_size) {
+        for y in 0..(image_height as f32 / upixel_size as f32).ceil() as u32 {
             progressbar.update(y.pow(2) as f32 / (image_height / upixel_size).pow(2) as f32);
             progressbar.show();
 
@@ -131,13 +132,14 @@ impl Renderer {
                 ((image_width as f32) * (1.0 / self.pixel_size).ceil()) as u64,
                 mpz_start,
             );
-            for x in 0..(image_width / upixel_size) {
+            for x in 0..(image_width as f32 / upixel_size as f32).ceil() as u32 {
                 match self.mode {
                     0 => {
                         let mut sum = 0;
                         for i in 0..(1.0 / self.pixel_size).ceil() as usize {
-                            sum +=
-                                sequence[((x as f32) * (1.0 / self.pixel_size).ceil()) as usize + i] as u32;
+                            sum += sequence
+                                [((x as f32) * (1.0 / self.pixel_size).ceil()) as usize + i]
+                                as u32;
                         }
                         self.fill_buffer(
                             &mut buffer,

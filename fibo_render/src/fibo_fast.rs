@@ -46,9 +46,6 @@ impl FiboFastSequence {
     }
 
     pub fn generate(&mut self, n: u64, mut mpz_start: mpz_t) -> Vec<bool> {
-        if self.p == 1 {
-            return vec![false; n as usize];
-        }
 
         let c_buf: *mut c_uchar =
             unsafe { fibo_mod2((self.p - 1).try_into().unwrap(), mpz_start.borrow_mut()) };

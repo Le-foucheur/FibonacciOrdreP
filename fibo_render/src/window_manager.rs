@@ -21,7 +21,7 @@ impl WindowManager {
             &Default::default(),
         );
         window.set_vertical_sync_enabled(true);
-        let renderer = Renderer::new(1.0 / 32.0 , 1_000_000_000, 0);
+        let renderer = Renderer::new(1.0 / 32.0 * 64.0, 000_000_000, 0);
         WindowManager {
             window,
             show_lines: true,
@@ -88,12 +88,12 @@ impl WindowManager {
                             self.generate_sequences();
                         }
                         sfml::window::Key::Right => {
-                            self.renderer.start_index += 1;
+                            self.renderer.start_index += 10;
                             self.generate_sequences();
                         }
                         sfml::window::Key::Left => {
-                            self.renderer.start_index = if self.renderer.start_index > 1 {
-                                self.renderer.start_index - 1
+                            self.renderer.start_index = if self.renderer.start_index > 10 {
+                                self.renderer.start_index - 10
                             } else {
                                 0
                             };
