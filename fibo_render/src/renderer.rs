@@ -1,4 +1,4 @@
-use std::borrow::BorrowMut;
+use std::{borrow::BorrowMut, io::Write};
 
 use sfml::graphics::{
     Color, RcSprite, RcTexture, RectangleShape, RenderTarget, RenderTexture, RenderWindow, Shape,
@@ -103,14 +103,17 @@ impl Renderer {
         image_height: u32,
         window: &mut RenderWindow,
     ) {
-        let mut mpz_start = mpz_int_from_u64(self.start_index + self.start_p + 1);
+        // Round pixel size for easier computation
+        let upixel_size = self.pixel_size.ceil() as u32;
+
+        let mpz_start = mpz_int_from_u64(
+            self.start_index + image_width as u64 * (1.0 / self.pixel_size).ceil() as u64 - 1,
+        );
+        // let mut mpz_start = mpz_int_from_u64(self.start_index + self.start_p + 1);
 
         // Initialize buffer
         let mut buffer = RenderTexture::new(image_width, image_height).unwrap();
         buffer.clear(Color::BLACK);
-
-        // Round pixel size for easier computation
-        let upixel_size = self.pixel_size.ceil() as u32;
 
         // progress bar
         let mut progressbar = progressbar::Progressbar::new();
@@ -166,14 +169,13 @@ impl Renderer {
             progressbar.clear();
 
             // Increment mpz_start
-            mpz_int_set_u64(
-                mpz_start.borrow_mut(),
-                self.start_index
-                    + 1
-                    + ((y as f32) * (1.0 / self.pixel_size).ceil()) as u64
-                    + self.start_p
-                    + 1,
-            );
+            // mpz_int_set_u64(
+            //     mpz_start.borrow_mut(),
+            //     self.start_index
+            //         + 1
+            //         + ((y as f32) * (1.0 / self.pixel_size).ceil()) as u64
+            //         + self.start_p + 1
+            // );
         }
 
         self.generate_texture(&buffer, image_width, image_height);

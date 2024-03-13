@@ -21,7 +21,7 @@ impl WindowManager {
             &Default::default(),
         );
         window.set_vertical_sync_enabled(true);
-        let renderer = Renderer::new(1.0 / 32.0 * 64.0, 000_000_000, 0);
+        let renderer = Renderer::new(1.0 / 64.0 * 64.0, 000_000_000, 0);
         WindowManager {
             window,
             show_lines: true,
