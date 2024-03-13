@@ -22,7 +22,7 @@ impl FiboFastManager {
         }
     }
 
-    pub fn generate(&mut self, p: u64, n: u64, start: u64, mpz_start: mpz_t) -> Vec<bool> {
+    pub fn generate(&mut self, p: u64, n: u64, mpz_start: mpz_t) -> Vec<bool> {
         if self.p < p {
             // Extend the sequences
             for i in self.p..p {
@@ -31,7 +31,7 @@ impl FiboFastManager {
             self.p = p;
         }
         // Generate the sequence
-        self.sequences[p as usize - 1].generate(n, start, mpz_start)
+        self.sequences[p as usize - 1].generate(n, mpz_start)
     }
 }
 
@@ -45,7 +45,7 @@ impl FiboFastSequence {
         FiboFastSequence { p }
     }
 
-    pub fn generate(&mut self, n: u64, start: u64, mut mpz_start: mpz_t) -> Vec<bool> {
+    pub fn generate(&mut self, n: u64, mut mpz_start: mpz_t) -> Vec<bool> {
         if self.p == 1 {
             return vec![false; n as usize];
         }

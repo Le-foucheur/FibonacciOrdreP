@@ -1,6 +1,6 @@
-use std::{borrow::{Borrow, BorrowMut}, mem::MaybeUninit};
+use std::{borrow::BorrowMut, mem::MaybeUninit};
 
-use gmp_mpfr_sys::gmp::{mpz_add_ui, mpz_init, mpz_set_ui, mpz_t};
+use gmp_mpfr_sys::gmp::{mpz_init, mpz_set_ui, mpz_t};
 
 pub fn mpz_int_from_u64(n: u64) -> mpz_t {
     let mut mpz_start = unsafe {

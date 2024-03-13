@@ -3,6 +3,8 @@ mod fibo;
 mod fibo_fast;
 mod gmp_utils;
 mod window_manager;
+mod progressbar;
+mod renderer;
 
 #[link(name = "fibo_mod2", kind = "static")]
 extern "C" {
