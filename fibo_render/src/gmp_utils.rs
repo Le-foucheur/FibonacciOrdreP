@@ -13,9 +13,3 @@ pub fn mpz_int_from_u64(n: u64) -> mpz_t {
     };
     mpz_start
 }
-
-pub fn mpz_int_set_u64(mpz: &mut mpz_t, n: u64) {
-    unsafe {
-        mpz_set_ui(mpz.borrow_mut(), n);
-    }
-}

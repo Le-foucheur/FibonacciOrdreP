@@ -1,17 +1,10 @@
-use std::{borrow::BorrowMut, io::Write};
-
 use sfml::graphics::{
-    Color, RcSprite, RcTexture, RectangleShape, RenderTarget, RenderTexture, RenderWindow, Shape,
-    Transformable, VertexBufferUsage,
+    Color, Image, RcSprite, RcTexture, RenderTarget, RenderWindow, VertexBufferUsage,
 };
 
-use crate::{
-    fibo_fast,
-    gmp_utils::{mpz_int_from_u64, mpz_int_set_u64},
-    progressbar,
-};
+use crate::{fibo_fast, gmp_utils::mpz_int_from_u64, progressbar};
 
-const SHOW_IMAGE_TIMES: u32 = 20;
+const SHOW_IMAGE_TIMES: u32 = 5;
 
 pub struct Renderer {
     pub current_sprite: RcSprite,
@@ -67,33 +60,29 @@ impl Renderer {
         }
     }
 
-    pub fn fill_buffer(
-        &mut self,
-        buffer: &mut RenderTexture,
-        x: u32,
-        y: f32,
-        size: u32,
-        color: f32,
-    ) {
-        let mut rect = RectangleShape::new();
-        rect.set_size((size as f32, size as f32));
-        rect.set_position(((x * size) as f32, y * size as f32));
-        rect.set_fill_color(Color::rgb(
-            (255.0 * color).ceil() as u8,
-            (255.0 * color).ceil() as u8,
-            (255.0 * color).ceil() as u8,
-        ));
-        buffer.draw(&rect);
+    pub fn fill_buffer(&mut self, buffer: &mut Image, x: f32, y: f32, size: f32, color: f32) {
+        for i in 0..size as u32 {
+            for j in 0..size as u32 {
+                unsafe {
+                    buffer.set_pixel(
+                        (x * size + i as f32) as u32,
+                        (y * size + j as f32) as u32,
+                        Color::rgb(
+                            (255.0 * color).ceil() as u8,
+                            (255.0 * color).ceil() as u8,
+                            (255.0 * color).ceil() as u8,
+                        ),
+                    );
+                }
+            }
+        }
     }
 
-    fn generate_texture(&mut self, buffer: &RenderTexture, image_width: u32, image_height: u32) {
+    fn generate_texture(&mut self, buffer: &Image, image_width: u32, image_height: u32) {
         if !self.current_texture.create(image_width, image_height) {
             panic!("Error creating texture");
         }
-        unsafe {
-            self.current_texture
-                .update_from_texture(buffer.texture(), 0, 0)
-        };
+        unsafe { self.current_texture.update_from_image(buffer, 0, 0) };
         self.current_sprite = RcSprite::with_texture(&self.current_texture);
     }
 
@@ -104,25 +93,22 @@ impl Renderer {
         window: &mut RenderWindow,
     ) {
         // Round pixel size for easier computation
-        let upixel_size = self.pixel_size.ceil() as u32;
+        let upixel_size = self.pixel_size.ceil() as f32;
 
         let mpz_start = mpz_int_from_u64(
             self.start_index + image_width as u64 * (1.0 / self.pixel_size).ceil() as u64 - 1,
         );
-        // let mut mpz_start = mpz_int_from_u64(self.start_index + self.start_p + 1);
 
         // Initialize buffer
-        let mut buffer = RenderTexture::new(image_width, image_height).unwrap();
-        buffer.clear(Color::BLACK);
+        let mut buffer = Image::new(image_width, image_height);
 
         // progress bar
         let mut progressbar = progressbar::Progressbar::new();
 
         // Loop over the image size divided by the pixel size
-        for y in 0..(image_height as f32 / upixel_size as f32).ceil() as u32 {
-            progressbar.update(y.pow(2) as f32 / (image_height / upixel_size).pow(2) as f32);
+        for y in 0_u32..(image_height as f32 / upixel_size).floor() as u32 {
+            progressbar.update(y.pow(2) as f32 / (image_height / upixel_size as u32).pow(2) as f32);
             progressbar.show();
-
             if (image_height / SHOW_IMAGE_TIMES) != 0 && y % (image_height / SHOW_IMAGE_TIMES) == 0
             {
                 self.generate_texture(&buffer, image_width, image_height);
@@ -135,7 +121,7 @@ impl Renderer {
                 ((image_width as f32) * (1.0 / self.pixel_size).ceil()) as u64,
                 mpz_start,
             );
-            for x in 0..(image_width as f32 / upixel_size as f32).ceil() as u32 {
+            for x in 0..(image_width as f32 / upixel_size).floor() as u32 {
                 match self.mode {
                     0 => {
                         let mut sum = 0;
@@ -146,9 +132,9 @@ impl Renderer {
                         }
                         self.fill_buffer(
                             &mut buffer,
-                            x,
-                            image_height as f32 / upixel_size as f32 - 1.0 - y as f32,
-                            upixel_size,
+                            x as f32,
+                            y as f32,
+                            upixel_size as f32,
                             sum as f32 / (1.0 / self.pixel_size).ceil() as f32,
                         );
                     }
@@ -156,9 +142,9 @@ impl Renderer {
                         if sequence[((x as f32) * (1.0 / self.pixel_size).ceil()) as usize] {
                             self.fill_buffer(
                                 &mut buffer,
-                                x,
-                                image_height as f32 / upixel_size as f32 - 1.0 - y as f32,
-                                upixel_size,
+                                x as f32,
+                                y as f32,
+                                upixel_size as f32,
                                 1.0,
                             );
                         }
@@ -167,21 +153,11 @@ impl Renderer {
                 }
             }
             progressbar.clear();
-
-            // Increment mpz_start
-            // mpz_int_set_u64(
-            //     mpz_start.borrow_mut(),
-            //     self.start_index
-            //         + 1
-            //         + ((y as f32) * (1.0 / self.pixel_size).ceil()) as u64
-            //         + self.start_p + 1
-            // );
         }
-
         self.generate_texture(&buffer, image_width, image_height);
     }
 
     pub fn change_mode(&mut self) {
-        self.mode = (self.mode + 1) % 3;
+        self.mode = (self.mode + 1) % 2;
     }
 }

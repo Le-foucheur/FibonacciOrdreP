@@ -1,6 +1,6 @@
 use sfml::{
     graphics::{RenderTarget, RenderWindow},
-    window::Event,
+    window::{Event, Key},
 };
 
 use crate::renderer::Renderer;
@@ -13,7 +13,7 @@ pub struct WindowManager {
 }
 
 impl WindowManager {
-    pub fn new() -> WindowManager {
+    pub fn new(n: u64, p: u64, zoom: f32) -> WindowManager {
         let mut window = RenderWindow::new(
             (300, 10),
             "Fibonacci sequence modulo 2",
@@ -21,7 +21,7 @@ impl WindowManager {
             &Default::default(),
         );
         window.set_vertical_sync_enabled(true);
-        let renderer = Renderer::new(1.0 / 64.0 * 64.0, 000_000_000, 0);
+        let renderer = Renderer::new(zoom, n, p);
         WindowManager {
             window,
             show_lines: true,
@@ -88,12 +88,12 @@ impl WindowManager {
                             self.generate_sequences();
                         }
                         sfml::window::Key::Right => {
-                            self.renderer.start_index += 10;
+                            self.renderer.start_index += 100;
                             self.generate_sequences();
                         }
                         sfml::window::Key::Left => {
-                            self.renderer.start_index = if self.renderer.start_index > 10 {
-                                self.renderer.start_index - 10
+                            self.renderer.start_index = if self.renderer.start_index > 100 {
+                                self.renderer.start_index - 100
                             } else {
                                 0
                             };
@@ -113,6 +113,11 @@ impl WindowManager {
                         sfml::window::Key::M => {
                             self.renderer.change_mode();
                             self.generate_sequences();
+                        }
+                        sfml::window::Key::Q => {
+                            if Key::LControl.is_pressed() {
+                                self.window.close();
+                            }
                         }
                         _ => {}
                     },
