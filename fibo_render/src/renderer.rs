@@ -84,7 +84,7 @@ impl Renderer {
         image_height: u32,
         window: &mut RenderWindow,
     ) {
-        let mut mpz_start = mpz_int_from_u64(self.start_index);
+        let mut mpz_start = mpz_int_from_u64(self.start_index + 1);
 
         // Initialize buffer
         let mut buffer = RenderTexture::new(image_width, image_height).unwrap();
@@ -116,7 +116,7 @@ impl Renderer {
             );
             for x in 0..(image_width / upixel_size) {
                 if sequence[((x as f32) * (1.0 / self.pixel_size).ceil()) as usize] {
-                    self.fill_buffer(&mut buffer, x, image_height / upixel_size - y, upixel_size);
+                    self.fill_buffer(&mut buffer, x, image_height / upixel_size -1 - y, upixel_size);
                 }
             }
             progressbar.clear();
@@ -124,7 +124,7 @@ impl Renderer {
             // Increment mpz_start
             mpz_int_set_u64(
                 mpz_start.borrow_mut(),
-                self.start_index
+                self.start_index + 1
                     + ((y as f32) * (1.0 / self.pixel_size).ceil()) as u64
                     + self.start_p
                     + 1,
