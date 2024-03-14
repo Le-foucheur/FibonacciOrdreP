@@ -1,6 +1,6 @@
 use std::env;
 
-use command_line::{load_argument_f32, load_argument_u64, load_argument_u8};
+use command_line::{load_argument_f32, load_argument_u32, load_argument_u64, load_argument_u8};
 
 use crate::{command_line::HELP_MESSAGE, window_manager::WindowManager};
 mod fibo;
@@ -67,6 +67,18 @@ fn main() {
         } else if args[0] == "-i" || args[0] == "--image" || args[0] == "--headless" {
             headless = true;
             args.remove(0);
+        } else if args[0] == "-w" || args[0] == "--width" {
+            load_argument_u32(
+                &mut args,
+                &mut width,
+                "Invalid argument for -w. Please provide a valid number for the width",
+            );
+        } else if args[0] == "-h" || args[0] == "--height" {
+            load_argument_u32(
+                &mut args,
+                &mut height,
+                "Invalid argument for -h. Please provide a valid number for the height",
+            );
         } else if args[0] == "-h" || args[0] == "--help" {
             println!("{}", HELP_MESSAGE);
             return;

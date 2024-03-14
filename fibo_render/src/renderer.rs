@@ -88,7 +88,7 @@ impl Renderer {
         &mut self,
         image_width: u32,
         image_height: u32,
-        mut window: Option<&mut RenderWindow>,
+        mut window: Option<&mut RenderWindow>
     ) {
         let texture_generation_time = std::time::Instant::now();
         // Round pixel size for easier computation
@@ -115,6 +115,7 @@ impl Renderer {
 
         // Loop over the image size divided by the pixel size
         for y in 0_u32..(image_height as f32 / upixel_size).floor() as u32 {
+            
             // Update progress bar and show the image sometimes
             progressbar.update(y.pow(2) as f32 / (image_height / upixel_size as u32).pow(2) as f32);
             progressbar.show();

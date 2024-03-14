@@ -38,72 +38,76 @@ impl WindowManager {
         );
     }
 
+    pub fn manage_events(&mut self) {
+        while let Some(ev) = self.window.poll_event() {
+            match ev {
+                Event::Closed => self.window.close(),
+                Event::Resized { width, height } => {
+                    self.window.set_view(&sfml::graphics::View::new(
+                        sfml::system::Vector2::new(width as f32 / 2.0, height as f32 / 2.0),
+                        sfml::system::Vector2::new(width as f32, height as f32),
+                    ));
+                    self.generate_sequences();
+                }
+                Event::KeyPressed { code, .. } => match code {
+                    sfml::window::Key::P => {
+                        self.renderer.save_image();
+                    }
+                    sfml::window::Key::Down => {
+                        self.renderer.start_p += MOVE_STEP;
+                        self.generate_sequences();
+                    }
+                    sfml::window::Key::Up => {
+                        self.renderer.start_p = if self.renderer.start_p > MOVE_STEP {
+                            self.renderer.start_p - MOVE_STEP
+                        } else {
+                            0
+                        };
+                        self.generate_sequences();
+                    }
+                    sfml::window::Key::Right => {
+                        self.renderer.start_index += MOVE_STEP;
+                        self.generate_sequences();
+                    }
+                    sfml::window::Key::Left => {
+                        self.renderer.start_index = if self.renderer.start_index > MOVE_STEP {
+                            self.renderer.start_index - MOVE_STEP
+                        } else {
+                            0
+                        };
+                        self.generate_sequences();
+                    }
+                    sfml::window::Key::Z => {
+                        self.renderer.pixel_size *= 2.;
+                        self.generate_sequences();
+                    }
+                    sfml::window::Key::S => {
+                        self.renderer.pixel_size /= 2.;
+                        self.generate_sequences();
+                    }
+                    sfml::window::Key::L => {
+                        self.show_lines = !self.show_lines;
+                    }
+                    sfml::window::Key::M => {
+                        self.renderer.change_mode();
+                        self.generate_sequences();
+                    }
+                    sfml::window::Key::Q => {
+                        if Key::LControl.is_pressed() {
+                            self.window.close();
+                        }
+                    }
+                    _ => {}
+                },
+                _ => {}
+            }
+        }
+    }
+
     pub fn run(&mut self) {
         self.generate_sequences();
         while self.window.is_open() {
-            while let Some(ev) = self.window.poll_event() {
-                match ev {
-                    Event::Closed => self.window.close(),
-                    Event::Resized { width, height } => {
-                        self.window.set_view(&sfml::graphics::View::new(
-                            sfml::system::Vector2::new(width as f32 / 2.0, height as f32 / 2.0),
-                            sfml::system::Vector2::new(width as f32, height as f32),
-                        ));
-                        self.generate_sequences();
-                    }
-                    Event::KeyPressed { code, .. } => match code {
-                        sfml::window::Key::P => {
-                            self.renderer.save_image();
-                        }
-                        sfml::window::Key::Down => {
-                            self.renderer.start_p += MOVE_STEP;
-                            self.generate_sequences();
-                        }
-                        sfml::window::Key::Up => {
-                            self.renderer.start_p = if self.renderer.start_p > MOVE_STEP {
-                                self.renderer.start_p - MOVE_STEP
-                            } else {
-                                0
-                            };
-                            self.generate_sequences();
-                        }
-                        sfml::window::Key::Right => {
-                            self.renderer.start_index += MOVE_STEP;
-                            self.generate_sequences();
-                        }
-                        sfml::window::Key::Left => {
-                            self.renderer.start_index = if self.renderer.start_index > MOVE_STEP {
-                                self.renderer.start_index - MOVE_STEP
-                            } else {
-                                0
-                            };
-                            self.generate_sequences();
-                        }
-                        sfml::window::Key::Z => {
-                            self.renderer.pixel_size *= 2.;
-                            self.generate_sequences();
-                        }
-                        sfml::window::Key::S => {
-                            self.renderer.pixel_size /= 2.;
-                            self.generate_sequences();
-                        }
-                        sfml::window::Key::L => {
-                            self.show_lines = !self.show_lines;
-                        }
-                        sfml::window::Key::M => {
-                            self.renderer.change_mode();
-                            self.generate_sequences();
-                        }
-                        sfml::window::Key::Q => {
-                            if Key::LControl.is_pressed() {
-                                self.window.close();
-                            }
-                        }
-                        _ => {}
-                    },
-                    _ => {}
-                }
-            }
+            self.manage_events();
             self.window.draw(&self.renderer.current_sprite);
             if self.show_lines {
                 self.renderer

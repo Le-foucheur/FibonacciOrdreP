@@ -16,7 +16,6 @@ Graphical usage:
     Ctrl+Q: Quit the program
 ";
 
-
 // Command line arguments helper functions
 fn _start_load_argument(args: &mut Vec<String>, msg: &str) -> bool {
     if args.len() < 2 {
@@ -35,6 +34,13 @@ pub fn load_argument_u64(args: &mut Vec<String>, arg: &mut u64, msg: &str) {
         return;
     }
     *arg = args[1].parse::<u64>().expect(msg);
+    _end_argument(args);
+}
+pub fn load_argument_u32(args: &mut Vec<String>, arg: &mut u32, msg: &str) {
+    if _start_load_argument(args, msg) {
+        return;
+    }
+    *arg = args[1].parse::<u32>().expect(msg);
     _end_argument(args);
 }
 pub fn load_argument_u8(args: &mut Vec<String>, arg: &mut u8, msg: &str) {
