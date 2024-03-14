@@ -1,9 +1,10 @@
 use sfml::graphics::{
-    Color, Image, RcSprite, RcTexture, RenderTarget, RenderWindow, VertexBufferUsage,
+    Color, Image, RcSprite, RcTexture, RenderTarget, RenderWindow, Shape, Transformable,
+    VertexBufferUsage,
 };
 
+use crate::window_manager::{generate_sequences, manage_events};
 use crate::{constants::SHOW_IMAGE_TIMES, fibo_fast, gmp_utils::mpz_int_from_u64, progressbar};
-use crate::window_manager::{manage_events, generate_sequences};
 
 pub struct Renderer {
     pub current_sprite: RcSprite,
@@ -15,6 +16,8 @@ pub struct Renderer {
     pub mode: u8,
     pub show_lines: bool,
     pub line_count: u32,
+    pub mouse_x: i32,
+    pub mouse_y: i32,
 }
 
 impl Renderer {
@@ -29,6 +32,8 @@ impl Renderer {
             mode: mode,
             show_lines: true,
             line_count: 10,
+            mouse_x: 0,
+            mouse_y: 0,
         }
     }
 
@@ -93,7 +98,7 @@ impl Renderer {
         &mut self,
         image_width: u32,
         image_height: u32,
-        mut window: Option<&mut RenderWindow>
+        mut window: Option<&mut RenderWindow>,
     ) {
         let texture_generation_time = std::time::Instant::now();
         // Round pixel size for easier computation
@@ -130,7 +135,7 @@ impl Renderer {
                     return;
                 }
                 if (image_height / SHOW_IMAGE_TIMES) != 0
-                && y % (image_height / SHOW_IMAGE_TIMES) == 0
+                    && y % (image_height / SHOW_IMAGE_TIMES) == 0
                 {
                     self.generate_texture(&buffer, image_width, image_height);
                     window.as_mut().unwrap().draw(&self.current_sprite);
@@ -204,5 +209,38 @@ impl Renderer {
                 println!("Error while saving the image");
             }
         };
+    }
+
+    // Draw text in the right left corner of the window to show the n and p under the mouse
+    pub fn draw_position(&mut self, window: &mut RenderWindow) {
+        // Draw text
+        let font = sfml::graphics::Font::from_file("assets/monospacebold.ttf").unwrap();
+        let mut text = sfml::graphics::Text::new(
+            &format!(
+                "n: {}, p: {}",
+                self.start_index + (self.mouse_x as f32 * (1.0 / self.pixel_size)).floor() as u64,
+                self.start_p + (self.mouse_y as f32 * (1.0 / self.pixel_size)).floor() as u64
+            ),
+            &font,
+            15,
+        );
+        text.set_fill_color(sfml::graphics::Color::WHITE);
+        text.set_position(sfml::system::Vector2::new(
+            window.size().x as f32 - text.local_bounds().width - 5.0,
+            window.size().y as f32 - text.local_bounds().height - 5.0,
+        ));
+        // Draw a black rectangle to make the text more readable
+        let mut rectangle = sfml::graphics::RectangleShape::new();
+        rectangle.set_size(sfml::system::Vector2::new(
+            text.local_bounds().width + 7.0,
+            text.local_bounds().height + 4.0,
+        ));
+        rectangle.set_fill_color(sfml::graphics::Color::BLACK);
+        rectangle.set_position(sfml::system::Vector2::new(
+            window.size().x as f32 - text.local_bounds().width - 7.0,
+            window.size().y as f32 - text.local_bounds().height - 4.0,
+        ));
+        window.draw(&rectangle);
+        window.draw(&text);
     }
 }

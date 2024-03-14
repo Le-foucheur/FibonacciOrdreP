@@ -3,7 +3,7 @@ use sfml::{
     window::{Event, Key},
 };
 
-use crate::{constants::MOVE_STEP, command_line::HELP_MESSAGE, renderer::Renderer};
+use crate::{command_line::HELP_MESSAGE, constants::MOVE_STEP, renderer::Renderer};
 
 pub struct WindowManager {
     window: RenderWindow,
@@ -11,11 +11,7 @@ pub struct WindowManager {
 }
 
 pub fn generate_sequences(window: &mut RenderWindow, renderer: &mut Renderer) {
-    renderer.generate_sequences_texture(
-        window.size().x,
-        window.size().y,
-        Some(window),
-    );
+    renderer.generate_sequences_texture(window.size().x, window.size().y, Some(window));
 }
 
 pub fn manage_events(window: &mut RenderWindow, renderer: &mut Renderer) -> u8 {
@@ -83,6 +79,10 @@ pub fn manage_events(window: &mut RenderWindow, renderer: &mut Renderer) -> u8 {
                 }
                 _ => {}
             },
+            Event::MouseMoved { x, y } => {
+                renderer.mouse_x = x;
+                renderer.mouse_y = y;
+            }
             _ => {}
         }
     }
@@ -98,15 +98,12 @@ impl WindowManager {
             &Default::default(),
         );
         window.set_vertical_sync_enabled(true);
-        
-        WindowManager {
-            window,
-            renderer,
-        }
+
+        WindowManager { window, renderer }
     }
 
     pub fn run(&mut self) {
-        generate_sequences(&mut self.window,&mut self.renderer);
+        generate_sequences(&mut self.window, &mut self.renderer);
         while self.window.is_open() {
             if manage_events(&mut self.window, &mut self.renderer) == 1 {
                 generate_sequences(&mut self.window, &mut self.renderer);
@@ -116,6 +113,7 @@ impl WindowManager {
                 self.renderer
                     .generate_line(&mut self.window, self.renderer.line_count);
             }
+            self.renderer.draw_position(&mut self.window);
             self.window.display();
         }
     }
