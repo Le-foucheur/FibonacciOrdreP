@@ -3,6 +3,7 @@ use sfml::graphics::{
 };
 
 use crate::{constants::SHOW_IMAGE_TIMES, fibo_fast, gmp_utils::mpz_int_from_u64, progressbar};
+use crate::window_manager::{manage_events, generate_sequences};
 
 pub struct Renderer {
     pub current_sprite: RcSprite,
@@ -12,6 +13,8 @@ pub struct Renderer {
     pub start_p: u64,
     pub fibo: fibo_fast::FiboFastManager,
     pub mode: u8,
+    pub show_lines: bool,
+    pub line_count: u32,
 }
 
 impl Renderer {
@@ -24,6 +27,8 @@ impl Renderer {
             start_p,
             fibo: fibo_fast::FiboFastManager::new(),
             mode: mode,
+            show_lines: true,
+            line_count: 10,
         }
     }
 
@@ -115,17 +120,22 @@ impl Renderer {
 
         // Loop over the image size divided by the pixel size
         for y in 0_u32..(image_height as f32 / upixel_size).floor() as u32 {
-            
             // Update progress bar and show the image sometimes
             progressbar.update(y.pow(2) as f32 / (image_height / upixel_size as u32).pow(2) as f32);
             progressbar.show();
-            if window.is_some()
-                && (image_height / SHOW_IMAGE_TIMES) != 0
+            if window.is_some() {
+                if manage_events(window.as_mut().unwrap(), self) == 1 {
+                    progressbar.clear();
+                    generate_sequences(window.as_mut().unwrap(), self);
+                    return;
+                }
+                if (image_height / SHOW_IMAGE_TIMES) != 0
                 && y % (image_height / SHOW_IMAGE_TIMES) == 0
-            {
-                self.generate_texture(&buffer, image_width, image_height);
-                window.as_mut().unwrap().draw(&self.current_sprite);
-                window.as_mut().unwrap().display();
+                {
+                    self.generate_texture(&buffer, image_width, image_height);
+                    window.as_mut().unwrap().draw(&self.current_sprite);
+                    window.as_mut().unwrap().display();
+                }
             }
 
             let sequence = self.fibo.generate(

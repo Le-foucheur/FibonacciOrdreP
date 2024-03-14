@@ -3,13 +3,90 @@ use sfml::{
     window::{Event, Key},
 };
 
-use crate::{constants::MOVE_STEP, renderer::Renderer};
+use crate::{constants::MOVE_STEP, command_line::HELP_MESSAGE, renderer::Renderer};
 
 pub struct WindowManager {
     window: RenderWindow,
-    show_lines: bool,
-    line_count: u32,
     renderer: Renderer,
+}
+
+pub fn generate_sequences(window: &mut RenderWindow, renderer: &mut Renderer) {
+    renderer.generate_sequences_texture(
+        window.size().x,
+        window.size().y,
+        Some(window),
+    );
+}
+
+pub fn manage_events(window: &mut RenderWindow, renderer: &mut Renderer) -> u8 {
+    let mut result = 0;
+    while let Some(ev) = window.poll_event() {
+        match ev {
+            Event::Closed => window.close(),
+            Event::Resized { width, height } => {
+                window.set_view(&sfml::graphics::View::new(
+                    sfml::system::Vector2::new(width as f32 / 2.0, height as f32 / 2.0),
+                    sfml::system::Vector2::new(width as f32, height as f32),
+                ));
+                result = 1;
+            }
+            Event::KeyPressed { code, .. } => match code {
+                sfml::window::Key::P => {
+                    renderer.save_image();
+                }
+                sfml::window::Key::Down => {
+                    renderer.start_p += MOVE_STEP;
+                    result = 1;
+                }
+                sfml::window::Key::Up => {
+                    renderer.start_p = if renderer.start_p > MOVE_STEP {
+                        renderer.start_p - MOVE_STEP
+                    } else {
+                        0
+                    };
+                    result = 1;
+                }
+                sfml::window::Key::Right => {
+                    renderer.start_index += MOVE_STEP;
+                    result = 1;
+                }
+                sfml::window::Key::Left => {
+                    renderer.start_index = if renderer.start_index > MOVE_STEP {
+                        renderer.start_index - MOVE_STEP
+                    } else {
+                        0
+                    };
+                    result = 1;
+                }
+                sfml::window::Key::Z => {
+                    renderer.pixel_size *= 2.;
+                    result = 1;
+                }
+                sfml::window::Key::S => {
+                    renderer.pixel_size /= 2.;
+                    result = 1;
+                }
+                sfml::window::Key::L => {
+                    renderer.show_lines = !renderer.show_lines;
+                }
+                sfml::window::Key::M => {
+                    renderer.change_mode();
+                    result = 1;
+                }
+                sfml::window::Key::Q => {
+                    if Key::LControl.is_pressed() {
+                        window.close();
+                    }
+                }
+                sfml::window::Key::H => {
+                    println!("{}", HELP_MESSAGE);
+                }
+                _ => {}
+            },
+            _ => {}
+        }
+    }
+    return result;
 }
 
 impl WindowManager {
@@ -24,94 +101,20 @@ impl WindowManager {
         
         WindowManager {
             window,
-            show_lines: true,
-            line_count: 10,
             renderer,
         }
     }
 
-    fn generate_sequences(&mut self) {
-        self.renderer.generate_sequences_texture(
-            self.window.size().x,
-            self.window.size().y,
-            Some(&mut self.window),
-        );
-    }
-
-    pub fn manage_events(&mut self) {
-        while let Some(ev) = self.window.poll_event() {
-            match ev {
-                Event::Closed => self.window.close(),
-                Event::Resized { width, height } => {
-                    self.window.set_view(&sfml::graphics::View::new(
-                        sfml::system::Vector2::new(width as f32 / 2.0, height as f32 / 2.0),
-                        sfml::system::Vector2::new(width as f32, height as f32),
-                    ));
-                    self.generate_sequences();
-                }
-                Event::KeyPressed { code, .. } => match code {
-                    sfml::window::Key::P => {
-                        self.renderer.save_image();
-                    }
-                    sfml::window::Key::Down => {
-                        self.renderer.start_p += MOVE_STEP;
-                        self.generate_sequences();
-                    }
-                    sfml::window::Key::Up => {
-                        self.renderer.start_p = if self.renderer.start_p > MOVE_STEP {
-                            self.renderer.start_p - MOVE_STEP
-                        } else {
-                            0
-                        };
-                        self.generate_sequences();
-                    }
-                    sfml::window::Key::Right => {
-                        self.renderer.start_index += MOVE_STEP;
-                        self.generate_sequences();
-                    }
-                    sfml::window::Key::Left => {
-                        self.renderer.start_index = if self.renderer.start_index > MOVE_STEP {
-                            self.renderer.start_index - MOVE_STEP
-                        } else {
-                            0
-                        };
-                        self.generate_sequences();
-                    }
-                    sfml::window::Key::Z => {
-                        self.renderer.pixel_size *= 2.;
-                        self.generate_sequences();
-                    }
-                    sfml::window::Key::S => {
-                        self.renderer.pixel_size /= 2.;
-                        self.generate_sequences();
-                    }
-                    sfml::window::Key::L => {
-                        self.show_lines = !self.show_lines;
-                    }
-                    sfml::window::Key::M => {
-                        self.renderer.change_mode();
-                        self.generate_sequences();
-                    }
-                    sfml::window::Key::Q => {
-                        if Key::LControl.is_pressed() {
-                            self.window.close();
-                        }
-                    }
-                    _ => {}
-                },
-                _ => {}
-            }
-        }
-    }
-
     pub fn run(&mut self) {
-        self.generate_sequences();
+        generate_sequences(&mut self.window,&mut self.renderer);
         while self.window.is_open() {
-            self.manage_events();
+            if manage_events(&mut self.window, &mut self.renderer) == 1 {
+                generate_sequences(&mut self.window, &mut self.renderer);
+            }
             self.window.draw(&self.renderer.current_sprite);
-            if self.show_lines {
+            if self.renderer.show_lines {
                 self.renderer
-                    .generate_line(&mut self.window, self.line_count);
+                    .generate_line(&mut self.window, self.renderer.line_count);
             }
             self.window.display();
         }
