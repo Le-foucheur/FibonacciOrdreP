@@ -161,10 +161,10 @@ accumulator loop_once(accumulator acc,cond_t condition, bytes_t bits){
 __attribute__((always_inline)) inline
 bytes_t finalize(accumulator acc, bytes_t result0){
   /* How much to shift (right)?
-     integer lane
-   0|1|2|3|4|5|6|7
+     integer lane  
+   0|1|2|3|4|5|6|7 
   
-a0 7|6|5|4|3|2|1|0
+a0 7|6|5|4|3|2|1|0  
 c1 6|5|4|3|2|1|0|7
 c2 5|4|3|2|1|0|7|6
 .3 4|3|2|1|0|7|6|5
@@ -175,47 +175,48 @@ t7 0|7|6|5|4|3|2|1
 
 r0 7|7|7|7|7|7|7|7
 */
+  __m512i temp = _mm512_slli(result0, 64-7);
   result0 = _mm512_srli_epi64(result0, 7);
   __m512i shifter = _mm512_set_epi64(0,1,2,3,4,5,6,7);
   __m512i less_one = _mm512_set1_epi64(-1);
-  __m512i eight = _mm512_set1_epi64(8); //dont worry, it will be 8 soon
+  __m512i seven = _mm512_set1_epi64(7);
 
   __m512i next_shifter=_mm512_add_epi64(shifter,less_one);
   
   acc.part0 = _mm512_srlv_epi64(acc.part0,shifter);
   
-  shifter = _mm512_and_epi64(next_shifter,eight);
+  shifter = _mm512_and_epi64(next_shifter,seven);
   result0 = _mm512_xor_epi64(result0,acc.part0);
   next_shifter = _mm512_add_epi64(next_shifter,less_one);
   acc.part1 = _mm512_srlv_epi64(acc.part1,shifter);
   
-  shifter = _mm512_and_epi64(next_shifter,eight);
+  shifter = _mm512_and_epi64(next_shifter,seven);
   result0 = _mm512_xor_epi64(result0,acc.part1);
   
   next_shifter = _mm512_add_epi64(next_shifter,less_one);
   acc.part2 = _mm512_srlv_epi64(acc.part2,shifter);
   
-  shifter = _mm512_and_epi64(next_shifter,eight);
+  shifter = _mm512_and_epi64(next_shifter,seven);
   result0 = _mm512_xor_epi64(result0,acc.part2);
   next_shifter = _mm512_add_epi64(next_shifter,less_one);
   acc.part3 = _mm512_srlv_epi64(acc.part3,shifter);
   
-  shifter = _mm512_and_epi64(next_shifter,eight);
+  shifter = _mm512_and_epi64(next_shifter,seven);
   result0 = _mm512_xor_epi64(result0,acc.part3);
   next_shifter = _mm512_add_epi64(next_shifter,less_one);
   acc.part4 = _mm512_srlv_epi64(acc.part4,shifter);
   
-  shifter = _mm512_and_epi64(next_shifter,eight);
+  shifter = _mm512_and_epi64(next_shifter,seven);
   result0 = _mm512_xor_epi64(result0,acc.part4);
   next_shifter = _mm512_add_epi64(next_shifter,less_one);
   acc.part5 = _mm512_srlv_epi64(acc.part5,shifter);
   
-  shifter = _mm512_and_epi64(next_shifter,eight);
+  shifter = _mm512_and_epi64(next_shifter,seven);
   result0 = _mm512_xor_epi64(result0,acc.part5);
   next_shifter = _mm512_add_epi64(next_shifter,less_one);
   acc.part6 = _mm512_srlv_epi64(acc.part6,shifter);
   
-  shifter = _mm512_and_epi64(next_shifter,eight);
+  shifter = _mm512_and_epi64(next_shifter,seven);
   result0 = _mm512_xor_epi64(result0,acc.part6);
   acc.part7 = _mm512_srlv_epi64(acc.part7,shifter);  
   result0 = _mm512_xor_epi64(result0,acc.part7);
