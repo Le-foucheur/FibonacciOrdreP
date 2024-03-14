@@ -14,6 +14,7 @@ Graphical usage:
     P: print current render in an image file
     M: Switch between rendering modes
     Ctrl+Q: Quit the program
+    H: display this help message
 ";
 
 // Command line arguments helper functions
