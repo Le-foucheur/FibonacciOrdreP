@@ -13,7 +13,7 @@ pub struct WindowManager {
 }
 
 impl WindowManager {
-    pub fn new(n: u64, p: u64, zoom: f32) -> WindowManager {
+    pub fn new(renderer: Renderer) -> WindowManager {
         let mut window = RenderWindow::new(
             (300, 10),
             "Fibonacci sequence modulo 2",
@@ -21,7 +21,7 @@ impl WindowManager {
             &Default::default(),
         );
         window.set_vertical_sync_enabled(true);
-        let renderer = Renderer::new(zoom, n, p);
+        
         WindowManager {
             window,
             show_lines: true,
@@ -30,29 +30,11 @@ impl WindowManager {
         }
     }
 
-    pub fn save_image(&self) {
-        // Save current texture
-        println!("Start image conversion...");
-        match self.renderer.current_texture.copy_to_image() {
-            Some(image) => {
-                println!("Saving image...");
-                if image.save_to_file("fibo_sequence.png") {
-                    println!("Image saved successfully as fibo_sequence.png");
-                } else {
-                    println!("Error while saving the image");
-                }
-            }
-            None => {
-                println!("Error while saving the image");
-            }
-        };
-    }
-
     fn generate_sequences(&mut self) {
         self.renderer.generate_sequences_texture(
             self.window.size().x,
             self.window.size().y,
-            &mut self.window,
+            Some(&mut self.window),
         );
     }
 
@@ -71,7 +53,7 @@ impl WindowManager {
                     }
                     Event::KeyPressed { code, .. } => match code {
                         sfml::window::Key::P => {
-                            self.save_image();
+                            self.renderer.save_image();
                         }
                         sfml::window::Key::Down => {
                             self.renderer.start_p += MOVE_STEP;

@@ -4,7 +4,6 @@ use sfml::graphics::{
 
 use crate::{constants::SHOW_IMAGE_TIMES, fibo_fast, gmp_utils::mpz_int_from_u64, progressbar};
 
-
 pub struct Renderer {
     pub current_sprite: RcSprite,
     pub current_texture: RcTexture,
@@ -16,7 +15,7 @@ pub struct Renderer {
 }
 
 impl Renderer {
-    pub fn new(pixel_size: f32, start_index: u64, start_p: u64) -> Renderer {
+    pub fn new(pixel_size: f32, start_index: u64, start_p: u64, mode: u8) -> Renderer {
         Renderer {
             current_sprite: RcSprite::new(),
             current_texture: RcTexture::new().unwrap(),
@@ -24,7 +23,7 @@ impl Renderer {
             start_index,
             start_p,
             fibo: fibo_fast::FiboFastManager::new(),
-            mode: 0,
+            mode: mode,
         }
     }
 
@@ -89,19 +88,19 @@ impl Renderer {
         &mut self,
         image_width: u32,
         image_height: u32,
-        window: &mut RenderWindow,
+        mut window: Option<&mut RenderWindow>,
     ) {
         let texture_generation_time = std::time::Instant::now();
         // Round pixel size for easier computation
         let upixel_size = self.pixel_size.ceil() as f32;
 
         let delta_n = (image_width as f32 / self.pixel_size).floor() as u64;
-        let delta_p = (((image_height as f32 / upixel_size).floor() - 1.0) * (1.0 / self.pixel_size).ceil()) as u64 + 1;
+        let delta_p = (((image_height as f32 / upixel_size).floor() - 1.0)
+            * (1.0 / self.pixel_size).ceil()) as u64
+            + 1;
         println!(
             "Start generating texture with pixel size: {}, n: {}, p: {}, delta_n: {}, delta_p: {}",
-            self.pixel_size, self.start_index, self.start_p,
-            delta_n,
-            delta_p
+            self.pixel_size, self.start_index, self.start_p, delta_n, delta_p
         );
 
         // Initialize the mpz at the right side of the generation
@@ -119,11 +118,13 @@ impl Renderer {
             // Update progress bar and show the image sometimes
             progressbar.update(y.pow(2) as f32 / (image_height / upixel_size as u32).pow(2) as f32);
             progressbar.show();
-            if (image_height / SHOW_IMAGE_TIMES) != 0 && y % (image_height / SHOW_IMAGE_TIMES) == 0
+            if window.is_some()
+                && (image_height / SHOW_IMAGE_TIMES) != 0
+                && y % (image_height / SHOW_IMAGE_TIMES) == 0
             {
                 self.generate_texture(&buffer, image_width, image_height);
-                window.draw(&self.current_sprite);
-                window.display();
+                window.as_mut().unwrap().draw(&self.current_sprite);
+                window.as_mut().unwrap().display();
             }
 
             let sequence = self.fibo.generate(
@@ -174,5 +175,23 @@ impl Renderer {
 
     pub fn change_mode(&mut self) {
         self.mode = (self.mode + 1) % 2;
+    }
+
+    pub fn save_image(&self) {
+        // Save current texture
+        println!("Start image conversion...");
+        match self.current_texture.copy_to_image() {
+            Some(image) => {
+                println!("Saving image...");
+                if image.save_to_file("fibo_sequence.png") {
+                    println!("Image saved successfully as fibo_sequence.png");
+                } else {
+                    println!("Error while saving the image");
+                }
+            }
+            None => {
+                println!("Error while saving the image");
+            }
+        };
     }
 }
