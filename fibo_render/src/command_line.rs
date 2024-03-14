@@ -13,6 +13,8 @@ Graphical usage:
     L: Show/Hide patterns lines
     P: print current render in an image file
     M: Switch between rendering modes
+    N: Input n start index
+    B: Input p start index
     Ctrl+Q: Quit the program
     H: display this help message
 ";

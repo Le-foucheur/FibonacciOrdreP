@@ -29,7 +29,7 @@ impl Renderer {
             start_index,
             start_p,
             fibo: fibo_fast::FiboFastManager::new(),
-            mode: mode,
+            mode,
             show_lines: true,
             line_count: 10,
             mouse_x: 0,
@@ -150,6 +150,7 @@ impl Renderer {
             );
             for x in 0..(image_width as f32 / upixel_size).floor() as u32 {
                 match self.mode {
+                    // Average over n
                     0 => {
                         let mut sum = 0;
                         for i in 0..(1.0 / self.pixel_size).ceil() as usize {
@@ -165,6 +166,7 @@ impl Renderer {
                             sum as f32 / (1.0 / self.pixel_size).ceil() as f32,
                         );
                     }
+                    // Take only once cell
                     1 => {
                         if sequence[((x as f32) * (1.0 / self.pixel_size).ceil()) as usize] {
                             self.fill_buffer(
@@ -175,6 +177,32 @@ impl Renderer {
                                 1.0,
                             );
                         }
+                    }
+                    // Average over n and p
+                    2 => {
+                        let mut sum = 0;
+                        for j in 0..(1.0 / self.pixel_size).ceil() as usize {
+                            let sequence = self.fibo.generate(
+                                ((y as f32) * (1.0 / self.pixel_size).ceil()) as u64
+                                    + self.start_p
+                                    + 1
+                                    + j as u64,
+                                ((image_width as f32) * (1.0 / self.pixel_size).ceil()) as u64,
+                                mpz_start,
+                            );
+                            for i in 0..(1.0 / self.pixel_size).ceil() as usize {
+                                sum += sequence
+                                    [((x as f32) * (1.0 / self.pixel_size).ceil()) as usize + i]
+                                    as u32;
+                            }
+                        }
+                        self.fill_buffer(
+                            &mut buffer,
+                            x as f32,
+                            y as f32,
+                            upixel_size as f32,
+                            sum as f32 / (1.0 / (self.pixel_size * self.pixel_size)).ceil() as f32,
+                        );
                     }
                     _ => {}
                 }
@@ -190,7 +218,7 @@ impl Renderer {
     }
 
     pub fn change_mode(&mut self) {
-        self.mode = (self.mode + 1) % 2;
+        self.mode = (self.mode + 1) % 3;
     }
 
     pub fn save_image(&self) {

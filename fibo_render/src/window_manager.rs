@@ -1,3 +1,5 @@
+use std::io::Write;
+
 use sfml::{
     graphics::{RenderTarget, RenderWindow},
     window::{Event, Key},
@@ -73,6 +75,24 @@ pub fn manage_events(window: &mut RenderWindow, renderer: &mut Renderer) -> u8 {
                     if Key::LControl.is_pressed() {
                         window.close();
                     }
+                }
+                sfml::window::Key::N => {
+                    // Input start index
+                    print!("Enter n start index: ");
+                    std::io::stdout().flush().unwrap();
+                    let mut input = String::new();
+                    std::io::stdin().read_line(&mut input).unwrap();
+                    renderer.start_index = input.trim().parse().unwrap();
+                    result = 1;
+                }
+                sfml::window::Key::B => {
+                    // Input p start index
+                    print!("Enter p start index: ");
+                    std::io::stdout().flush().unwrap();
+                    let mut input = String::new();
+                    std::io::stdin().read_line(&mut input).unwrap();
+                    renderer.start_p = input.trim().parse().unwrap();
+                    result = 1;
                 }
                 sfml::window::Key::H => {
                     println!("{}", HELP_MESSAGE);
