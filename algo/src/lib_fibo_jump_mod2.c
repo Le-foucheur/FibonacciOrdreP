@@ -175,50 +175,57 @@ t7 0|7|6|5|4|3|2|1
 
 r0 7|7|7|7|7|7|7|7
 */
-  __m512i temp = _mm512_slli(result0, 64-7);
-  result0 = _mm512_srli_epi64(result0, 7);
+  __m512i temp = _mm512_alignr_epi64(result0,result0,1);
+  result0 = _mm512_shrdi_epi64 (result0, temp, 7);
   __m512i shifter = _mm512_set_epi64(0,1,2,3,4,5,6,7);
   __m512i less_one = _mm512_set1_epi64(-1);
   __m512i seven = _mm512_set1_epi64(7);
 
   __m512i next_shifter=_mm512_add_epi64(shifter,less_one);
-  
-  acc.part0 = _mm512_srlv_epi64(acc.part0,shifter);
-  
+  //TODO: mix temp instruction to hide latency from alignr
+  temp = _mm512_alignr_epi64(acc.part7,acc.part7,1);      //bit that will be lost by right shifting should in fact go to the next lane, so we get in temp
+  acc.part0 = _mm512_shrdv_epi64(acc.part0,temp,shifter); //bits from next lanes the should be sfifted of same amount (aka, previous accumulator) and then use shrdv
+                                                          //to shift them both in one instruction
   shifter = _mm512_and_epi64(next_shifter,seven);
   result0 = _mm512_xor_epi64(result0,acc.part0);
   next_shifter = _mm512_add_epi64(next_shifter,less_one);
-  acc.part1 = _mm512_srlv_epi64(acc.part1,shifter);
+  temp = _mm512_alignr_epi64(acc.part0,acc.part0,1);
+  acc.part1 = _mm512_shrdv_epi64(acc.part1,temp,shifter);
   
   shifter = _mm512_and_epi64(next_shifter,seven);
   result0 = _mm512_xor_epi64(result0,acc.part1);
-  
   next_shifter = _mm512_add_epi64(next_shifter,less_one);
-  acc.part2 = _mm512_srlv_epi64(acc.part2,shifter);
+  temp = _mm512_alignr_epi64(acc.part1,acc.part1,1);
+  acc.part2 = _mm512_shrdv_epi64(acc.part2,temp,shifter);
   
   shifter = _mm512_and_epi64(next_shifter,seven);
   result0 = _mm512_xor_epi64(result0,acc.part2);
   next_shifter = _mm512_add_epi64(next_shifter,less_one);
-  acc.part3 = _mm512_srlv_epi64(acc.part3,shifter);
+  temp = _mm512_alignr_epi64(acc.part2,acc.part2,1);
+  acc.part3 = _mm512_shrdv_epi64(acc.part3,temp,shifter);
   
   shifter = _mm512_and_epi64(next_shifter,seven);
   result0 = _mm512_xor_epi64(result0,acc.part3);
   next_shifter = _mm512_add_epi64(next_shifter,less_one);
-  acc.part4 = _mm512_srlv_epi64(acc.part4,shifter);
+  temp = _mm512_alignr_epi64(acc.part3,acc.part3,1);
+  acc.part4 = _mm512_shrdv_epi64(acc.part4,temp,shifter);
   
   shifter = _mm512_and_epi64(next_shifter,seven);
   result0 = _mm512_xor_epi64(result0,acc.part4);
   next_shifter = _mm512_add_epi64(next_shifter,less_one);
-  acc.part5 = _mm512_srlv_epi64(acc.part5,shifter);
+  temp = _mm512_alignr_epi64(acc.part4,acc.part4,1);
+  acc.part5 = _mm512_shrdv_epi64(acc.part5,temp,shifter);
   
   shifter = _mm512_and_epi64(next_shifter,seven);
   result0 = _mm512_xor_epi64(result0,acc.part5);
   next_shifter = _mm512_add_epi64(next_shifter,less_one);
-  acc.part6 = _mm512_srlv_epi64(acc.part6,shifter);
+  temp = _mm512_alignr_epi64(acc.part5,acc.part5,1);
+  acc.part6 = _mm512_shrdv_epi64(acc.part6,temp,shifter);
   
   shifter = _mm512_and_epi64(next_shifter,seven);
   result0 = _mm512_xor_epi64(result0,acc.part6);
-  acc.part7 = _mm512_srlv_epi64(acc.part7,shifter);  
+  temp = _mm512_alignr_epi64(acc.part6,acc.part6,1);
+  acc.part7 = _mm512_shrdv_epi64(acc.part7,temp,shifter);  
   result0 = _mm512_xor_epi64(result0,acc.part7);
   
   return result0;
