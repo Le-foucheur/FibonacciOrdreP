@@ -148,10 +148,10 @@ impl Renderer {
                 ((image_width as f32) * (1.0 / self.pixel_size).ceil()) as u64,
                 mpz_start,
             );
-            for x in 0..(image_width as f32 / upixel_size).floor() as u32 {
-                match self.mode {
-                    // Average over n
-                    0 => {
+            match self.mode {
+                // Average over n
+                0 => {
+                    for x in 0..(image_width as f32 / upixel_size).floor() as u32 {
                         let mut sum = 0;
                         for i in 0..(1.0 / self.pixel_size).ceil() as usize {
                             sum += sequence
@@ -166,8 +166,10 @@ impl Renderer {
                             sum as f32 / (1.0 / self.pixel_size).ceil() as f32,
                         );
                     }
-                    // Take only once cell
-                    1 => {
+                }
+                // Take only once cell
+                1 => {
+                    for x in 0..(image_width as f32 / upixel_size).floor() as u32 {
                         if sequence[((x as f32) * (1.0 / self.pixel_size).ceil()) as usize] {
                             self.fill_buffer(
                                 &mut buffer,
@@ -178,21 +180,26 @@ impl Renderer {
                             );
                         }
                     }
-                    // Average over n and p
-                    2 => {
+                }
+                // Average over n and p
+                2 => {
+                    let mut sequences = vec![];
+                    for j in 0..(1.0 / self.pixel_size).ceil() as usize {
+                        sequences.push(self.fibo.generate(
+                            ((y as f32) * (1.0 / self.pixel_size).ceil()) as u64
+                                + self.start_p
+                                + 1
+                                + j as u64,
+                            ((image_width as f32) * (1.0 / self.pixel_size).ceil()) as u64,
+                            mpz_start,
+                        ));
+                    }
+                    for x in 0..(image_width as f32 / upixel_size).floor() as u32 {
                         let mut sum = 0;
-                        for j in 0..(1.0 / self.pixel_size).ceil() as usize {
-                            let sequence = self.fibo.generate(
-                                ((y as f32) * (1.0 / self.pixel_size).ceil()) as u64
-                                    + self.start_p
-                                    + 1
-                                    + j as u64,
-                                ((image_width as f32) * (1.0 / self.pixel_size).ceil()) as u64,
-                                mpz_start,
-                            );
-                            for i in 0..(1.0 / self.pixel_size).ceil() as usize {
-                                sum += sequence
-                                    [((x as f32) * (1.0 / self.pixel_size).ceil()) as usize + i]
+                        for i in 0..(1.0 / self.pixel_size).ceil() as usize {
+                            for j in 0..(1.0 / self.pixel_size).ceil() as usize {
+                                sum += sequences[i]
+                                    [((x as f32) * (1.0 / self.pixel_size).ceil()) as usize + j]
                                     as u32;
                             }
                         }
@@ -204,8 +211,8 @@ impl Renderer {
                             sum as f32 / (1.0 / (self.pixel_size * self.pixel_size)).ceil() as f32,
                         );
                     }
-                    _ => {}
                 }
+                _ => {}
             }
             progressbar.clear();
         }
