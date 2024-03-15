@@ -5,6 +5,7 @@ use libc::c_uchar;
 use std::borrow::BorrowMut;
 #[link(name = "fibo_mod2", kind = "static")]
 extern "C" {
+    fn fibo_mod2_initialization(p: isize, n: *mut mpz_t) -> *mut c_uchar;
     fn fibo_mod2(p: isize, n: *mut mpz_t) -> *mut c_uchar;
     fn arr_getb(array: *const c_uchar, index: isize) -> bool;
 }
@@ -78,5 +79,11 @@ impl FiboFastSequence {
             }
         }
         result
+    }
+}
+
+pub fn init_serie(max_p: u64, mut mpz_end: mpz_t) {
+    unsafe {
+        fibo_mod2_initialization(max_p as isize, mpz_end.borrow_mut());
     }
 }

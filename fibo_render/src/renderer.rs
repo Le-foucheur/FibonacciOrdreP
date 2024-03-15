@@ -1,8 +1,11 @@
+use std::env::current_exe;
+
 use sfml::graphics::{
     Color, Image, RcSprite, RcTexture, RenderTarget, RenderWindow, Shape, Transformable,
     VertexBufferUsage,
 };
 
+use crate::fibo_fast::init_serie;
 use crate::window_manager::{generate_sequences, manage_events};
 use crate::{constants::SHOW_IMAGE_TIMES, fibo_fast, gmp_utils::mpz_int_from_u64, progressbar};
 
@@ -99,7 +102,7 @@ impl Renderer {
         image_width: u32,
         image_height: u32,
         mut window: Option<&mut RenderWindow>,
-    ) {
+    ) -> bool {
         let texture_generation_time = std::time::Instant::now();
         // Round pixel size for easier computation
         let upixel_size = self.pixel_size.ceil() as f32;
@@ -120,8 +123,11 @@ impl Renderer {
 
         // Initialize buffer
         let mut buffer = Image::new(image_width, image_height);
+        
+        init_serie(((image_height as f32 / upixel_size).floor() * (1.0 / self.pixel_size).ceil()) as u64 + self.start_p + 1 - 1, mpz_start);
 
         let mut progressbar = progressbar::Progressbar::new();
+
 
         // Loop over the image size divided by the pixel size
         for y in 0_u32..(image_height as f32 / upixel_size).floor() as u32 {
@@ -131,8 +137,9 @@ impl Renderer {
             if window.is_some() {
                 if manage_events(window.as_mut().unwrap(), self) == 1 {
                     progressbar.clear();
-                    generate_sequences(window.as_mut().unwrap(), self);
-                    return;
+                    return true;
+                    // generate_sequences(window.as_mut().unwrap(), self);
+                    // return;
                 }
                 if (image_height / SHOW_IMAGE_TIMES) != 0
                     && y % (image_height / SHOW_IMAGE_TIMES) == 0
@@ -143,8 +150,9 @@ impl Renderer {
                 }
             }
 
+            let current_p = ((y as f32) * (1.0 / self.pixel_size).ceil()) as u64 + self.start_p + 1;
             let sequence = self.fibo.generate(
-                ((y as f32) * (1.0 / self.pixel_size).ceil()) as u64 + self.start_p + 1,
+                current_p,
                 ((image_width as f32) * (1.0 / self.pixel_size).ceil()) as u64,
                 mpz_start,
             );
@@ -222,6 +230,7 @@ impl Renderer {
             "End generating texture in {:.2} seconds",
             texture_generation_time.elapsed().as_secs_f32()
         );
+        return false;
     }
 
     pub fn change_mode(&mut self) {

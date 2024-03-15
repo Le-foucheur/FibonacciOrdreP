@@ -13,7 +13,10 @@ pub struct WindowManager {
 }
 
 pub fn generate_sequences(window: &mut RenderWindow, renderer: &mut Renderer) {
-    renderer.generate_sequences_texture(window.size().x, window.size().y, Some(window));
+    let mut flag = true;
+    while flag {
+        flag = renderer.generate_sequences_texture(window.size().x, window.size().y, Some(window));
+    }
 }
 
 pub fn manage_events(window: &mut RenderWindow, renderer: &mut Renderer) -> u8 {

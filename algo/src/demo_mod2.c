@@ -20,6 +20,7 @@ int main(int argc, char* argv[]){
   unsigned char* returned;
   
   while (mpz_inp_str(n,stdin,10)!=0) {
+    fibo_mod2_initialization(p, n);
     returned=fibo_mod2(p, n);
     if (returned!=NULL) {
       for (size_t i=0; i<p+1; i++) {
