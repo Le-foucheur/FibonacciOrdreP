@@ -1,10 +1,12 @@
+use std::borrow::BorrowMut;
+
 use sfml::graphics::{
     Color, Image, RcSprite, RcTexture, RenderTarget, RenderWindow, Shape, Transformable,
     VertexBufferUsage,
 };
 
 use crate::fibo_fast::init_serie;
-use crate::gmp_utils::utils_mpz_to_string;
+use crate::gmp_utils::{utils_mpz_add_mpz, utils_mpz_to_string};
 use crate::window_manager::manage_events;
 use crate::{constants::SHOW_IMAGE_TIMES, fibo_fast, gmp_utils::utils_mpz_from_u64, progressbar};
 use gmp_mpfr_sys::gmp::mpz_t;
@@ -129,9 +131,10 @@ impl Renderer {
         );
 
         // Initialize the mpz at the right side of the generation
-        let mpz_start = utils_mpz_from_u64(
-            self.start_index + image_width as u64 * (1.0 / self.pixel_size).ceil() as u64 - 1,
+        let mut mpz_start = utils_mpz_from_u64(
+            image_width as u64 * (1.0 / self.pixel_size).ceil() as u64 - 1,
         );
+        utils_mpz_add_mpz(mpz_start.borrow_mut(), self.start_index_mpz.borrow_mut());
 
         // Initialize buffer
         let mut buffer = Image::new(image_width, image_height);
@@ -276,10 +279,12 @@ impl Renderer {
     pub fn draw_position(&mut self, window: &mut RenderWindow) {
         // Draw text
         let font = sfml::graphics::Font::from_file("assets/monospacebold.ttf").unwrap();
+        let mut temp_mpz = utils_mpz_from_u64((self.mouse_x as f32 * (1.0 / self.pixel_size)).floor() as u64);
+        utils_mpz_add_mpz(temp_mpz.borrow_mut(), self.start_index_mpz.borrow_mut());
         let mut text = sfml::graphics::Text::new(
             &format!(
                 "n: {}, p: {}",
-                self.start_index + (self.mouse_x as f32 * (1.0 / self.pixel_size)).floor() as u64,
+                utils_mpz_to_string(temp_mpz.borrow_mut()),
                 self.start_p + (self.mouse_y as f32 * (1.0 / self.pixel_size)).floor() as u64
             ),
             &font,

@@ -1,6 +1,7 @@
 use std::env;
 
 use command_line::{load_argument_f32, load_argument_u32, load_argument_u64, load_argument_u8, load_argument_mpz};
+use gmp_utils::utils_mpz_to_u64;
 
 use crate::{command_line::HELP_MESSAGE, window_manager::WindowManager, gmp_utils::utils_mpz_init};
 mod fibo;
@@ -35,18 +36,12 @@ fn main() {
     args.remove(0);
     while args.len() != 0 {
         if args[0] == "-n" {
-            args.insert(0, args[1].clone());
-            args.insert(0, args[1].clone());
-            load_argument_u64(
-                &mut args,
-                &mut n,
-                "Invalid argument for -n. Please provide a valid number for the sequence length",
-            );
             load_argument_mpz(
                 &mut args,
                 &mut n_mpz,
                 "Invalid argument for -n. Please provide a valid number for the sequence length",
             );
+            n = utils_mpz_to_u64(&mut n_mpz);
         } else if args[0] == "-p" {
             load_argument_u64(
                 &mut args,

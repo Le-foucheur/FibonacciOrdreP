@@ -1,4 +1,4 @@
-use crate::gmp_utils::{utils_mpz_int_from_string, utils_mpz_set_string};
+use crate::gmp_utils::utils_mpz_set_string;
 use gmp_mpfr_sys::gmp::mpz_t;
 
 pub const HELP_MESSAGE: &str = "Command line usage:
@@ -67,6 +67,9 @@ pub fn load_argument_mpz(args: &mut Vec<String>, arg: &mut mpz_t, msg: &str) {
     if _start_load_argument(args, msg) {
         return;
     }
-    utils_mpz_set_string(args[1].parse::<String>().expect(msg), arg);
+    let mut temp = args[1].parse::<String>().expect(msg);
+    // Add a null terminator to the string
+    temp.push('\0');
+    utils_mpz_set_string(temp, arg);
     _end_argument(args);
 }
