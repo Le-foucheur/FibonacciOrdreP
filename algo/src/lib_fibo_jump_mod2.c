@@ -124,8 +124,7 @@ bool arr_getb2(unsigned char* array,size_t arr_index,unsigned char c_index){  re
 bool arr_getb(unsigned char* array,size_t index){return arr_getb2(array, index>>3, (unsigned char)(index&0b111));}
 
 
-#if  defined(__AVX512F__) && (!defined (FIBO_NO_AVX512))
-#if defined(FIBO_AVX512_TEST)
+#if FIBO_IMPLEM == 'T'
 //******************************* AVX512 new test *************************************************
 __m512i arr_get8i(unsigned char* array,ptrdiff_t index){  return _mm512_loadu_si512((__m512i*)(array+(index*INDEX_MULT)-(INDEX_FLAT*(8*8-1)))) ;}
 
@@ -322,34 +321,118 @@ void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bi
   arr_set_result(little_buffer, k, result0);//write to memory
 }
 
-
-#else
+#endif
+#if FIBO_IMPLEM == '5'
 //******************************* fastest AVX-512 implem *******************************************
 
-#define zero_acc() _mm512_setzero_epi32()
+__m512i arr_get8i(unsigned char* array,ptrdiff_t index){  return _mm512_loadu_si512((__m512i*)(array+(index*INDEX_MULT)-(INDEX_FLAT*(8*8-1)))) ;}
 
-//__attribute__((always_inline)) inline
-//accumulator loop_once(accumulator acc,cond_t condition }//, bytes_t bits){
-  //__m512i temp = _mm512_maskz_set1_epi64(condition,bits);
-//  return _mm512_xor_epi64(acc,condition);
-//}
+__attribute__((always_inline)) inline
+void arr_set63c(unsigned char* array,ptrdiff_t base_index,__m512i value){
+  _mm512_mask_storeu_epi8(array+base_index*INDEX_MULT-(31*INDEX_FLAT),0x7FFFFFFFFFFFFFFFUL,value);
+}
+
+accumulator zero_acc() {return (accumulator){_mm512_setzero_epi32(),_mm512_setzero_epi32(),_mm512_setzero_epi32(),_mm512_setzero_epi32(),
+                                             _mm512_setzero_epi32(),_mm512_setzero_epi32(),_mm512_setzero_epi32(),_mm512_setzero_epi32() };}
+
+__attribute__((always_inline)) inline
+accumulator loop_once(accumulator acc,cond_t condition, bytes_t bits){
+  cond_t temp = _kshiftri_mask16(condition,1);
+  acc.part0 = _mm512_mask_xor_epi64 (acc.part0, condition, acc.part0, bits);
+  acc.part1 = _mm512_mask_xor_epi64 (acc.part1, temp, acc.part1, bits);
+  condition = _kshiftri_mask16(condition, 2);
+  temp = _kshiftri_mask16(temp,2);
+  acc.part2 = _mm512_mask_xor_epi64 (acc.part2, condition, acc.part2, bits);
+  acc.part3 = _mm512_mask_xor_epi64 (acc.part3, temp, acc.part3, bits);
+  condition = _kshiftri_mask16(condition, 2);
+  temp = _kshiftri_mask16(temp,2);
+  acc.part4 = _mm512_mask_xor_epi64 (acc.part4, condition, acc.part4, bits);
+  acc.part5 = _mm512_mask_xor_epi64 (acc.part5, temp, acc.part5, bits);
+  condition = _kshiftri_mask16(condition, 2);
+  temp = _kshiftri_mask16(temp,2);
+  acc.part6 = _mm512_mask_xor_epi64 (acc.part6, condition, acc.part6, bits);
+  acc.part7 = _mm512_mask_xor_epi64 (acc.part7, temp, acc.part7, bits);
+  
+  return acc;
+}
 
 __attribute__((always_inline)) inline
 bytes_t finalize(accumulator acc, bytes_t result0){
-  //due to inversion when using masks, acc contain bits to be shifted of 7,6,5,4,3,2,1,0, in this order
-  __m256i temp1 = _mm512_extracti64x4_epi64 (acc, 0);
-  temp1=_mm256_srli_epi64 (temp1, 4);
-  __m256i temp2 = _mm512_extracti64x4_epi64 (acc, 1);
-  temp2 = _mm256_xor_si256(temp1,temp2);  //contain to be shifted by 3,2,1,0
+  /* How much to shift (right)?
+     integer lane  
+   0|1|2|3|4|5|6|7 
   
-  __m128i temp3 = _mm256_extracti128_si256 (temp2, 1);  //contain 1,0
-  temp2 = _mm256_srli_epi64(temp2,2);
-  temp2 = _mm256_xor_si256 (temp2, _mm256_castsi128_si256(temp3));  //contain 1,0,useless,useless
+a0 7|6|5|4|3|2|1|0  
+c1 6|5|4|3|2|1|0|7
+c2 5|4|3|2|1|0|7|6
+.3 4|3|2|1|0|7|6|5
+p4 3|2|1|0|7|6|5|4
+a5 2|1|0|7|6|5|4|3
+r6 1|0|7|6|5|4|3|2
+t7 0|7|6|5|4|3|2|1
 
-  result0 = _mm256_extract_epi64 (temp2, 1) ^ (result0>>7);
-  result0 ^= _mm256_extract_epi64 (temp2, 0)>>1;
+r0 7|7|7|7|7|7|7|7
+*/
+  __m512i temp = _mm512_alignr_epi64(result0,result0,1);
+  __m512i temp2;
+  result0 = _mm512_shrdi_epi64 (result0, temp, 7);
+  __m512i shifter = _mm512_set_epi64(0,1,2,3,4,5,6,7);
+  __m512i less_one = _mm512_set1_epi64(-1);
+  __m512i seven = _mm512_set1_epi64(7);
+
+  __m512i next_shifter=_mm512_add_epi64(shifter,less_one);
+  //TODO: mix temp instruction to hide latency from alignr
+  temp = _mm512_alignr_epi64(acc.part7,acc.part7,1);      //bit that will be lost by right shifting should in fact go to the next lane, so we get in temp
+  temp2 = _mm512_alignr_epi64(acc.part0,acc.part0,1);         //taking it now as we are on the verge of editing part0
+  acc.part0 = _mm512_shrdv_epi64(acc.part0,temp,shifter); //bits from next lanes the should be sfifted of same amount (aka, previous accumulator) and then use shrdv
+                                                          //to shift them both in one instruction
+  shifter = _mm512_and_epi64(next_shifter,seven);
+  result0 = _mm512_xor_epi64(result0,acc.part0);
+  next_shifter = _mm512_add_epi64(next_shifter,less_one);
+  temp = _mm512_alignr_epi64(acc.part1,acc.part1,1);
+  acc.part1 = _mm512_shrdv_epi64(acc.part1,temp2,shifter);
+  
+  shifter = _mm512_and_epi64(next_shifter,seven);
+  result0 = _mm512_xor_epi64(result0,acc.part1);
+  next_shifter = _mm512_add_epi64(next_shifter,less_one);
+  temp2 = _mm512_alignr_epi64(acc.part2,acc.part2,1);
+  acc.part2 = _mm512_shrdv_epi64(acc.part2,temp,shifter);
+  
+  shifter = _mm512_and_epi64(next_shifter,seven);
+  result0 = _mm512_xor_epi64(result0,acc.part2);
+  next_shifter = _mm512_add_epi64(next_shifter,less_one);
+  temp = _mm512_alignr_epi64(acc.part3,acc.part3,1);
+  acc.part3 = _mm512_shrdv_epi64(acc.part3,temp2,shifter);
+  
+  shifter = _mm512_and_epi64(next_shifter,seven);
+  result0 = _mm512_xor_epi64(result0,acc.part3);
+  next_shifter = _mm512_add_epi64(next_shifter,less_one);
+  temp2 = _mm512_alignr_epi64(acc.part4,acc.part4,1);
+  acc.part4 = _mm512_shrdv_epi64(acc.part4,temp,shifter);
+  
+  shifter = _mm512_and_epi64(next_shifter,seven);
+  result0 = _mm512_xor_epi64(result0,acc.part4);
+  next_shifter = _mm512_add_epi64(next_shifter,less_one);
+  temp = _mm512_alignr_epi64(acc.part5,acc.part5,1);
+  acc.part5 = _mm512_shrdv_epi64(acc.part5,temp2,shifter);
+  
+  shifter = _mm512_and_epi64(next_shifter,seven);
+  result0 = _mm512_xor_epi64(result0,acc.part5);
+  next_shifter = _mm512_add_epi64(next_shifter,less_one);
+  temp2 = _mm512_alignr_epi64(acc.part6,acc.part6,1);
+  acc.part6 = _mm512_shrdv_epi64(acc.part6,temp,shifter);
+  
+  shifter = _mm512_and_epi64(next_shifter,seven);
+  result0 = _mm512_xor_epi64(result0,acc.part6);
+  acc.part7 = _mm512_shrdv_epi64(acc.part7,temp2,shifter);  
+  result0 = _mm512_xor_epi64(result0,acc.part7);
+  
   return result0;
 }
+#define MASK_0246 0x00FF00FF00FF00FFUL
+#define MASK_135  0x0000FF00FF00FF00UL
+#define PACKER    0x101
+
 
 void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bit_addr_shift,bytes_t result0){
   ptrdiff_t i_base=0;
@@ -357,42 +440,89 @@ void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bi
   //the same loop is executed p/8 + 1 times, however condition have memory access economies by getting them by int batchs, so we
   //exute the loop by batches of 7
   
-  for (;i_base<=((ptrdiff_t)(p/8))-7;i_base+=7){
+  for (;i_base<=(ptrdiff_t)(p)-56;i_base+=56){
     uint64_t cond_bits = arr_geti(big_buffer,bit_addr-7)>>(bit_addr_shift); //get a pack of 56 condition
-  
-    for (signed char i=6;i>=0;i--){
-      unsigned char cond_bits_c =  (char)(cond_bits>>(8*i));
-      bytes_t bits=get_bytes(big_buffer,ints_addr);   //get corresponding bytes treated by the condition
-      __m512i temp = _mm512_maskz_set1_epi64(cond_bits_c,bits);
-      accu = _mm512_xor_epi64(accu,temp);
-      ints_addr++;
-    }
+    uint64_t part1 = cond_bits & MASK_135;
+    cond_bits &= MASK_0246;
+    part1 *= PACKER;
+    cond_bits*= PACKER;
+    
+    bytes_t int_bits=get_bytes(big_buffer,ints_addr);   //get corresponding bytes
+    accu = loop_once(accu, cond_bits>>(6*8), int_bits);
+    ints_addr++;
+    
+    int_bits=get_bytes(big_buffer,ints_addr);   //get corresponding bytes
+    accu = loop_once(accu, part1>>(5*8), int_bits);
+    ints_addr++;
+    
+    int_bits=get_bytes(big_buffer,ints_addr);   //get corresponding bytes
+    accu = loop_once(accu, cond_bits>>(4*8), int_bits);
+    ints_addr++;
+    
+    int_bits=get_bytes(big_buffer,ints_addr);   //get corresponding bytes
+    accu = loop_once(accu, part1>>(3*8), int_bits);
+    ints_addr++;
+    
+    int_bits=get_bytes(big_buffer,ints_addr);   //get corresponding bytes
+    accu = loop_once(accu, cond_bits>>(2*8), int_bits);
+    ints_addr++;
+    
+    int_bits=get_bytes(big_buffer,ints_addr);   //get corresponding bytes
+    accu = loop_once(accu, part1>>(1*8), int_bits);
+    ints_addr++;
+    
+    int_bits=get_bytes(big_buffer,ints_addr);   //get corresponding bytes
+    accu = loop_once(accu, cond_bits>>(0*8), int_bits);
+    ints_addr++;
+    
+    
     bit_addr-=7;
   }
 
-  uint64_t cond_bits = arr_geti(big_buffer,bit_addr-7)>>(bit_addr_shift); //get the last pack of condition, used for the remainings of the formula
-  
-  for (unsigned char i=0;i<(p/8)-i_base;i++){                             //treat the part of the last 56 conditions wich are still packed by 8
-    unsigned char cond_bits_c =  (char)(cond_bits>>(8*(6-i)));
-    bytes_t bits=get_bytes(big_buffer,ints_addr);
-    __m512i temp = _mm512_maskz_set1_epi64(cond_bits_c,bits);
-    accu = _mm512_xor_epi64(accu,temp);
+    uint64_t cond_bits = arr_geti(big_buffer,bit_addr-7)>>(bit_addr_shift); //get a pack of 56 condition
+    cond_bits &= 0xFFFFFFFFFFFFFFFFUL<<(56-(p-i_base));
+    uint64_t part1 = cond_bits & MASK_135;
+    cond_bits &= MASK_0246;
+    part1 *= PACKER;
+    cond_bits*= PACKER;
+    
+    bytes_t int_bits=get_bytes(big_buffer,ints_addr);   //get corresponding bytes
+    accu = loop_once(accu, cond_bits>>(6*8), int_bits);
     ints_addr++;
-  }
-  
-  unsigned char cond_bits_c =  (char)(cond_bits>>(8*(6-((p/8)-i_base)))); //mask the remainning last few condition
-  cond_bits_c &= (int)(0xFF)<<(8 - (p&0b111));
-  bytes_t bits=get_bytes(big_buffer,ints_addr);
-  __m512i temp = _mm512_maskz_set1_epi64(cond_bits_c,bits);
-  accu = _mm512_xor_epi64(accu,temp);
-  
+    
+    int_bits=get_bytes(big_buffer,ints_addr);   //get corresponding bytes
+    accu = loop_once(accu, part1>>(5*8), int_bits);
+    ints_addr++;
+    
+    int_bits=get_bytes(big_buffer,ints_addr);   //get corresponding bytes
+    accu = loop_once(accu, cond_bits>>(4*8), int_bits);
+    ints_addr++;
+    
+    int_bits=get_bytes(big_buffer,ints_addr);   //get corresponding bytes
+    accu = loop_once(accu, part1>>(3*8), int_bits);
+    ints_addr++;
+    
+    int_bits=get_bytes(big_buffer,ints_addr);   //get corresponding bytes
+    accu = loop_once(accu, cond_bits>>(2*8), int_bits);
+    ints_addr++;
+    
+    int_bits=get_bytes(big_buffer,ints_addr);   //get corresponding bytes
+    accu = loop_once(accu, part1>>(1*8), int_bits);
+    ints_addr++;
+    
+    int_bits=get_bytes(big_buffer,ints_addr);   //get corresponding bytes
+    accu = loop_once(accu, cond_bits>>(0*8), int_bits);
+    ints_addr++;
+
+
+
   result0 = finalize(accu,result0);         //compact the values in the accumulator and initial value
   arr_set_result(little_buffer, k, result0);//write to memory
 }
 
+
 #endif
-#else
-#if defined(__AVX2__) && (!defined (FIBO_NO_AVX))
+#if FIBO_IMPLEM == '2'
 //************************** fast? AVX implem ********************
 
 #define mm256_blendv_epi64(A,B,M) \
@@ -529,10 +659,9 @@ void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bi
   result0 = finalize(accu,result0);         //compact the values in the accumulator and initial value
   arr_set_result(little_buffer, k, result0);//write to memory
 }
+#endif
 
-
-
-#else 
+#if FIBO_IMPLEM == 'i'
 //*********** slowest 64bits only implem ***********************
 
 __attribute__((always_inline)) inline
@@ -594,7 +723,6 @@ void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bi
   arr_set_result(little_buffer, k, result0);//write to memory
 }
 
-#endif
 #endif
 /*************** END SPECIFIC IMPLEMENTATIONS *******************/
 

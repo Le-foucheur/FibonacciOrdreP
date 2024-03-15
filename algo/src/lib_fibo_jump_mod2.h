@@ -49,9 +49,23 @@
 // #define __AVX512F__
 // #define FIBO_AVX512_TEST
 
-#if  (!defined(__AVX512F__)) || defined(FIBO_NO_AVX512) 
-#if (!defined(__AVX2__)) || defined (FIBO_NO_AVX) 
 
+#if defined (__AVX512F__) && (!defined (FIBO_NO_AVX512))
+#if defined(FIBO_AVX512_TEST)
+#define FIBO_IMPLEM 'T'
+#else //for Test
+#define FIBO_IMPLEM '5'
+#endif //for AVX*5*12
+#else
+#if defined(__AVX2__) && (!defined (FIBO_NO_AVX))
+#define FIBO_IMPLEM '2'
+#else //for avx*2*
+#define FIBO_IMPLEM 'i'
+#endif //for Ints only
+#endif
+
+
+#if FIBO_IMPLEM == 'i'
 //int64 only
 #warning "Your CPU do not support AVX2, slow code will be used"
   typedef struct {
@@ -73,9 +87,9 @@
   #define arr_set_result arr_set7c
   //number of bytes treated as once in one jump_formula call
   #define BATCH_SIZE 7
+#endif
 
-
-#else //AVX2
+#if FIBO_IMPLEM == '2'
   #warning "Your CPU do not support AVX512, slow code (using AVX2 only) will be used"
 
   typedef struct {
@@ -104,12 +118,9 @@
   #define arr_set_result arr_set31c
   //number of bytes treated as once in one jump_formula call
   #define BATCH_SIZE 31
+#endif
 
-
-
-#endif //AVX2
-#else //AVX512
-#if defined(FIBO_AVX512_TEST)
+#if FIBO_IMPLEM == 'T'
 //******************************* AVX512 new test *************************************************
   typedef struct {
       __m512i part0;
@@ -132,19 +143,32 @@
   #define arr_set_result arr_set63c
   //number of bytes treated as once in one jump_formula call
   #define BATCH_SIZE 63
-  
-#else
-//AVX 512 old version
-  typedef __m512i accumulator ;
-  typedef uint64_t bytes_t;
-  typedef char cond_t;
-  #define byte_zero 0
-  #define get_bytes arr_geti
-  #define arr_set_result arr_set7c
-  //number of bytes treated as once in one jump_formula call
-  #define BATCH_SIZE 7
-  
 #endif
+
+#if FIBO_IMPLEM == '5'
+//AVX 512 old version
+  typedef struct {
+      __m512i part0;
+      __m512i part1;
+      __m512i part2;
+      __m512i part3;
+      __m512i part4;
+      __m512i part5;
+      __m512i part6;
+      __m512i part7;
+  } accumulator;
+
+  __m512i arr_get8i(unsigned char* array,ptrdiff_t index);
+  
+  typedef __m512i bytes_t;
+  typedef __mmask16 cond_t;
+  
+  #define byte_zero _mm512_setzero_epi32()
+  #define get_bytes arr_get8i
+  #define arr_set_result arr_set63c
+  //number of bytes treated as once in one jump_formula call
+  #define BATCH_SIZE 63
+  
 #endif
 
 static_assert(8==sizeof(uint64_t), "There is uncontrolled padding or oversized uuint64_t ...");
