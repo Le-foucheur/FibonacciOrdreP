@@ -20,7 +20,6 @@ extern "C" {
 
 fn main() {
     let mut args: Vec<String> = env::args().collect();
-    let mut n = 0;
     let mut n_mpz = utils_mpz_init();
     let mut p = 0;
     let mut zoom = 1.0;
@@ -35,13 +34,6 @@ fn main() {
     args.remove(0);
     while args.len() != 0 {
         if args[0] == "-n" {
-            args.insert(0, args[1].clone());
-            args.insert(0, args[1].clone());
-            load_argument_u64(
-                &mut args,
-                &mut n,
-                "Invalid argument for -n. Please provide a valid number for the sequence length",
-            );
             load_argument_mpz(
                 &mut args,
                 &mut n_mpz,
@@ -100,7 +92,7 @@ fn main() {
     unsafe { fibo2_init_thread_pool(0) };
 
     // Create the renderer
-    let mut renderer = renderer::Renderer::new(zoom, n, n_mpz, p, mode);
+    let mut renderer = renderer::Renderer::new(zoom, n_mpz, p, mode);
 
     if headless {
         renderer.generate_sequences_texture(width, height, None);

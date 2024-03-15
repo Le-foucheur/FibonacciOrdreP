@@ -1,6 +1,6 @@
 use std::{borrow::{Borrow, BorrowMut}, mem::MaybeUninit};
 
-use gmp_mpfr_sys::gmp::{mpz_add_ui, mpz_cmp_ui, mpz_get_str, mpz_init, mpz_set_ui, mpz_sub_ui, mpz_t};
+use gmp_mpfr_sys::gmp::{mpz_add, mpz_add_ui, mpz_cmp_ui, mpz_get_str, mpz_get_ui, mpz_init, mpz_set_ui, mpz_sub_ui, mpz_t};
 use std::ffi::CStr;
 use gmp_mpfr_sys::gmp::mpz_set_str;
 
@@ -13,21 +13,27 @@ pub fn utils_mpz_init() -> mpz_t {
     mpz_start
 }
 
-pub fn utils_mpz_int_from_string(n: String) -> mpz_t {
-    let mut mpz_start = utils_mpz_init();
-    let temp = n.as_bytes();
-    let n_uchar = CStr::from_bytes_with_nul(temp).unwrap();
-    let k = n_uchar.as_ptr();
-    unsafe {
-        mpz_set_str(mpz_start.borrow_mut(), k, 10);
-    }
-    mpz_start
-}
+// pub fn utils_mpz_int_from_string(n: String) -> mpz_t {
+//     let mut mpz_start = utils_mpz_init();
+//     let temp = n.as_bytes();
+//     let n_uchar = CStr::from_bytes_with_nul(temp).unwrap();
+//     let k = n_uchar.as_ptr();
+//     unsafe {
+//         mpz_set_str(mpz_start.borrow_mut(), k, 10);
+//     }
+//     mpz_start
+// }
 
 pub fn utils_mpz_set_u64(n: u64, mpz_start: &mut mpz_t) {
     unsafe {
         mpz_set_ui(mpz_start.borrow_mut(), n);
     };
+}
+
+pub fn utils_mpz_to_u64(mpz_start: &mut mpz_t) -> u64 {
+    unsafe {
+        mpz_get_ui(mpz_start.borrow())
+    }
 }
 
 pub fn utils_mpz_set_string(n: String, mpz_start: &mut mpz_t) {
@@ -71,4 +77,9 @@ pub fn utils_mpz_compare_u64(mpz_start: &mut mpz_t, n: u64) -> i32 {
     unsafe {
         mpz_cmp_ui(mpz_start.borrow(), n)
     }    
+}
+pub fn utils_mpz_add_mpz(mpz_start: &mut mpz_t, mpz_end: &mut mpz_t) {
+    unsafe {
+        mpz_add(mpz_start.borrow_mut(), mpz_start.borrow(), mpz_end.borrow());
+    };
 }
