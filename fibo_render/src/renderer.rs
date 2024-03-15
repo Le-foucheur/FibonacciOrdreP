@@ -1,12 +1,10 @@
-use std::env::current_exe;
-
 use sfml::graphics::{
     Color, Image, RcSprite, RcTexture, RenderTarget, RenderWindow, Shape, Transformable,
     VertexBufferUsage,
 };
 
 use crate::fibo_fast::init_serie;
-use crate::window_manager::{generate_sequences, manage_events};
+use crate::window_manager::manage_events;
 use crate::{constants::SHOW_IMAGE_TIMES, fibo_fast, gmp_utils::mpz_int_from_u64, progressbar};
 use gmp_mpfr_sys::gmp::mpz_t;
 
