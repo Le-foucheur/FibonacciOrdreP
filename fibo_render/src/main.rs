@@ -1,8 +1,8 @@
 use std::env;
 
-use command_line::{load_argument_f32, load_argument_u32, load_argument_u64, load_argument_u8};
+use command_line::{load_argument_f32, load_argument_u32, load_argument_u64, load_argument_u8, load_argument_mpz};
 
-use crate::{command_line::HELP_MESSAGE, window_manager::WindowManager};
+use crate::{command_line::HELP_MESSAGE, window_manager::WindowManager, gmp_utils::utils_mpz_init};
 mod fibo;
 mod fibo_fast;
 mod gmp_utils;
@@ -21,6 +21,7 @@ extern "C" {
 fn main() {
     let mut args: Vec<String> = env::args().collect();
     let mut n = 0;
+    let mut n_mpz = utils_mpz_init();
     let mut p = 0;
     let mut zoom = 1.0;
     let mut mode = 0;
@@ -37,6 +38,11 @@ fn main() {
             load_argument_u64(
                 &mut args,
                 &mut n,
+                "Invalid argument for -n. Please provide a valid number for the sequence length",
+            );
+            load_argument_mpz(
+                &mut args,
+                &mut n_mpz,
                 "Invalid argument for -n. Please provide a valid number for the sequence length",
             );
         } else if args[0] == "-p" {
@@ -92,7 +98,7 @@ fn main() {
     unsafe { fibo2_init_thread_pool(0) };
 
     // Create the renderer
-    let mut renderer = renderer::Renderer::new(zoom, n, p, mode);
+    let mut renderer = renderer::Renderer::new(zoom, n, n_mpz, p, mode);
 
     if headless {
         renderer.generate_sequences_texture(width, height, None);

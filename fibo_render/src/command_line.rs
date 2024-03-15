@@ -1,3 +1,6 @@
+use crate::gmp_utils::mpz_int_from_string;
+use gmp_mpfr_sys::gmp::mpz_t;
+
 pub const HELP_MESSAGE: &str = "Command line usage:
     -n <n_start_index>: start index of the sequence (default=0)
     -p <p_start_index>: start index of the p order (default=0)
@@ -58,5 +61,12 @@ pub fn load_argument_f32(args: &mut Vec<String>, arg: &mut f32, msg: &str) {
         return;
     }
     *arg = args[1].parse::<f32>().expect(msg);
+    _end_argument(args);
+}
+pub fn load_argument_mpz(args: &mut Vec<String>, arg: &mut mpz_t, msg: &str) {
+    if _start_load_argument(args, msg) {
+        return;
+    }
+    *arg = mpz_int_from_string(args[1].parse::<String>().expect(msg));
     _end_argument(args);
 }

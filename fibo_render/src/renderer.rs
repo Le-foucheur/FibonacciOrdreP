@@ -8,12 +8,14 @@ use sfml::graphics::{
 use crate::fibo_fast::init_serie;
 use crate::window_manager::{generate_sequences, manage_events};
 use crate::{constants::SHOW_IMAGE_TIMES, fibo_fast, gmp_utils::mpz_int_from_u64, progressbar};
+use gmp_mpfr_sys::gmp::mpz_t;
 
 pub struct Renderer {
     pub current_sprite: RcSprite,
     pub current_texture: RcTexture,
     pub pixel_size: f32,
     pub start_index: u64,
+    pub start_index_mpz: mpz_t,
     pub start_p: u64,
     pub fibo: fibo_fast::FiboFastManager,
     pub mode: u8,
@@ -24,12 +26,13 @@ pub struct Renderer {
 }
 
 impl Renderer {
-    pub fn new(pixel_size: f32, start_index: u64, start_p: u64, mode: u8) -> Renderer {
+    pub fn new(pixel_size: f32, start_index: u64, start_index_mpz: mpz_t, start_p: u64, mode: u8) -> Renderer {
         Renderer {
             current_sprite: RcSprite::new(),
             current_texture: RcTexture::new().unwrap(),
             pixel_size,
             start_index,
+            start_index_mpz,
             start_p,
             fibo: fibo_fast::FiboFastManager::new(),
             mode,
