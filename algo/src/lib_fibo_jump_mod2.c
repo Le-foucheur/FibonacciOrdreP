@@ -131,7 +131,7 @@ __m512i arr_get8i(unsigned char* array,ptrdiff_t index){  return _mm512_loadu_si
 
 __attribute__((always_inline)) inline
 void arr_set63c(unsigned char* array,ptrdiff_t base_index,__m512i value){
-  _mm512_mask_storeu_epi8(array+base_index*INDEX_MULT-(31*INDEX_FLAT),0x7FFFFFFFUL,value);
+  _mm512_mask_storeu_epi8(array+base_index*INDEX_MULT-(31*INDEX_FLAT),0x7FFFFFFFFFFFFFFFUL,value);
 }
 
 accumulator zero_acc() {return (accumulator){_mm512_setzero_epi32(),_mm512_setzero_epi32(),_mm512_setzero_epi32(),_mm512_setzero_epi32(),
