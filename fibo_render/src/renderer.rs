@@ -4,8 +4,9 @@ use sfml::graphics::{
 };
 
 use crate::fibo_fast::init_serie;
+use crate::gmp_utils::utils_mpz_to_string;
 use crate::window_manager::manage_events;
-use crate::{constants::SHOW_IMAGE_TIMES, fibo_fast, gmp_utils::mpz_int_from_u64, progressbar};
+use crate::{constants::SHOW_IMAGE_TIMES, fibo_fast, gmp_utils::utils_mpz_from_u64, progressbar};
 use gmp_mpfr_sys::gmp::mpz_t;
 
 pub struct Renderer {
@@ -24,7 +25,13 @@ pub struct Renderer {
 }
 
 impl Renderer {
-    pub fn new(pixel_size: f32, start_index: u64, start_index_mpz: mpz_t, start_p: u64, mode: u8) -> Renderer {
+    pub fn new(
+        pixel_size: f32,
+        start_index: u64,
+        start_index_mpz: mpz_t,
+        start_p: u64,
+        mode: u8,
+    ) -> Renderer {
         Renderer {
             current_sprite: RcSprite::new(),
             current_texture: RcTexture::new().unwrap(),
@@ -114,21 +121,30 @@ impl Renderer {
             + 1;
         println!(
             "Start generating texture with pixel size: {}, n: {}, p: {}, delta_n: {}, delta_p: {}",
-            self.pixel_size, self.start_index, self.start_p, delta_n, delta_p
+            self.pixel_size,
+            utils_mpz_to_string(&mut self.start_index_mpz),
+            self.start_p,
+            delta_n,
+            delta_p
         );
 
         // Initialize the mpz at the right side of the generation
-        let mpz_start = mpz_int_from_u64(
+        let mpz_start = utils_mpz_from_u64(
             self.start_index + image_width as u64 * (1.0 / self.pixel_size).ceil() as u64 - 1,
         );
 
         // Initialize buffer
         let mut buffer = Image::new(image_width, image_height);
-        
-        init_serie(((image_height as f32 / upixel_size).floor() * (1.0 / self.pixel_size).ceil()) as u64 + self.start_p + 1 - 1, mpz_start);
+
+        init_serie(
+            ((image_height as f32 / upixel_size).floor() * (1.0 / self.pixel_size).ceil()) as u64
+                + self.start_p
+                + 1
+                - 1,
+            mpz_start,
+        );
 
         let mut progressbar = progressbar::Progressbar::new();
-
 
         // Loop over the image size divided by the pixel size
         for y in 0_u32..(image_height as f32 / upixel_size).floor() as u32 {

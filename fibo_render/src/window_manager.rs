@@ -1,11 +1,11 @@
-use std::io::Write;
+use std::{borrow::BorrowMut, io::Write};
 
 use sfml::{
     graphics::{RenderTarget, RenderWindow},
     window::{Event, Key},
 };
 
-use crate::{command_line::HELP_MESSAGE, constants::MOVE_STEP, renderer::Renderer};
+use crate::{command_line::HELP_MESSAGE, constants::MOVE_STEP, gmp_utils::{utils_mpz_add_u64, utils_mpz_compare_u64, utils_mpz_set_string, utils_mpz_set_u64, utils_mpz_sub_u64}, renderer::Renderer};
 
 pub struct WindowManager {
     window: RenderWindow,
@@ -49,6 +49,7 @@ pub fn manage_events(window: &mut RenderWindow, renderer: &mut Renderer) -> u8 {
                 }
                 sfml::window::Key::Right => {
                     renderer.start_index += MOVE_STEP;
+                    utils_mpz_add_u64(renderer.start_index_mpz.borrow_mut(), MOVE_STEP);
                     result = 1;
                 }
                 sfml::window::Key::Left => {
@@ -57,6 +58,11 @@ pub fn manage_events(window: &mut RenderWindow, renderer: &mut Renderer) -> u8 {
                     } else {
                         0
                     };
+                    if utils_mpz_compare_u64(renderer.start_index_mpz.borrow_mut(), MOVE_STEP) > 0 {
+                        utils_mpz_sub_u64(renderer.start_index_mpz.borrow_mut(), MOVE_STEP);
+                    } else {
+                        utils_mpz_set_u64(0, renderer.start_index_mpz.borrow_mut());
+                    }
                     result = 1;
                 }
                 sfml::window::Key::Z => {
@@ -86,6 +92,7 @@ pub fn manage_events(window: &mut RenderWindow, renderer: &mut Renderer) -> u8 {
                     let mut input = String::new();
                     std::io::stdin().read_line(&mut input).unwrap();
                     renderer.start_index = input.trim().parse().unwrap();
+                    utils_mpz_set_string(input.trim().to_string(), renderer.start_index_mpz.borrow_mut());
                     result = 1;
                 }
                 sfml::window::Key::B => {
