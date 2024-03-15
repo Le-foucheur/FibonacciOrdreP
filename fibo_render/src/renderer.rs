@@ -264,7 +264,7 @@ impl Renderer {
             Some(image) => {
                 println!("Saving image...");
                 if image.save_to_file(filename) {
-                    println!("Image saved successfully as fibo_sequence.png");
+                    println!("Image saved successfully as {}", filename);
                 } else {
                     println!("Error while saving the image");
                 }
