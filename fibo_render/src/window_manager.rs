@@ -33,7 +33,7 @@ pub fn manage_events(window: &mut RenderWindow, renderer: &mut Renderer) -> u8 {
             }
             Event::KeyPressed { code, .. } => match code {
                 sfml::window::Key::P => {
-                    renderer.save_image();
+                    renderer.save_image("fibo_sequence.png");
                 }
                 sfml::window::Key::Down => {
                     renderer.start_p += MOVE_STEP;

@@ -1,6 +1,6 @@
 use std::env;
 
-use command_line::{load_argument_f32, load_argument_u32, load_argument_u64, load_argument_u8, load_argument_mpz};
+use command_line::{load_argument_f32, load_argument_mpz, load_argument_string, load_argument_u32, load_argument_u64, load_argument_u8};
 
 use crate::{command_line::HELP_MESSAGE, window_manager::WindowManager, gmp_utils::utils_mpz_init};
 mod fibo;
@@ -29,6 +29,7 @@ fn main() {
     let mut headless = false;
     let mut height = 1080;
     let mut width = 1920;
+    let mut filename = "fibo_sequence.png".to_string();
 
     // Remove the first argument (the program name)
     args.remove(0);
@@ -79,7 +80,13 @@ fn main() {
                 &mut height,
                 "Invalid argument for -h. Please provide a valid number for the height",
             );
-        } else if args[0] == "-h" || args[0] == "--help" {
+        } else if args[0] == "-o" || args[0] == "--output" {
+            load_argument_string(
+                &mut args,
+                &mut filename,
+                "Invalid argument for -o. Please provide a valid string for the filename",
+            );
+        } else if  args[0] == "--help" {
             println!("{}", HELP_MESSAGE);
             return;
         } else {
@@ -96,7 +103,7 @@ fn main() {
 
     if headless {
         renderer.generate_sequences_texture(width, height, None);
-        renderer.save_image();
+        renderer.save_image(filename.as_str());
         return;
     } else {
         // Create the window
