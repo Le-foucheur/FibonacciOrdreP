@@ -6,7 +6,9 @@ use sfml::graphics::{
 };
 
 use crate::fibo_fast::init_serie;
-use crate::gmp_utils::{utils_mpz_add_mpz, utils_mpz_to_string};
+use crate::gmp_utils::{
+    utils_mpz_add_mpz, utils_mpz_compare_u64, utils_mpz_to_string, utils_mpz_to_u64,
+};
 use crate::window_manager::manage_events;
 use crate::{constants::SHOW_IMAGE_TIMES, fibo_fast, gmp_utils::utils_mpz_from_u64, progressbar};
 use gmp_mpfr_sys::gmp::mpz_t;
@@ -15,7 +17,6 @@ pub struct Renderer {
     pub current_sprite: RcSprite,
     pub current_texture: RcTexture,
     pub pixel_size: f32,
-    pub start_index: u64,
     pub start_index_mpz: mpz_t,
     pub start_p: u64,
     pub fibo: fibo_fast::FiboFastManager,
@@ -29,7 +30,6 @@ pub struct Renderer {
 impl Renderer {
     pub fn new(
         pixel_size: f32,
-        start_index: u64,
         start_index_mpz: mpz_t,
         start_p: u64,
         mode: u8,
@@ -38,7 +38,6 @@ impl Renderer {
             current_sprite: RcSprite::new(),
             current_texture: RcTexture::new().unwrap(),
             pixel_size,
-            start_index,
             start_index_mpz,
             start_p,
             fibo: fibo_fast::FiboFastManager::new(),
@@ -52,32 +51,36 @@ impl Renderer {
 
     pub fn generate_line(&mut self, window: &mut RenderWindow, n: u32) {
         // generate lines -x, -/2x, ... -1/nx
-        for i in 1..n {
-            let starty = 1.0 / i as f32 * self.start_index as f32 * self.pixel_size
-                - self.start_p as f32 * self.pixel_size;
-            let endy = 1.0 / i as f32
-                * (self.start_index as f32 * self.pixel_size + window.size().x as f32)
-                - self.start_p as f32 * self.pixel_size;
-            let mut line = sfml::graphics::VertexBuffer::new(
-                sfml::graphics::PrimitiveType::LINES,
-                2,
-                VertexBufferUsage::STATIC,
-            );
-            line.update(
-                &[
-                    sfml::graphics::Vertex::with_pos_color(
-                        sfml::system::Vector2::new(0., starty),
-                        sfml::graphics::Color::RED,
-                    ),
-                    sfml::graphics::Vertex::with_pos_color(
-                        sfml::system::Vector2::new(window.size().x as f32, endy),
-                        sfml::graphics::Color::RED,
-                    ),
-                ],
-                0,
-            );
+        // Check if the start index can be converted to u64
+        if utils_mpz_compare_u64(self.start_index_mpz.borrow_mut(), u64::MAX) < 0 {
+            let temp = utils_mpz_to_u64(self.start_index_mpz.borrow_mut());
+            for i in 1..n {
+                let starty = 1.0 / i as f32 * temp as f32 * self.pixel_size
+                    - self.start_p as f32 * self.pixel_size;
+                let endy = 1.0 / i as f32
+                    * (temp as f32 * self.pixel_size + window.size().x as f32)
+                    - self.start_p as f32 * self.pixel_size;
+                let mut line = sfml::graphics::VertexBuffer::new(
+                    sfml::graphics::PrimitiveType::LINES,
+                    2,
+                    VertexBufferUsage::STATIC,
+                );
+                line.update(
+                    &[
+                        sfml::graphics::Vertex::with_pos_color(
+                            sfml::system::Vector2::new(0., starty),
+                            sfml::graphics::Color::RED,
+                        ),
+                        sfml::graphics::Vertex::with_pos_color(
+                            sfml::system::Vector2::new(window.size().x as f32, endy),
+                            sfml::graphics::Color::RED,
+                        ),
+                    ],
+                    0,
+                );
 
-            window.draw(&line);
+                window.draw(&line);
+            }
         }
     }
 
@@ -131,9 +134,8 @@ impl Renderer {
         );
 
         // Initialize the mpz at the right side of the generation
-        let mut mpz_start = utils_mpz_from_u64(
-            image_width as u64 * (1.0 / self.pixel_size).ceil() as u64 - 1,
-        );
+        let mut mpz_start =
+            utils_mpz_from_u64(image_width as u64 * (1.0 / self.pixel_size).ceil() as u64 - 1);
         utils_mpz_add_mpz(mpz_start.borrow_mut(), self.start_index_mpz.borrow_mut());
 
         // Initialize buffer
@@ -158,8 +160,6 @@ impl Renderer {
                 if manage_events(window.as_mut().unwrap(), self) == 1 {
                     progressbar.clear();
                     return true;
-                    // generate_sequences(window.as_mut().unwrap(), self);
-                    // return;
                 }
                 if (image_height / SHOW_IMAGE_TIMES) != 0
                     && y % (image_height / SHOW_IMAGE_TIMES) == 0
@@ -279,7 +279,8 @@ impl Renderer {
     pub fn draw_position(&mut self, window: &mut RenderWindow) {
         // Draw text
         let font = sfml::graphics::Font::from_file("assets/monospacebold.ttf").unwrap();
-        let mut temp_mpz = utils_mpz_from_u64((self.mouse_x as f32 * (1.0 / self.pixel_size)).floor() as u64);
+        let mut temp_mpz =
+            utils_mpz_from_u64((self.mouse_x as f32 * (1.0 / self.pixel_size)).floor() as u64);
         utils_mpz_add_mpz(temp_mpz.borrow_mut(), self.start_index_mpz.borrow_mut());
         let mut text = sfml::graphics::Text::new(
             &format!(
