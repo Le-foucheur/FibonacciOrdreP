@@ -42,21 +42,21 @@ pub fn load_argument_u64(args: &mut Vec<String>, arg: &mut u64, msg: &str) {
     if _start_load_argument(args, msg) {
         return;
     }
-    *arg = args[1].parse::<u64>().expect(msg);
+    *arg = args[1].replace("_", "").parse::<u64>().expect(msg);
     _end_argument(args);
 }
 pub fn load_argument_u32(args: &mut Vec<String>, arg: &mut u32, msg: &str) {
     if _start_load_argument(args, msg) {
         return;
     }
-    *arg = args[1].parse::<u32>().expect(msg);
+    *arg = args[1].replace("_", "").parse::<u32>().expect(msg);
     _end_argument(args);
 }
 pub fn load_argument_u8(args: &mut Vec<String>, arg: &mut u8, msg: &str) {
     if _start_load_argument(args, msg) {
         return;
     }
-    *arg = args[1].parse::<u8>().expect(msg);
+    *arg = args[1].replace("_", "").parse::<u8>().expect(msg);
     _end_argument(args);
 }
 pub fn load_argument_f32(args: &mut Vec<String>, arg: &mut f32, msg: &str) {
@@ -71,6 +71,7 @@ pub fn load_argument_mpz(args: &mut Vec<String>, arg: &mut mpz_t, msg: &str) {
         return;
     }
     let mut temp = args[1].parse::<String>().expect(msg);
+    temp = temp.replace("_", "");
     // Add a null terminator to the string
     temp.push('\0');
     utils_mpz_set_string(temp, arg);
