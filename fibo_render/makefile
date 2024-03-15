@@ -16,4 +16,3 @@ clean:
 	rm -f libfibo_mod2.a
 	rm -f libgmp.a
 	rm -f gnom.out perf.data perf.data.old
-	cargo clean
