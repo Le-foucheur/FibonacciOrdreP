@@ -15,17 +15,22 @@
 
 //Protos:
 //do the actual heavy work
-void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bit_addr_shift,bytes_t result);
+static void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bit_addr_shift,bytes_t result);
 //calculate the next range adding one (2n+1)
-void jump_formula_plus1(void* k);
+static void jump_formula_plus1(void* k);
 //calculate the next range (2n)
-void jump_formula(void* k);
+static void jump_formula(void* k);
 //calculate iteratively the previous terms needed for the formula
 void refill_big_from_little(size_t last_valid);
 //initialize big with initial value in range 0-n
-void initialize_big(size_t last_valid,size_t init_max);
+static void initialize_big(size_t last_valid,size_t init_max);
 //mpz_t to size_t
 size_t mpz_get_siz(mpz_t z);
+
+static __attribute__((always_inline)) inline accumulator zero_acc(void);
+static __attribute__((always_inline)) inline bytes_t finalize(accumulator acc, bytes_t result0);
+static __attribute__((always_inline)) inline accumulator loop_once(accumulator acc,cond_t condition , bytes_t bits);
+
 
 unsigned char* big_buffer;
 size_t big_buffer_size;
@@ -81,11 +86,6 @@ unsigned char* arr_get_false_addr(unsigned char* real_addr,size_t size){    retu
 
 unsigned char* arr_get_real_addr(unsigned char* array, size_t size){  return array-8-(size+1)*INDEX_FLAT;}
 
-__attribute__((always_inline)) inline accumulator zero_acc(void);
-__attribute__((always_inline)) inline bytes_t finalize(accumulator acc, bytes_t result0);
-__attribute__((always_inline)) inline accumulator loop_once(accumulator acc,cond_t condition , bytes_t bits);
-
-
 unsigned char* array_create(size_t size){  
   unsigned char* array = calloc(size+15,1);
   if (array==NULL) {
@@ -133,10 +133,10 @@ void arr_set63c(unsigned char* array,ptrdiff_t base_index,__m512i value){
   _mm512_mask_storeu_epi8(array+base_index*INDEX_MULT-(31*INDEX_FLAT),0x7FFFFFFFFFFFFFFFUL,value);
 }
 
-accumulator zero_acc() {return (accumulator){_mm512_setzero_epi32(),_mm512_setzero_epi32(),_mm512_setzero_epi32(),_mm512_setzero_epi32(),
+static accumulator zero_acc() {return (accumulator){_mm512_setzero_epi32(),_mm512_setzero_epi32(),_mm512_setzero_epi32(),_mm512_setzero_epi32(),
                                              _mm512_setzero_epi32(),_mm512_setzero_epi32(),_mm512_setzero_epi32(),_mm512_setzero_epi32() };}
 
-__attribute__((always_inline)) inline
+static __attribute__((always_inline)) inline
 accumulator loop_once(accumulator acc,cond_t condition, bytes_t bits){
   cond_t temp = _kshiftri_mask16(condition,1);
   acc.part0 = _mm512_mask_xor_epi64 (acc.part0, condition, acc.part0, bits);
@@ -157,7 +157,7 @@ accumulator loop_once(accumulator acc,cond_t condition, bytes_t bits){
   return acc;
 }
 
-__attribute__((always_inline)) inline
+static __attribute__((always_inline)) inline
 bytes_t finalize(accumulator acc, bytes_t result0){
   /* How much to shift (right)?
      integer lane  
@@ -235,7 +235,7 @@ r0 7|7|7|7|7|7|7|7
 #define PACKER    0x101
 
 
-void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bit_addr_shift,bytes_t result0){
+static void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bit_addr_shift,bytes_t result0){
   ptrdiff_t i_base=0;
   accumulator accu = zero_acc();  
   //the same loop is executed p/8 + 1 times, however condition have memory access economies by getting them by int batchs, so we
@@ -327,15 +327,15 @@ void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bi
 
 __m512i arr_get8i(unsigned char* array,ptrdiff_t index){  return _mm512_loadu_si512((__m512i*)(array+(index*INDEX_MULT)-(INDEX_FLAT*(8*8-1)))) ;}
 
-__attribute__((always_inline)) inline
+static __attribute__((always_inline)) inline
 void arr_set63c(unsigned char* array,ptrdiff_t base_index,__m512i value){
   _mm512_mask_storeu_epi8(array+base_index*INDEX_MULT-(31*INDEX_FLAT),0x7FFFFFFFFFFFFFFFUL,value);
 }
 
-accumulator zero_acc() {return (accumulator){_mm512_setzero_epi32(),_mm512_setzero_epi32(),_mm512_setzero_epi32(),_mm512_setzero_epi32(),
+static accumulator zero_acc() {return (accumulator){_mm512_setzero_epi32(),_mm512_setzero_epi32(),_mm512_setzero_epi32(),_mm512_setzero_epi32(),
                                              _mm512_setzero_epi32(),_mm512_setzero_epi32(),_mm512_setzero_epi32(),_mm512_setzero_epi32() };}
 
-__attribute__((always_inline)) inline
+static __attribute__((always_inline)) inline
 accumulator loop_once(accumulator acc,cond_t condition, bytes_t bits){
   cond_t temp = _kshiftri_mask16(condition,1);
   acc.part0 = _mm512_mask_xor_epi64 (acc.part0, condition, acc.part0, bits);
@@ -356,7 +356,7 @@ accumulator loop_once(accumulator acc,cond_t condition, bytes_t bits){
   return acc;
 }
 
-__attribute__((always_inline)) inline
+static __attribute__((always_inline)) inline
 bytes_t finalize(accumulator acc, bytes_t result0){
   /* How much to shift (right)?
      integer lane  
@@ -434,7 +434,7 @@ r0 7|7|7|7|7|7|7|7
 #define PACKER    0x101
 
 
-void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bit_addr_shift,bytes_t result0){
+static void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bit_addr_shift,bytes_t result0){
   ptrdiff_t i_base=0;
   accumulator accu = zero_acc();  
   //the same loop is executed p/8 + 1 times, however condition have memory access economies by getting them by int batchs, so we
@@ -528,7 +528,7 @@ void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bi
 #define mm256_blendv_epi64(A,B,M) \
   _mm256_castpd_si256(_mm256_blendv_pd(_mm256_castsi256_pd(A),_mm256_castsi256_pd(B),_mm256_castsi256_pd(M)))
 
-__attribute__((always_inline)) inline
+static __attribute__((always_inline)) inline
 accumulator zero_acc(){
   return (accumulator){_mm256_setzero_si256(),_mm256_setzero_si256(),_mm256_setzero_si256(),_mm256_setzero_si256(),
                       _mm256_setzero_si256(),_mm256_setzero_si256(),_mm256_setzero_si256(),_mm256_setzero_si256(),_mm256_setzero_si256()};}
@@ -549,7 +549,7 @@ void arr_set31c(unsigned char* array,ptrdiff_t base_index,__m256i value){
   acc.part0 = _mm256_xor_si256(acc.part0,acc.part##j);
 
 
-__attribute__((always_inline)) inline
+static __attribute__((always_inline)) inline
 bytes_t finalize(accumulator acc,bytes_t result0){
   acc.part7 = _mm256_xor_si256(acc.part7,result0);
   __m256i temp;
@@ -576,7 +576,7 @@ __m256i arr_broadload(unsigned char* array,ptrdiff_t index){ return (__m256i)(_m
     acc.cond = _mm256_slli_epi64 (acc.cond, 1); */
 
 
-__attribute__((always_inline)) inline
+static __attribute__((always_inline)) inline
 accumulator loop_once(accumulator acc, cond_t condition, bytes_t bits){
     __m256i temp;
     __m256i temp2;
@@ -618,7 +618,7 @@ accumulator loop_once(accumulator acc, cond_t condition, bytes_t bits){
   return acc;
 }
 
-void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bit_addr_shift,bytes_t result0){
+static void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bit_addr_shift,bytes_t result0){
   ptrdiff_t i_base=0;
   accumulator accu = zero_acc();  
   //the same loop is executed p/8 + 1 times, however condition have memory access economies by getting them by int batchs, so we
@@ -664,11 +664,11 @@ void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bi
 #if FIBO_IMPLEM == 'i'
 //*********** slowest 64bits only implem ***********************
 
-__attribute__((always_inline)) inline
+static __attribute__((always_inline)) inline
 accumulator zero_acc(){  return (accumulator){0, 0, 0, 0, 0, 0, 0, 0};}
 
 #define LOOP_INNER(j) if ((condition&1<<(7-j))) {acc.part##j^=bits;}
-__attribute__((always_inline)) inline
+static __attribute__((always_inline)) inline
 accumulator loop_once(accumulator acc,cond_t condition, bytes_t bits){
   LOOP_INNER(0)
   LOOP_INNER(1)
@@ -681,13 +681,13 @@ accumulator loop_once(accumulator acc,cond_t condition, bytes_t bits){
   return acc;
 }
 
-__attribute__((always_inline)) inline
+static __attribute__((always_inline)) inline
 bytes_t finalize(accumulator acc,bytes_t result0){
   return acc.part0^(acc.part1>>1)^(acc.part2>>2)^(acc.part3>>3)^(acc.part4>>4)^(acc.part5>>5)
     ^(acc.part6>>6)^((result0^acc.part7)>>7); 
 }
 
-void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bit_addr_shift,bytes_t result0){
+static void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bit_addr_shift,bytes_t result0){
   ptrdiff_t i_base=0;
   accumulator accu = zero_acc();  
   //the same loop is executed p/8 + 1 times, however condition have memory access economies by getting them by int batchs, so we
