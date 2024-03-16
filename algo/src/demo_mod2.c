@@ -6,7 +6,7 @@
 
 int main(int argc, char* argv[]){
   if (argc==1) {
-    printf("usage: %s p",argv[0]);
+    printf("usage: %s p [n] [cores]",argv[0]);
     exit(1);
   }
   size_t p = 0;
@@ -14,7 +14,17 @@ int main(int argc, char* argv[]){
     printf("number not formated as decimal");
     exit(1);
   }
-  fibo2_init_thread_pool(0);
+  if (argc>3){
+    int temp;
+    if(sscanf(argv[3],"%u",&temp)!=1){
+      printf("number not formated as decimal");
+      exit(1);
+    }
+    
+    fibo2_init_thread_pool(temp);
+  } else {
+    fibo2_init_thread_pool(0);
+  }
   mpz_t n;
   mpz_init(n);
   unsigned char* returned;

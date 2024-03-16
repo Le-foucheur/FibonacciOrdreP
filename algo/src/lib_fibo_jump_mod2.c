@@ -32,11 +32,11 @@ static __attribute__((always_inline)) inline bytes_t finalize(accumulator acc, b
 static __attribute__((always_inline)) inline accumulator loop_once(accumulator acc,cond_t condition , bytes_t bits);
 
 
-unsigned char* big_buffer;
-size_t big_buffer_size;
+static unsigned char* big_buffer;
+static size_t big_buffer_size;
 unsigned char* little_buffer;
-size_t little_buffer_size;
-size_t p;
+static size_t little_buffer_size;
+static size_t p;
 
 // get number of available calculation cores
 int getNumCores(void) {
