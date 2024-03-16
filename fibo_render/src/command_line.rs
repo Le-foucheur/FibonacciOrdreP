@@ -7,8 +7,11 @@ pub const HELP_MESSAGE: &str = "Command line usage:
     -zoom <zoom_factor>: zoom factor (default=1.0)
     -izoom <izoom_factor>: invert zoom factor
     -m, --mode <mode>: rendering mode (0 or 1) (default=0)
-    -i, --image, --headless: headless mode (no graphical rendering)
-    -h, --help: display this help message
+    -i, --image, --headless: headless mode (no graphical rendering) :
+        -w, --width <width>: width of the image
+        -h, --height <height>: height of the image
+        -o, --output <filename>: output filename
+    --help: display this help message
     
 Graphical usage:
     Left/Right/Up/Down arrow: move start index for n and p
@@ -39,21 +42,21 @@ pub fn load_argument_u64(args: &mut Vec<String>, arg: &mut u64, msg: &str) {
     if _start_load_argument(args, msg) {
         return;
     }
-    *arg = args[1].parse::<u64>().expect(msg);
+    *arg = args[1].replace("_", "").parse::<u64>().expect(msg);
     _end_argument(args);
 }
 pub fn load_argument_u32(args: &mut Vec<String>, arg: &mut u32, msg: &str) {
     if _start_load_argument(args, msg) {
         return;
     }
-    *arg = args[1].parse::<u32>().expect(msg);
+    *arg = args[1].replace("_", "").parse::<u32>().expect(msg);
     _end_argument(args);
 }
 pub fn load_argument_u8(args: &mut Vec<String>, arg: &mut u8, msg: &str) {
     if _start_load_argument(args, msg) {
         return;
     }
-    *arg = args[1].parse::<u8>().expect(msg);
+    *arg = args[1].replace("_", "").parse::<u8>().expect(msg);
     _end_argument(args);
 }
 pub fn load_argument_f32(args: &mut Vec<String>, arg: &mut f32, msg: &str) {
@@ -68,8 +71,17 @@ pub fn load_argument_mpz(args: &mut Vec<String>, arg: &mut mpz_t, msg: &str) {
         return;
     }
     let mut temp = args[1].parse::<String>().expect(msg);
+    temp = temp.replace("_", "");
     // Add a null terminator to the string
     temp.push('\0');
     utils_mpz_set_string(temp, arg);
+    _end_argument(args);
+}
+
+pub fn load_argument_string(args: &mut Vec<String>, arg: &mut String, msg: &str) {
+    if _start_load_argument(args, msg) {
+        return;
+    }
+    *arg = args[1].parse::<String>().expect(msg);
     _end_argument(args);
 }

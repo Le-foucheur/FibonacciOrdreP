@@ -257,14 +257,14 @@ impl Renderer {
         self.mode = (self.mode + 1) % 3;
     }
 
-    pub fn save_image(&self) {
+    pub fn save_image(&self, filename: &str) {
         // Save current texture
         println!("Start image conversion...");
         match self.current_texture.copy_to_image() {
             Some(image) => {
                 println!("Saving image...");
-                if image.save_to_file("fibo_sequence.png") {
-                    println!("Image saved successfully as fibo_sequence.png");
+                if image.save_to_file(filename) {
+                    println!("Image saved successfully as {}", filename);
                 } else {
                     println!("Error while saving the image");
                 }
