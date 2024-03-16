@@ -18,7 +18,21 @@ int main(int argc, char* argv[]){
   mpz_t n;
   mpz_init(n);
   unsigned char* returned;
-  
+  if (argc>2){
+    //performance testing mode
+    mpz_set_str(n,argv[1],10);
+    fibo_mod2_initialization(p, n);
+    returned=fibo_mod2(p, n);
+    if (returned!=NULL) {
+      for (size_t i=0; i<1; i++) {
+        if (arr_getb(returned,p-i))
+          putchar('#');
+        else 
+          putchar('.');
+      }
+    }
+    
+  } else {
   while (mpz_inp_str(n,stdin,10)!=0) {
     fibo_mod2_initialization(p, n);
     returned=fibo_mod2(p, n);
@@ -31,6 +45,6 @@ int main(int argc, char* argv[]){
       }
     }
     putchar('\n');
-  }
+  }}
   exit(0);
 }
