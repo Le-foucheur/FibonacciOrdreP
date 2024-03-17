@@ -15,7 +15,7 @@ pub struct WindowManager {
 pub fn generate_sequences(window: &mut RenderWindow, renderer: &mut Renderer) {
     let mut flag = true;
     while flag {
-        flag = renderer.generate_sequences_texture(window.size().x, window.size().y, Some(window));
+        flag = renderer.generate_sequences_texture(window.size().x, window.size().y, false, Some(window));
     }
 }
 
@@ -77,6 +77,7 @@ pub fn manage_events(window: &mut RenderWindow, renderer: &mut Renderer) -> u8 {
                 sfml::window::Key::Q => {
                     if Key::LControl.is_pressed() {
                         window.close();
+                        return 2;
                     }
                 }
                 sfml::window::Key::N => {

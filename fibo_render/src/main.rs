@@ -31,6 +31,19 @@ fn main() {
     let mut width = 1920;
     let mut filename = "fibo_sequence.png".to_string();
 
+    // TESTS
+    // println!("{}, {}", width * 16, height * 16);
+    // let mut headless_buffer = image::ImageBuffer::new(width * 16, height * 16);
+    // println!("1");
+    // for x in 0..width * 16 {
+    //     for y in 0..height * 16 {
+    //         let pixel = headless_buffer.get_pixel_mut(x, y);
+    //         *pixel = image::Rgb([255_u8, 0, 0]);
+    //     }
+    // }
+    // println!("save");
+    // headless_buffer.save("test.png").unwrap();
+
     // Remove the first argument (the program name)
     args.remove(0);
     while args.len() != 0 {
@@ -102,8 +115,8 @@ fn main() {
     let mut renderer = renderer::Renderer::new(zoom, n_mpz, p, mode);
 
     if headless {
-        renderer.generate_sequences_texture(width, height, None);
-        renderer.save_image(filename.as_str());
+        renderer.generate_sequences_texture(width, height, true, None);
+        renderer.save_image_headless(filename.as_str());
         return;
     } else {
         // Create the window
