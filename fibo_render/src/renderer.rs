@@ -1,5 +1,6 @@
 use std::borrow::BorrowMut;
 
+use image::{Pixel, Rgb};
 use sfml::graphics::{
     Color, Image, RcSprite, RcTexture, RenderTarget, RenderWindow, Shape, Transformable,
     VertexBufferUsage,
@@ -16,6 +17,7 @@ use gmp_mpfr_sys::gmp::mpz_t;
 pub struct Renderer {
     pub current_sprite: RcSprite,
     pub current_texture: RcTexture,
+    pub current_headless_buffer: Option<image::ImageBuffer<Rgb<u8>, Vec<<Rgb<u8> as Pixel>::Subpixel>>>,
     pub pixel_size: f32,
     pub start_index_mpz: mpz_t,
     pub start_p: u64,
@@ -28,15 +30,11 @@ pub struct Renderer {
 }
 
 impl Renderer {
-    pub fn new(
-        pixel_size: f32,
-        start_index_mpz: mpz_t,
-        start_p: u64,
-        mode: u8,
-    ) -> Renderer {
+    pub fn new(pixel_size: f32, start_index_mpz: mpz_t, start_p: u64, mode: u8) -> Renderer {
         Renderer {
             current_sprite: RcSprite::new(),
             current_texture: RcTexture::new().unwrap(),
+            current_headless_buffer: None,
             pixel_size,
             start_index_mpz,
             start_p,
@@ -84,6 +82,29 @@ impl Renderer {
         }
     }
 
+    pub fn fill_buffer_headless(
+        &mut self,
+        buffer: &mut image::ImageBuffer<Rgb<u8>, Vec<<Rgb<u8> as Pixel>::Subpixel>>,
+        x: f32,
+        y: f32,
+        size: f32,
+        color: f32,
+    ) {
+        for i in 0..size as u32 {
+            for j in 0..size as u32 {
+                buffer.put_pixel(
+                    (x * size + i as f32) as u32,
+                    (y * size + j as f32) as u32,
+                    Rgb([
+                        (255.0 * color).ceil() as u8,
+                        (255.0 * color).ceil() as u8,
+                        (255.0 * color).ceil() as u8,
+                    ]),
+                );
+            }
+        }
+    }
+
     pub fn fill_buffer(&mut self, buffer: &mut Image, x: f32, y: f32, size: f32, color: f32) {
         for i in 0..size as u32 {
             for j in 0..size as u32 {
@@ -102,6 +123,23 @@ impl Renderer {
         }
     }
 
+    pub fn fill_buffer_wrapper(
+        &mut self,
+        buffer: &mut Image,
+        buffer_headless: &mut image::ImageBuffer<Rgb<u8>, Vec<<Rgb<u8> as Pixel>::Subpixel>>,
+        x: f32,
+        y: f32,
+        size: f32,
+        color: f32,
+        headless: bool,
+    ) {
+        if headless {
+            self.fill_buffer_headless(buffer_headless, x, y, size, color);
+        } else {
+            self.fill_buffer(buffer, x, y, size, color);
+        }
+    }
+
     fn generate_texture(&mut self, buffer: &Image, image_width: u32, image_height: u32) {
         if !self.current_texture.create(image_width, image_height) {
             panic!("Error creating texture");
@@ -114,6 +152,7 @@ impl Renderer {
         &mut self,
         image_width: u32,
         image_height: u32,
+        headless: bool,
         mut window: Option<&mut RenderWindow>,
     ) -> bool {
         let texture_generation_time = std::time::Instant::now();
@@ -140,6 +179,7 @@ impl Renderer {
 
         // Initialize buffer
         let mut buffer = Image::new(image_width, image_height);
+        let mut headless_buffer = image::ImageBuffer::new(image_width, image_height);
 
         init_serie(
             ((image_height as f32 / upixel_size).floor() * (1.0 / self.pixel_size).ceil()) as u64
@@ -156,10 +196,14 @@ impl Renderer {
             // Update progress bar and show the image sometimes
             progressbar.update(y.pow(2) as f32 / (image_height / upixel_size as u32).pow(2) as f32);
             progressbar.show();
-            if window.is_some() {
-                if manage_events(window.as_mut().unwrap(), self) == 1 {
+            if !headless {
+                let event = manage_events(window.as_mut().unwrap(), self);
+                if event == 1 {
                     progressbar.clear();
                     return true;
+                } else if event == 2 {
+                    progressbar.clear();
+                    return false;
                 }
                 if (image_height / SHOW_IMAGE_TIMES) != 0
                     && y % (image_height / SHOW_IMAGE_TIMES) == 0
@@ -186,12 +230,14 @@ impl Renderer {
                                 [((x as f32) * (1.0 / self.pixel_size).ceil()) as usize + i]
                                 as u32;
                         }
-                        self.fill_buffer(
+                        self.fill_buffer_wrapper(
                             &mut buffer,
+                            &mut headless_buffer,
                             x as f32,
                             y as f32,
                             upixel_size as f32,
                             sum as f32 / (1.0 / self.pixel_size).ceil() as f32,
+                            headless,
                         );
                     }
                 }
@@ -199,12 +245,14 @@ impl Renderer {
                 1 => {
                     for x in 0..(image_width as f32 / upixel_size).floor() as u32 {
                         if sequence[((x as f32) * (1.0 / self.pixel_size).ceil()) as usize] {
-                            self.fill_buffer(
+                            self.fill_buffer_wrapper(
                                 &mut buffer,
+                                &mut headless_buffer,
                                 x as f32,
                                 y as f32,
                                 upixel_size as f32,
                                 1.0,
+                                headless,
                             );
                         }
                     }
@@ -231,12 +279,14 @@ impl Renderer {
                                     as u32;
                             }
                         }
-                        self.fill_buffer(
+                        self.fill_buffer_wrapper(
                             &mut buffer,
+                            &mut headless_buffer,
                             x as f32,
                             y as f32,
                             upixel_size as f32,
                             sum as f32 / (1.0 / (self.pixel_size * self.pixel_size)).ceil() as f32,
+                            headless,
                         );
                     }
                 }
@@ -244,7 +294,11 @@ impl Renderer {
             }
             progressbar.clear();
         }
-        self.generate_texture(&buffer, image_width, image_height);
+        if headless {
+            self.current_headless_buffer = Some(headless_buffer);
+        } else {
+            self.generate_texture(&buffer, image_width, image_height);
+        }
 
         println!(
             "End generating texture in {:.2} seconds",
@@ -267,6 +321,27 @@ impl Renderer {
                     println!("Image saved successfully as {}", filename);
                 } else {
                     println!("Error while saving the image");
+                }
+            }
+            None => {
+                println!("Error while saving the image");
+            }
+        };
+    }
+
+    pub fn save_image_headless(&self, filename: &str) {
+        // Save current texture
+        println!("Start image conversion...");
+        match self.current_headless_buffer {
+            Some(ref buffer) => {
+                println!("Saving image...");
+                match buffer.save(filename) {
+                    Ok(_) => {
+                        println!("Image saved successfully as {}", filename);
+                    }
+                    Err(e) => {
+                        println!("Error while saving the image: {}", e);
+                    }
                 }
             }
             None => {
