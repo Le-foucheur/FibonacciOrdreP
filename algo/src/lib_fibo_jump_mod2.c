@@ -1,6 +1,7 @@
 #include "lib_fibo_jump_mod2.h"
 #include "external/C-Thread-Pool/thpool.h"
 #include <smmintrin.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -23,7 +24,7 @@ static void jump_formula(void* k);
 //calculate iteratively the previous terms needed for the formula
 void refill_big_from_little(size_t last_valid);
 //initialize big with initial value in range 0-n
-static void initialize_big(size_t last_valid,size_t init_max);
+static void initialize_big(size_t last_valid,ptrdiff_t init_max);
 //mpz_t to size_t
 size_t mpz_get_siz(mpz_t z);
 
@@ -795,18 +796,29 @@ void jump_formula(void* k_arg){
 }
 
 //assume init_max<=p+1 and init_max<=last_valid<=big_buffer_size*8
-void initialize_big(size_t last_valid,size_t init_max){
-  init_max+=1;
-  for (size_t i=0;i<init_max>>3;i++){
-    arr_setc(big_buffer,i,0xFF);
-  }
-  arr_setc(big_buffer,init_max>>3,0xFF>>(8-(init_max&0b111)));
-  for (size_t i=(init_max>>3) +1;i<little_buffer_size;i++){
-    arr_setc(big_buffer,i,0);
-  }
-  for (size_t i=0;i<last_valid-(p+1);i++){
-    //TODO can be optimized, especially for big p
-    arr_setb(big_buffer,i+p+1, arr_getb(big_buffer,i) ^ arr_getb(big_buffer, i+1) );
+void initialize_big(size_t last_valid,ptrdiff_t init_max){
+  if (init_max>=0){
+    init_max+=1; //now, init_max = number of 1
+    for (size_t i=0;i<init_max>>3;i++){
+      arr_setc(big_buffer,i,0xFF);
+    }
+    arr_setc(big_buffer,init_max>>3,0xFF>>(8-(init_max&0b111)));
+    for (size_t i=(init_max>>3) +1;i<little_buffer_size;i++){
+      arr_setc(big_buffer,i,0);
+    }
+    for (size_t i=0;i<last_valid-(p+1);i++){
+      //TODO can be optimized, especially for big p
+      arr_setb(big_buffer,i+p+1, arr_getb(big_buffer,i) ^ arr_getb(big_buffer, i+1) );
+    }
+  } else {
+    for (ptrdiff_t i=-1;i<(ptrdiff_t)(last_valid>>3)+1;i++)
+      arr_setc(big_buffer, i, 0);
+    arr_setb(big_buffer,p+init_max+1,1);
+    for (ptrdiff_t i=p+init_max;i<last_valid-(p+1);i++){
+      //TODO can be optimized, especially for big p
+      arr_setb(big_buffer,i+p+1, arr_getb(big_buffer,i) ^ arr_getb(big_buffer, i+1) );
+    }
+    
   }
   
 }
@@ -840,27 +852,25 @@ size_t mpz_get_siz(mpz_t z)
 
 unsigned char* fibo_mod2(size_t p_arg,mpz_t n){
   size_t min_valid_size = (MIN(2*p_arg+4,p_arg+p_arg/2+7*BATCH_SIZE*8+4)) ;
-    
-    p = p_arg;
+  p = p_arg;
 
   unsigned int bits_p = 0;
   for (size_t copy=p;copy!=0;copy >>= 1){
     bits_p++;
   }
-
-  size_t bits_n = mpz_sizeinbase(n,2);
-  if (bits_n<=63 && bits_n< (size_t)bits_p-1) {
-    //we are just as fast by calculating them iteratively ...
-    initialize_big(little_buffer_size*8,mpz_get_siz(n));
-  return big_buffer;}
-  //launch the big machine ...
-
-  //specific AVX initialisation
-  #ifdef __AVX512F__
-
-  #elif defined (__AVX2__)
+  bool neg_n = mpz_cmp_ui(n,0)<0;
+  mpz_abs(n,n);
   
-  #endif
+  size_t bits_n = mpz_sizeinbase(n,2);
+  if ((bits_n<=63 && bits_n< (size_t)bits_p-1) || (p==1 && bits_n==1)) {
+    //we are just as fast by calculating them iteratively ...
+    if (neg_n)
+      initialize_big(little_buffer_size*8, -(ptrdiff_t)(mpz_get_siz(n)));
+    else
+      initialize_big(little_buffer_size*8,mpz_get_siz(n));
+    return big_buffer;
+  }
+  //launch the big machine ...
   
 
   //the point is to get to have work_buffer_2 filled up with value from n to n-p
@@ -874,7 +884,18 @@ unsigned char* fibo_mod2(size_t p_arg,mpz_t n){
   //add one in the end if necessary
   size_t init=0;
   size_t index=MIN(64,bits_p-1);
-  index=MIN(index,bits_n);
+  index=MIN(index,bits_n-1);
+  void (*jump_function_1)(void*);
+  void (*jump_function_0)(void*);
+  
+  if (neg_n){
+    mpz_sub_ui(n,n,1);
+    jump_function_0 = &jump_formula_plus1;
+    jump_function_1 = &jump_formula;
+  } else {
+    jump_function_0 = &jump_formula;
+    jump_function_1 = &jump_formula_plus1;
+  }
 
   void (*jump_function)(void*);
   
@@ -883,7 +904,7 @@ unsigned char* fibo_mod2(size_t p_arg,mpz_t n){
   }
   index=bits_n-index-1;  
   
-  initialize_big(min_valid_size, init);
+  initialize_big(min_valid_size, neg_n ? -(init +neg_n):init);
 
   if (index==ULLONG_MAX)
     return big_buffer;
@@ -891,9 +912,9 @@ unsigned char* fibo_mod2(size_t p_arg,mpz_t n){
   while (index>=1) {
 
     if (mpz_tstbit(n,index))
-      jump_function= (&jump_formula_plus1);
+      jump_function= jump_function_1;
     else
-      jump_function= (&jump_formula);
+      jump_function= jump_function_0;
     
     for (size_t i=0;i<little_buffer_size;i+=BATCH_SIZE){
       thpool_add_work(calcul_pool, jump_function, (void*)i);
@@ -904,9 +925,9 @@ unsigned char* fibo_mod2(size_t p_arg,mpz_t n){
   }
   // handling by hand the last jump as we do not fill back the big buffer
   if (mpz_tstbit(n,0))
-    jump_function= (&jump_formula_plus1);
+    jump_function= jump_function_1;
   else
-    jump_function= (&jump_formula);
+    jump_function= jump_function_0;
 
   for (size_t i=0;i<little_buffer_size;i+=BATCH_SIZE){
     thpool_add_work(calcul_pool, jump_function, (void*)i);
@@ -917,38 +938,31 @@ unsigned char* fibo_mod2(size_t p_arg,mpz_t n){
 
 
 // Init functions to call malloc one time for a serie of p
-unsigned char* fibo_mod2_initialization(size_t p_arg,mpz_t n) {
-  if (mpz_cmp_ui(n,0)<0){
-    printf("negative integers not yet supported, abborting");
-    return NULL;
-  }
+// return 1 on error
+int fibo_mod2_initialization(size_t p_arg){
   size_t min_valid_size = (MIN(2*p_arg+4,p_arg+p_arg/2+7*BATCH_SIZE*8+4)) ;
-  if (p!=p_arg || little_buffer==NULL || big_buffer==NULL){
+  array_free(big_buffer, big_buffer_size);
+  array_free(little_buffer, little_buffer_size);
 
-    array_free(big_buffer, big_buffer_size);
-    array_free(little_buffer, little_buffer_size);
-
-    
-    p = p_arg;
-    if (min_valid_size<p) {
-      printf("OVERSIZED P: ABORTING");
-      p=0;
-      return NULL;
-    }
-
-    big_buffer_size    = ((min_valid_size+7)>>3) +BATCH_SIZE + 8; //to be sure I dont break anything as i am careless with boundary ...
-    big_buffer         = array_create(big_buffer_size);
-    little_buffer_size = (p>>3) + 1;
-    little_buffer      = array_create(little_buffer_size + BATCH_SIZE + 8);
-
-    if (big_buffer==NULL||little_buffer==NULL) {
-      printf("NOT ENOUGH MEMORY: ABORTING");
-      array_free(big_buffer, big_buffer_size);
-      big_buffer=NULL;
-      array_free(little_buffer, little_buffer_size);
-      little_buffer=NULL;
-      p=0;
-      return NULL;
-    }
+  if (min_valid_size<p_arg) {
+    printf("OVERSIZED P: ABORTING");
+    big_buffer=NULL;
+    little_buffer=NULL;
+    return 1;
   }
+
+  big_buffer_size    = ((min_valid_size+7)>>3) +BATCH_SIZE + 8; //to be sure I dont break anything as i am careless with boundary ...
+  big_buffer         = array_create(big_buffer_size);
+  little_buffer_size = (p_arg>>3) + 1;
+  little_buffer      = array_create(little_buffer_size + BATCH_SIZE + 8);
+
+  if (big_buffer==NULL||little_buffer==NULL) {
+    printf("NOT ENOUGH MEMORY: ABORTING");
+    array_free(big_buffer, big_buffer_size);
+    big_buffer=NULL;
+    array_free(little_buffer, little_buffer_size);
+    little_buffer=NULL;
+    return 1;
+  }
+  return 0;
 }

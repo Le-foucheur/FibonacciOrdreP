@@ -213,5 +213,7 @@ int fibo2_init_thread_pool(size_t size);
 *    result: pointeur vers p+1 mpz_t valant Fp(n) a Fp(n+p)
 */
 unsigned char* fibo_mod2(size_t p,mpz_t n);
-unsigned char* fibo_mod2_initialization(size_t p_arg,mpz_t n);
+/* Initialize nescessary structure to use with p up to p_arg.
+  Return 1 on error, 0 otherwise */
+int fibo_mod2_initialization(size_t p_arg);
 #endif // LIB_FIBO_JUMP2_H

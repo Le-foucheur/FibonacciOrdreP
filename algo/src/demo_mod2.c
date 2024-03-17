@@ -14,6 +14,7 @@ int main(int argc, char* argv[]){
     printf("number not formated as decimal");
     exit(1);
   }
+  if(fibo_mod2_initialization(p)) exit(1);
   if (argc>3){
     int temp;
     if(sscanf(argv[3],"%u",&temp)!=1){
@@ -31,10 +32,9 @@ int main(int argc, char* argv[]){
   if (argc>2){
     //performance testing mode
     mpz_set_str(n,argv[1],10);
-    fibo_mod2_initialization(p, n);
     returned=fibo_mod2(p, n);
     if (returned!=NULL) {
-      for (size_t i=0; i<1; i++) {
+      for (size_t i=0; i<5; i++) {
         if (arr_getb(returned,p-i))
           putchar('#');
         else 
@@ -44,7 +44,6 @@ int main(int argc, char* argv[]){
     
   } else {
   while (mpz_inp_str(n,stdin,10)!=0) {
-    fibo_mod2_initialization(p, n);
     returned=fibo_mod2(p, n);
     if (returned!=NULL) {
       for (size_t i=0; i<p+1; i++) {
