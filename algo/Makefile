@@ -1,13 +1,13 @@
 WARNINGS := -Wall -Wextra -pedantic -Wshadow -Wpointer-arith -Wcast-align \
             -Wwrite-strings -Wmissing-prototypes -Wmissing-declarations \
             -Wredundant-decls -Wnested-externs -Winline -Wno-long-long \
-            -Wstrict-prototypes -Werror=odr -Werror=lto-type-mismatch -Werror=strict-aliasing
+            -Wstrict-prototypes -Werror=odr -Werror=lto-type-mismatch -Werror=strict-aliasing -Wstrict-overflow=2
 			#-Wconversion
 
 CFLAGS+=-lpthread $(WARNINGS) -Isrc/
 LDFLAGS+=-lpthread ${WARNINGS}
 
-RELEASE_FLAGS=-O3 -march=native -mtune=native -flto
+RELEASE_FLAGS=-O3 -march=native -mtune=native -flto -fwhole-program -fomit-frame-pointer -static
 DEBUG_FLAGS=-ggdb -g3 -O0 -fno-inline -march=native
 
 SOURCES=
