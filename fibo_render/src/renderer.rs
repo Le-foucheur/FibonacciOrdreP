@@ -1,12 +1,11 @@
 use std::borrow::BorrowMut;
 
-use image::buffer::ConvertBuffer;
-use image::{Luma, Pixel, Rgb};
+use image::{Luma, Pixel};
 use sfml::graphics::{
-    Color, Image, RcSprite, RcTexture, RenderTarget, RenderWindow, Shape, Transformable,
-    VertexBufferUsage,
+    Color, Image, RcSprite, RcTexture, RenderTarget, RenderWindow, Shape, Transformable
 };
 
+use crate::draw_utils::draw_line;
 use crate::fibo_fast::init_serie;
 use crate::gmp_utils::{
     utils_mpz_add_mpz, utils_mpz_compare_i64, utils_mpz_to_i64, utils_mpz_to_string,
@@ -68,26 +67,7 @@ impl Renderer {
                 let endy = 1.0 / i as f32
                     * (temp as f32 * self.pixel_size + window.size().x as f32)
                     - self.start_p as f32 * self.pixel_size;
-                let mut line = sfml::graphics::VertexBuffer::new(
-                    sfml::graphics::PrimitiveType::LINES,
-                    2,
-                    VertexBufferUsage::STATIC,
-                );
-                line.update(
-                    &[
-                        sfml::graphics::Vertex::with_pos_color(
-                            sfml::system::Vector2::new(0., starty),
-                            sfml::graphics::Color::RED,
-                        ),
-                        sfml::graphics::Vertex::with_pos_color(
-                            sfml::system::Vector2::new(window.size().x as f32, endy),
-                            sfml::graphics::Color::RED,
-                        ),
-                    ],
-                    0,
-                );
-
-                window.draw(&line);
+                draw_line(0., starty, window.size().x as f32, endy, window);
             }
         }
 
@@ -104,26 +84,7 @@ impl Renderer {
                 let endy = -1.0 / i as f32
                     * (temp as f32 * self.pixel_size - window.size().x as f32)
                     - self.start_p as f32 * self.pixel_size;
-                let mut line = sfml::graphics::VertexBuffer::new(
-                    sfml::graphics::PrimitiveType::LINES,
-                    2,
-                    VertexBufferUsage::STATIC,
-                );
-                line.update(
-                    &[
-                        sfml::graphics::Vertex::with_pos_color(
-                            sfml::system::Vector2::new(window.size().x as f32, starty),
-                            sfml::graphics::Color::RED,
-                        ),
-                        sfml::graphics::Vertex::with_pos_color(
-                            sfml::system::Vector2::new(0., endy),
-                            sfml::graphics::Color::RED,
-                        ),
-                    ],
-                    0,
-                );
-
-                window.draw(&line);
+                draw_line(0., endy, window.size().x as f32, starty, window);
             }
         }
     }

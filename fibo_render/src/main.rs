@@ -6,6 +6,7 @@ use crate::{command_line::HELP_MESSAGE, window_manager::WindowManager, gmp_utils
 mod fibo;
 mod fibo_fast;
 mod gmp_utils;
+mod draw_utils;
 mod progressbar;
 mod renderer;
 mod window_manager;

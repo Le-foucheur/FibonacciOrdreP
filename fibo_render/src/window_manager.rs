@@ -5,7 +5,7 @@ use sfml::{
     window::{Event, Key},
 };
 
-use crate::{command_line::HELP_MESSAGE, constants::MOVE_STEP, gmp_utils::{utils_mpz_add_u64, utils_mpz_compare_i64, utils_mpz_set_string, utils_mpz_set_u64, utils_mpz_sub_u64}, renderer::Renderer};
+use crate::{command_line::HELP_MESSAGE, constants::MOVE_STEP, gmp_utils::{utils_mpz_add_u64, utils_mpz_set_string, utils_mpz_sub_u64}, renderer::Renderer};
 
 pub struct WindowManager {
     window: RenderWindow,

@@ -1,6 +1,6 @@
 use std::{borrow::{Borrow, BorrowMut}, mem::MaybeUninit};
 
-use gmp_mpfr_sys::gmp::{mpz_add, mpz_add_ui, mpz_cmp_si, mpz_cmp_ui, mpz_get_si, mpz_get_str, mpz_get_ui, mpz_init, mpz_set_ui, mpz_sub_ui, mpz_t};
+use gmp_mpfr_sys::gmp::{mpz_add, mpz_add_ui, mpz_cmp_si, mpz_get_si, mpz_get_str, mpz_init, mpz_set_ui, mpz_sub_ui, mpz_t};
 use std::ffi::CStr;
 use gmp_mpfr_sys::gmp::mpz_set_str;
 
@@ -11,12 +11,6 @@ pub fn utils_mpz_init() -> mpz_t {
         mpz_start.assume_init()
     };
     mpz_start
-}
-
-pub fn utils_mpz_set_u64(n: u64, mpz_start: &mut mpz_t) {
-    unsafe {
-        mpz_set_ui(mpz_start.borrow_mut(), n);
-    };
 }
 
 pub fn utils_mpz_to_i64(mpz_start: &mut mpz_t) -> i64 {
