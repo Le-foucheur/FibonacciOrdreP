@@ -5,7 +5,7 @@ use sfml::{
     window::{Event, Key},
 };
 
-use crate::{command_line::HELP_MESSAGE, constants::MOVE_STEP, gmp_utils::{utils_mpz_add_u64, utils_mpz_compare_u64, utils_mpz_set_string, utils_mpz_set_u64, utils_mpz_sub_u64}, renderer::Renderer};
+use crate::{command_line::HELP_MESSAGE, constants::MOVE_STEP, gmp_utils::{utils_mpz_add_u64, utils_mpz_compare_i64, utils_mpz_set_string, utils_mpz_set_u64, utils_mpz_sub_u64}, renderer::Renderer};
 
 pub struct WindowManager {
     window: RenderWindow,
@@ -48,14 +48,18 @@ pub fn manage_events(window: &mut RenderWindow, renderer: &mut Renderer) -> u8 {
                     result = 1;
                 }
                 sfml::window::Key::Right => {
-                    utils_mpz_add_u64(renderer.start_index_mpz.borrow_mut(), MOVE_STEP);
+                    if Key::LShift.is_pressed() {
+                        utils_mpz_add_u64(renderer.start_index_mpz.borrow_mut(), 1);
+                    } else {
+                        utils_mpz_add_u64(renderer.start_index_mpz.borrow_mut(), MOVE_STEP);
+                    }
                     result = 1;
                 }
                 sfml::window::Key::Left => {
-                    if utils_mpz_compare_u64(renderer.start_index_mpz.borrow_mut(), MOVE_STEP) > 0 {
-                        utils_mpz_sub_u64(renderer.start_index_mpz.borrow_mut(), MOVE_STEP);
+                    if Key::LShift.is_pressed() {
+                        utils_mpz_sub_u64(renderer.start_index_mpz.borrow_mut(), 1);
                     } else {
-                        utils_mpz_set_u64(0, renderer.start_index_mpz.borrow_mut());
+                        utils_mpz_sub_u64(renderer.start_index_mpz.borrow_mut(), MOVE_STEP);
                     }
                     result = 1;
                 }
