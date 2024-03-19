@@ -373,7 +373,7 @@ impl Renderer {
     // Move the start p index to the bottom, center on the next power of two
     pub fn move_bottom_next_power_of_two(&mut self, window: &mut RenderWindow) {
         // Get the position at the center of the screen
-        let mut center = (window.size().y as f32 * (1.0 / self.pixel_size)).floor() as u64 / 2;
+        let center = (window.size().y as f32 * (1.0 / self.pixel_size)).floor() as u64 / 2;
         // Get the next power of 2
         let mut next_power_of_2 = 1;
         while next_power_of_2 <= center + self.start_p{
@@ -391,7 +391,7 @@ impl Renderer {
     // Move the start p index to the top, center on the previous power of two
     pub fn move_top_previous_power_of_two(&mut self, window: &mut RenderWindow) {
         // Get the position at the center of the screen
-        let mut center = (window.size().y as f32 * (1.0 / self.pixel_size)).floor() as u64 / 2;
+        let center = (window.size().y as f32 * (1.0 / self.pixel_size)).floor() as u64 / 2;
         // Get the next power of 2
         let mut next_power_of_2 = 1;
         while next_power_of_2 < center + self.start_p{

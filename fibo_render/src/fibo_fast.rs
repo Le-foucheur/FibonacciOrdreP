@@ -1,10 +1,9 @@
 extern crate libc;
 
-use gmp_mpfr_sys::gmp::{mpz_set, mpz_t};
+use gmp_mpfr_sys::gmp::mpz_t;
 use libc::c_uchar;
-use std::borrow::{Borrow, BorrowMut};
+use std::borrow::BorrowMut;
 
-use crate::gmp_utils::utils_mpz_init;
 #[link(name = "fibo_mod2", kind = "static")]
 extern "C" {
     fn fibo_mod2_initialization(p: isize) -> *mut c_uchar;
@@ -49,7 +48,7 @@ impl FiboFastSequence {
         FiboFastSequence { p, saved: vec![] }
     }
 
-    pub fn generate(&mut self, n: u64, mpz_end: mpz_t) -> Vec<bool> {
+    pub fn generate(&mut self, n: u64, mut mpz_end: mpz_t) -> Vec<bool> {
         // Manage this special case lonely, because it crash the C library
         if self.p == 1 {
             let mut result = vec![false; n as usize];
@@ -58,13 +57,8 @@ impl FiboFastSequence {
         }
 
         // Call the C library
-        // Copy mpz
-        let mut temp = utils_mpz_init();
-        unsafe {
-            mpz_set(temp.borrow_mut(), mpz_end.borrow());
-        }
         let c_buf: *mut c_uchar =
-            unsafe { fibo_mod2((self.p - 1).try_into().unwrap(), temp.borrow_mut()) };
+            unsafe { fibo_mod2((self.p - 1).try_into().unwrap(), mpz_end.borrow_mut()) };
 
         // Initialize the result array
         let mut result = vec![false; n as usize];

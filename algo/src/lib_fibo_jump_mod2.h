@@ -47,7 +47,7 @@
 //autocompletion purpose: comment when building/releasing
 //#define __AVX2__
 //#define __AVX512F__
-//#define FIBO_AVX512_TEST
+#define FIBO_AVX512_TEST
 
 
 #if defined (__AVX512F__) && (!defined (FIBO_NO_AVX512))
