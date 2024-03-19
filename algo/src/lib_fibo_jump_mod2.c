@@ -1,5 +1,6 @@
 #include "lib_fibo_jump_mod2.h"
 #include "external/C-Thread-Pool/thpool.h"
+#include "external/gmp-6.3.0/gmp.h"
 #include <smmintrin.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -139,14 +140,14 @@ static accumulator zero_acc() {return (accumulator){_mm512_setzero_epi32(),_mm51
 
 #define LOOP_I(j) acc.part##j = _mm512_xor_epi64 (acc.part##j,bits)
 #define LOOP_8(mask) \
-  if (mask&1) LOOP_I(0); \
-  if (mask&2) LOOP_I(1); \
-  if (mask&4) LOOP_I(2); \
-  if (mask&8) LOOP_I(3); \
-  if (mask&16) LOOP_I(4);\
-  if (mask&32) LOOP_I(5);\
-  if (mask&64) LOOP_I(6);\
-  if (mask&128)LOOP_I(7);
+  if (mask&128)LOOP_I(0); \
+  if (mask&64) LOOP_I(1); \
+  if (mask&32) LOOP_I(2); \
+  if (mask&16) LOOP_I(3); \
+  if (mask&8)  LOOP_I(4);\
+  if (mask&4)  LOOP_I(5);\
+  if (mask&2)  LOOP_I(6);\
+  if (mask&1)  LOOP_I(7);
 
 
 static __attribute__((always_inline)) inline
@@ -456,9 +457,6 @@ bytes_t finalize(accumulator acc, bytes_t result0){
 
   return result0;
 }
-#define MASK_0246 0x00FF00FF00FF00FFUL
-#define MASK_135  0x0000FF00FF00FF00UL
-#define PACKER    0x101
 
 
 static void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,char bit_addr_shift,bytes_t result0){
@@ -1114,7 +1112,10 @@ unsigned char* fibo_mod2(size_t p_arg,mpz_t n){
   void (*jump_function_0)(void*);
   
   if (neg_n){
-    mpz_sub_ui(n,n,1);
+    mpz_t n2;
+    mpz_init(n2);
+    mpz_sub_ui(n2,n,1);
+    n=n2;
     jump_function_0 = &jump_formula_plus1;
     jump_function_1 = &jump_formula;
   } else {
@@ -1158,6 +1159,9 @@ unsigned char* fibo_mod2(size_t p_arg,mpz_t n){
     thpool_add_work(calcul_pool, jump_function, (void*)i);
   }
   thpool_wait(calcul_pool);
+  if (neg_n){
+    mpz_clear(n);
+  }
   return little_buffer;
 }
 
