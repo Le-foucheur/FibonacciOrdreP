@@ -1,14 +1,14 @@
 use std::borrow::BorrowMut;
 
-use image::{Pixel, Rgb};
+use image::{Luma, Pixel};
 use sfml::graphics::{
-    Color, Image, RcSprite, RcTexture, RenderTarget, RenderWindow, Shape, Transformable,
-    VertexBufferUsage,
+    Color, Image, RcSprite, RcTexture, RenderTarget, RenderWindow, Shape, Transformable
 };
 
+use crate::draw_utils::draw_line;
 use crate::fibo_fast::init_serie;
 use crate::gmp_utils::{
-    utils_mpz_add_mpz, utils_mpz_compare_u64, utils_mpz_to_string, utils_mpz_to_u64,
+    utils_mpz_add_mpz, utils_mpz_compare_i64, utils_mpz_to_i64, utils_mpz_to_string,
 };
 use crate::window_manager::manage_events;
 use crate::{constants::SHOW_IMAGE_TIMES, fibo_fast, gmp_utils::utils_mpz_from_u64, progressbar};
@@ -17,7 +17,8 @@ use gmp_mpfr_sys::gmp::mpz_t;
 pub struct Renderer {
     pub current_sprite: RcSprite,
     pub current_texture: RcTexture,
-    pub current_headless_buffer: Option<image::ImageBuffer<Rgb<u8>, Vec<<Rgb<u8> as Pixel>::Subpixel>>>,
+    pub current_headless_buffer:
+        Option<image::ImageBuffer<Luma<u8>, Vec<<Luma<u8> as Pixel>::Subpixel>>>,
     pub pixel_size: f32,
     pub start_index_mpz: mpz_t,
     pub start_p: u64,
@@ -50,41 +51,47 @@ impl Renderer {
     pub fn generate_line(&mut self, window: &mut RenderWindow, n: u32) {
         // generate lines -x, -/2x, ... -1/nx
         // Check if the start index can be converted to u64
-        if utils_mpz_compare_u64(self.start_index_mpz.borrow_mut(), u64::MAX) < 0 {
-            let temp = utils_mpz_to_u64(self.start_index_mpz.borrow_mut());
+        // Initialize the mpz at the right side of the generation
+        let mut mpz_end: mpz_t =
+            utils_mpz_from_u64((window.size().x as f32 * 1.0 / self.pixel_size).ceil() as u64);
+        utils_mpz_add_mpz(mpz_end.borrow_mut(), self.start_index_mpz.borrow_mut());
+
+        // Line in positive
+        if utils_mpz_compare_i64(self.start_index_mpz.borrow_mut(), i64::MAX) < 0
+            && utils_mpz_compare_i64(mpz_end.borrow_mut(), 0) > 0
+        {
+            let temp = utils_mpz_to_i64(self.start_index_mpz.borrow_mut());
             for i in 1..n {
                 let starty = 1.0 / i as f32 * temp as f32 * self.pixel_size
                     - self.start_p as f32 * self.pixel_size;
                 let endy = 1.0 / i as f32
                     * (temp as f32 * self.pixel_size + window.size().x as f32)
                     - self.start_p as f32 * self.pixel_size;
-                let mut line = sfml::graphics::VertexBuffer::new(
-                    sfml::graphics::PrimitiveType::LINES,
-                    2,
-                    VertexBufferUsage::STATIC,
-                );
-                line.update(
-                    &[
-                        sfml::graphics::Vertex::with_pos_color(
-                            sfml::system::Vector2::new(0., starty),
-                            sfml::graphics::Color::RED,
-                        ),
-                        sfml::graphics::Vertex::with_pos_color(
-                            sfml::system::Vector2::new(window.size().x as f32, endy),
-                            sfml::graphics::Color::RED,
-                        ),
-                    ],
-                    0,
-                );
+                draw_line(0., starty, window.size().x as f32, endy, window);
+            }
+        }
 
-                window.draw(&line);
+        // Line in negative
+        if utils_mpz_compare_i64(mpz_end.borrow_mut(), i64::MIN) > 0
+            && utils_mpz_compare_i64(self.start_index_mpz.borrow_mut(), 0) < 0
+        {
+            // Compute again mpz_end in floating point
+            let t1 = utils_mpz_to_i64(self.start_index_mpz.borrow_mut());
+            let temp = window.size().x as f32 * 1.0 / self.pixel_size + t1 as f32;
+            for i in 1..n {
+                let starty = -1.0 / i as f32 * temp as f32 * self.pixel_size
+                    - self.start_p as f32 * self.pixel_size;
+                let endy = -1.0 / i as f32
+                    * (temp as f32 * self.pixel_size - window.size().x as f32)
+                    - self.start_p as f32 * self.pixel_size;
+                draw_line(0., endy, window.size().x as f32, starty, window);
             }
         }
     }
 
     pub fn fill_buffer_headless(
         &mut self,
-        buffer: &mut image::ImageBuffer<Rgb<u8>, Vec<<Rgb<u8> as Pixel>::Subpixel>>,
+        buffer: &mut image::ImageBuffer<Luma<u8>, Vec<<Luma<u8> as Pixel>::Subpixel>>,
         x: f32,
         y: f32,
         size: f32,
@@ -95,11 +102,7 @@ impl Renderer {
                 buffer.put_pixel(
                     (x * size + i as f32) as u32,
                     (y * size + j as f32) as u32,
-                    Rgb([
-                        (255.0 * color).ceil() as u8,
-                        (255.0 * color).ceil() as u8,
-                        (255.0 * color).ceil() as u8,
-                    ]),
+                    Luma([((255.0 * color).ceil()) as u8]),
                 );
             }
         }
@@ -126,7 +129,7 @@ impl Renderer {
     pub fn fill_buffer_wrapper(
         &mut self,
         buffer: &mut Image,
-        buffer_headless: &mut image::ImageBuffer<Rgb<u8>, Vec<<Rgb<u8> as Pixel>::Subpixel>>,
+        buffer_headless: &mut image::ImageBuffer<Luma<u8>, Vec<<Luma<u8> as Pixel>::Subpixel>>,
         x: f32,
         y: f32,
         size: f32,
@@ -179,7 +182,7 @@ impl Renderer {
 
         // Initialize buffer
         let mut buffer = Image::new(image_width, image_height);
-        let mut headless_buffer = image::ImageBuffer::new(image_width, image_height);
+        let mut headless_buffer = image::GrayImage::new(image_width, image_height);
 
         init_serie(
             ((image_height as f32 / upixel_size).floor() * (1.0 / self.pixel_size).ceil()) as u64
@@ -210,6 +213,7 @@ impl Renderer {
                 {
                     self.generate_texture(&buffer, image_width, image_height);
                     window.as_mut().unwrap().draw(&self.current_sprite);
+                    self.draw_position(window.as_mut().unwrap());
                     window.as_mut().unwrap().display();
                 }
             }
@@ -335,7 +339,19 @@ impl Renderer {
         match self.current_headless_buffer {
             Some(ref buffer) => {
                 println!("Saving image...");
-                match buffer.save(filename) {
+                let file = match std::fs::File::create(filename) {
+                    Ok(f) => f,
+                    Err(e) => {
+                        println!("Error while saving the image: {}", e);
+                        return;
+                    }
+                };
+                let encoder = image::codecs::png::PngEncoder::new_with_quality(
+                    file,
+                    image::codecs::png::CompressionType::Best,
+                    image::codecs::png::FilterType::NoFilter,
+                );
+                match buffer.write_with_encoder(encoder) {
                     Ok(_) => {
                         println!("Image saved successfully as {}", filename);
                     }
