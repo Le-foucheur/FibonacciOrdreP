@@ -2,17 +2,18 @@ use std::borrow::BorrowMut;
 
 use image::{Luma, Pixel};
 use sfml::graphics::{
-    Color, Image, RcSprite, RcTexture, RenderTarget, RenderWindow, Shape, Transformable
+    Color, Image, RcSprite, RcTexture, RenderTarget, RenderWindow, Shape, Transformable,
 };
 
 use crate::draw_utils::draw_line;
 use crate::fibo_fast::init_serie;
 use crate::gmp_utils::{
-    utils_mpz_add_mpz, utils_mpz_compare_i64, utils_mpz_to_i64, utils_mpz_to_string,
+    utils_mpz_add_mpz, utils_mpz_compare_i64, utils_mpz_compare_mpz, utils_mpz_divexact_u64,
+    utils_mpz_sub_u64, utils_mpz_to_i64, utils_mpz_to_string,
 };
 use crate::window_manager::manage_events;
 use crate::{constants::SHOW_IMAGE_TIMES, fibo_fast, gmp_utils::utils_mpz_from_u64, progressbar};
-use gmp_mpfr_sys::gmp::mpz_t;
+use gmp_mpfr_sys::gmp::{mpz_mul_ui, mpz_t};
 
 pub struct Renderer {
     pub current_sprite: RcSprite,
@@ -189,7 +190,6 @@ impl Renderer {
                 + self.start_p
                 + 1
                 - 1,
-            mpz_start,
         );
 
         let mut progressbar = progressbar::Progressbar::new();
@@ -313,6 +313,99 @@ impl Renderer {
 
     pub fn change_mode(&mut self) {
         self.mode = (self.mode + 1) % 3;
+    }
+
+    // Move the start index to the right, to center the screen on the next power of 2
+    pub fn move_right_next_power_of_2(&mut self, window: &mut RenderWindow) {
+        // Get the position at the center of the screen
+        let mut center = utils_mpz_from_u64(
+            (window.size().x as f32 * (1.0 / self.pixel_size)).floor() as u64 / 2,
+        );
+        utils_mpz_add_mpz(center.borrow_mut(), self.start_index_mpz.borrow_mut());
+        // Get the next power of 2
+        let mut next_power_of_2 = utils_mpz_from_u64(1);
+        while utils_mpz_compare_mpz(next_power_of_2.borrow_mut(), center.borrow_mut()) <= 0 {
+            unsafe {
+                mpz_mul_ui(
+                    next_power_of_2.borrow_mut(),
+                    next_power_of_2.borrow_mut(),
+                    2,
+                );
+            }
+        }
+        // COmpute the new start index (next power of 2 - half of the screen)
+        utils_mpz_sub_u64(
+            next_power_of_2.borrow_mut(),
+            (window.size().x as f32 * (1.0 / self.pixel_size)).floor() as u64 / 2,
+        );
+        self.start_index_mpz = next_power_of_2;
+    }
+
+    // Move the start index to the left, center on the previous power of two
+    pub fn move_left_previous_power_of_two(&mut self, window: &mut RenderWindow) {
+        // Get the position at the center of the screen
+        let mut center = utils_mpz_from_u64(
+            (window.size().x as f32 * (1.0 / self.pixel_size)).floor() as u64 / 2,
+        );
+        utils_mpz_add_mpz(center.borrow_mut(), self.start_index_mpz.borrow_mut());
+        // Get the next power of 2
+        let mut next_power_of_2 = utils_mpz_from_u64(1);
+        while utils_mpz_compare_mpz(next_power_of_2.borrow_mut(), center.borrow_mut()) < 0 {
+            unsafe {
+                mpz_mul_ui(
+                    next_power_of_2.borrow_mut(),
+                    next_power_of_2.borrow_mut(),
+                    2,
+                );
+            }
+        }
+        // Divide by two to get the previous power of two
+        utils_mpz_divexact_u64(next_power_of_2.borrow_mut(), 2);
+
+        // COmpute the new start index (next power of 2 - half of the screen)
+        utils_mpz_sub_u64(
+            next_power_of_2.borrow_mut(),
+            (window.size().x as f32 * (1.0 / self.pixel_size)).floor() as u64 / 2,
+        );
+        self.start_index_mpz = next_power_of_2;
+    }
+
+    // Move the start p index to the bottom, center on the next power of two
+    pub fn move_bottom_next_power_of_two(&mut self, window: &mut RenderWindow) {
+        // Get the position at the center of the screen
+        let mut center = (window.size().y as f32 * (1.0 / self.pixel_size)).floor() as u64 / 2;
+        // Get the next power of 2
+        let mut next_power_of_2 = 1;
+        while next_power_of_2 <= center + self.start_p{
+            next_power_of_2 *= 2;
+        }
+        // Compute the new start index (next power of 2 - half of the screen)
+        let temp = next_power_of_2 as i64 - center as i64;
+        if temp > 0 {
+            self.start_p = temp as u64;
+        } else {
+            self.start_p = 0;
+        }
+    }
+
+    // Move the start p index to the top, center on the previous power of two
+    pub fn move_top_previous_power_of_two(&mut self, window: &mut RenderWindow) {
+        // Get the position at the center of the screen
+        let mut center = (window.size().y as f32 * (1.0 / self.pixel_size)).floor() as u64 / 2;
+        // Get the next power of 2
+        let mut next_power_of_2 = 1;
+        while next_power_of_2 < center + self.start_p{
+            next_power_of_2 *= 2;
+        }
+        // Divide by two to get the previous power of two
+        next_power_of_2 /= 2;
+        // Compute the new start index (next power of 2 - half of the screen)
+        let temp = next_power_of_2 as i64 - center as i64;
+        if temp > 0 {
+            self.start_p = temp as u64;
+        } else {
+            self.start_p = 0;
+        }
     }
 
     pub fn save_image(&self, filename: &str) {

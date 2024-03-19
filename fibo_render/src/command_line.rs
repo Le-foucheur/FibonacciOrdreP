@@ -72,8 +72,6 @@ pub fn load_argument_mpz(args: &mut Vec<String>, arg: &mut mpz_t, msg: &str) {
     }
     let mut temp = args[1].parse::<String>().expect(msg);
     temp = temp.replace("_", "");
-    // Add a null terminator to the string
-    temp.push('\0');
     utils_mpz_set_string(temp, arg);
     _end_argument(args);
 }

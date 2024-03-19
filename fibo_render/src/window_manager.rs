@@ -5,7 +5,12 @@ use sfml::{
     window::{Event, Key},
 };
 
-use crate::{command_line::HELP_MESSAGE, constants::MOVE_STEP, gmp_utils::{utils_mpz_add_u64, utils_mpz_set_string, utils_mpz_sub_u64}, renderer::Renderer};
+use crate::{
+    command_line::HELP_MESSAGE,
+    constants::MOVE_STEP,
+    gmp_utils::{utils_mpz_add_u64, utils_mpz_set_string, utils_mpz_sub_u64},
+    renderer::Renderer,
+};
 
 pub struct WindowManager {
     window: RenderWindow,
@@ -15,7 +20,12 @@ pub struct WindowManager {
 pub fn generate_sequences(window: &mut RenderWindow, renderer: &mut Renderer) {
     let mut flag = true;
     while flag {
-        flag = renderer.generate_sequences_texture(window.size().x, window.size().y, false, Some(window));
+        flag = renderer.generate_sequences_texture(
+            window.size().x,
+            window.size().y,
+            false,
+            Some(window),
+        );
     }
 }
 
@@ -36,20 +46,30 @@ pub fn manage_events(window: &mut RenderWindow, renderer: &mut Renderer) -> u8 {
                     renderer.save_image("fibo_sequence.png");
                 }
                 sfml::window::Key::Down => {
-                    renderer.start_p += MOVE_STEP;
+                    if Key::LShift.is_pressed() {
+                        renderer.start_p += 1;
+                    } else if Key::LControl.is_pressed() {
+                        renderer.move_bottom_next_power_of_two(window);
+                    } else {
+                        renderer.start_p += MOVE_STEP;
+                    }
                     result = 1;
                 }
                 sfml::window::Key::Up => {
-                    renderer.start_p = if renderer.start_p > MOVE_STEP {
-                        renderer.start_p - MOVE_STEP
-                    } else {
-                        0
-                    };
+                    if Key::LShift.is_pressed() && renderer.start_p >= 1 {
+                        renderer.start_p -= 1;
+                    } else if Key::LControl.is_pressed() {
+                        renderer.move_top_previous_power_of_two(window);
+                    } else if renderer.start_p >= MOVE_STEP {
+                        renderer.start_p -= MOVE_STEP;
+                    }
                     result = 1;
                 }
                 sfml::window::Key::Right => {
                     if Key::LShift.is_pressed() {
                         utils_mpz_add_u64(renderer.start_index_mpz.borrow_mut(), 1);
+                    } else if Key::LControl.is_pressed() {
+                        renderer.move_right_next_power_of_2(window);
                     } else {
                         utils_mpz_add_u64(renderer.start_index_mpz.borrow_mut(), MOVE_STEP);
                     }
@@ -58,6 +78,8 @@ pub fn manage_events(window: &mut RenderWindow, renderer: &mut Renderer) -> u8 {
                 sfml::window::Key::Left => {
                     if Key::LShift.is_pressed() {
                         utils_mpz_sub_u64(renderer.start_index_mpz.borrow_mut(), 1);
+                    } else if Key::LControl.is_pressed() {
+                        renderer.move_left_previous_power_of_two(window);
                     } else {
                         utils_mpz_sub_u64(renderer.start_index_mpz.borrow_mut(), MOVE_STEP);
                     }
@@ -90,7 +112,10 @@ pub fn manage_events(window: &mut RenderWindow, renderer: &mut Renderer) -> u8 {
                     std::io::stdout().flush().unwrap();
                     let mut input = String::new();
                     std::io::stdin().read_line(&mut input).unwrap();
-                    utils_mpz_set_string(input.trim().to_string(), renderer.start_index_mpz.borrow_mut());
+                    utils_mpz_set_string(
+                        input.trim().to_string(),
+                        renderer.start_index_mpz.borrow_mut(),
+                    );
                     result = 1;
                 }
                 sfml::window::Key::B => {
