@@ -467,79 +467,23 @@ static void jump_formula_internal(size_t k,size_t ints_addr, ptrdiff_t bit_addr,
   
   for (;i_base<=(ptrdiff_t)(p)-56;i_base+=56){
     uint64_t cond_bits = arr_geti(big_buffer,bit_addr-7)>>(bit_addr_shift); //get a pack of 56 condition
-    uint64_t part1 = cond_bits & MASK_135;
-    cond_bits &= MASK_0246;
-    part1 *= PACKER;
-    cond_bits*= PACKER;
-    
-    bytes_t int_bits=get_bytes(big_buffer,ints_addr);   //get corresponding bytes
-    accu = loop_once(accu, cond_bits>>(6*8), int_bits);
-    ints_addr++;
-    
-    int_bits=get_bytes(big_buffer,ints_addr);   //get corresponding bytes
-    accu = loop_once(accu, part1>>(5*8), int_bits);
-    ints_addr++;
-    
-    int_bits=get_bytes(big_buffer,ints_addr);   //get corresponding bytes
-    accu = loop_once(accu, cond_bits>>(4*8), int_bits);
-    ints_addr++;
-    
-    int_bits=get_bytes(big_buffer,ints_addr);   //get corresponding bytes
-    accu = loop_once(accu, part1>>(3*8), int_bits);
-    ints_addr++;
-    
-    int_bits=get_bytes(big_buffer,ints_addr);   //get corresponding bytes
-    accu = loop_once(accu, cond_bits>>(2*8), int_bits);
-    ints_addr++;
-    
-    int_bits=get_bytes(big_buffer,ints_addr);   //get corresponding bytes
-    accu = loop_once(accu, part1>>(1*8), int_bits);
-    ints_addr++;
-    
-    int_bits=get_bytes(big_buffer,ints_addr);   //get corresponding bytes
-    accu = loop_once(accu, cond_bits>>(0*8), int_bits);
-    ints_addr++;
-    
-    
+
+    for (int i=6;i>=0;i--){
+      bytes_t int_bits=get_bytes(big_buffer,ints_addr);   //get corresponding bytes
+      ints_addr++;
+      accu = loop_once(accu, cond_bits>>(i*8), int_bits);  
+    }
     bit_addr-=7;
   }
 
     uint64_t cond_bits = arr_geti(big_buffer,bit_addr-7)>>(bit_addr_shift); //get a pack of 56 condition
     cond_bits &= 0xFFFFFFFFFFFFFFFFUL<<(56-(p-i_base));
-    uint64_t part1 = cond_bits & MASK_135;
-    cond_bits &= MASK_0246;
-    part1 *= PACKER;
-    cond_bits*= PACKER;
     
-    bytes_t int_bits=get_bytes(big_buffer,ints_addr);   //get corresponding bytes
-    accu = loop_once(accu, cond_bits>>(6*8), int_bits);
-    ints_addr++;
-    
-    int_bits=get_bytes(big_buffer,ints_addr);   //get corresponding bytes
-    accu = loop_once(accu, part1>>(5*8), int_bits);
-    ints_addr++;
-    
-    int_bits=get_bytes(big_buffer,ints_addr);   //get corresponding bytes
-    accu = loop_once(accu, cond_bits>>(4*8), int_bits);
-    ints_addr++;
-    
-    int_bits=get_bytes(big_buffer,ints_addr);   //get corresponding bytes
-    accu = loop_once(accu, part1>>(3*8), int_bits);
-    ints_addr++;
-    
-    int_bits=get_bytes(big_buffer,ints_addr);   //get corresponding bytes
-    accu = loop_once(accu, cond_bits>>(2*8), int_bits);
-    ints_addr++;
-    
-    int_bits=get_bytes(big_buffer,ints_addr);   //get corresponding bytes
-    accu = loop_once(accu, part1>>(1*8), int_bits);
-    ints_addr++;
-    
-    int_bits=get_bytes(big_buffer,ints_addr);   //get corresponding bytes
-    accu = loop_once(accu, cond_bits>>(0*8), int_bits);
-    ints_addr++;
-
-
+    for (int i=6;i>=0;i--){
+      bytes_t int_bits=get_bytes(big_buffer,ints_addr);   //get corresponding bytes
+      ints_addr++;
+      accu = loop_once(accu, cond_bits>>(i*8), int_bits);  
+    }
 
   result0 = finalize(accu,result0);         //compact the values in the accumulator and initial value
   arr_set_result(little_buffer, k, result0);//write to memory
