@@ -136,7 +136,7 @@
   __m512i arr_get8i(unsigned char* array,ptrdiff_t index);
   
   typedef __m512i bytes_t;
-  typedef __mmask16 cond_t;
+  typedef unsigned char cond_t;
   
   #define byte_zero _mm512_setzero_epi32()
   #define get_bytes arr_get8i

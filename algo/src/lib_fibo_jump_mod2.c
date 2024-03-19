@@ -152,7 +152,7 @@ static accumulator zero_acc() {return (accumulator){_mm512_setzero_epi32(),_mm51
 
 static __attribute__((always_inline)) inline
 accumulator loop_once(accumulator acc,cond_t condition, bytes_t bits){
-  switch (condition) {
+  switch ((char)(condition)) {
     case 0: LOOP_8(0) break;
     case 1: LOOP_8(1) break;
     case 2: LOOP_8(2) break;
