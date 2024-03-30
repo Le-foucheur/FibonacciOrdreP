@@ -1,9 +1,13 @@
-run: build
-run:
+all: help
+
+graphic: build
+graphic:
+	cargo run --release --features="graphic"
+
+headless: build
 	cargo run --release
 
 debug: build
-debug:
 	cargo run
 
 build:
@@ -16,3 +20,17 @@ clean:
 	rm -f libfibo_mod2.a
 	rm -f libgmp.a
 	rm -f gnom.out perf.data perf.data.old
+
+clean_all: clean
+clean_all:
+	cargo clean
+
+help:
+	@echo "TLDR; Makefile help"
+	@echo "    make graphic       Run fibo_render in GUI mode"
+	@echo "    make headless      Run fibo_render in headless mode"
+	@echo "    make debug  		  Run fibo_render in dev mode (Headless by default)"
+	@echo "    make build         Build GMP and computation lib, and copy .a files"
+	@echo "    make clean         Cleans compilation temporary files (Without Rust libs)"
+	@echo "    make clean_all     Cleans compilation temporary files (With Rust libs)"
+	@echo "    make help          Displays this help"

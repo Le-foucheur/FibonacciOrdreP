@@ -9,7 +9,7 @@ edition = "2021"
 sfml = { version = "0.21.0", optional = true }
 libc = "0.2.110"
 gmp-mpfr-sys = "1.6"
-image = "0.25.0"
+image = { version = "0.25.0", default-features = false, features = ["rayon", "png"] }
 
 [features]
 graphic = ["dep:sfml"]
