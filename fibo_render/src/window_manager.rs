@@ -23,8 +23,7 @@ pub fn generate_sequences(window: &mut RenderWindow, renderer: &mut Renderer) {
         flag = renderer.generate_sequences_texture(
             window.size().x,
             window.size().y,
-            false,
-            Some(window),
+            window
         );
     }
 }

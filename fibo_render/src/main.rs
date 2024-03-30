@@ -2,16 +2,20 @@ use std::env;
 
 use command_line::{load_argument_f32, load_argument_mpz, load_argument_string, load_argument_u32, load_argument_u64, load_argument_u8};
 
-use crate::{command_line::HELP_MESSAGE, window_manager::WindowManager, gmp_utils::utils_mpz_init};
+use crate::{command_line::HELP_MESSAGE, gmp_utils::utils_mpz_init};
 mod fibo;
 mod fibo_fast;
 mod gmp_utils;
-mod draw_utils;
-mod progressbar;
-mod renderer;
-mod window_manager;
 mod command_line;
 mod constants;
+mod renderer;
+mod progressbar;
+
+#[cfg(feature = "graphic")]
+mod draw_utils;
+#[cfg(feature = "graphic")]
+mod window_manager;
+
 
 #[link(name = "fibo_mod2", kind = "static")]
 extern "C" {
@@ -25,9 +29,12 @@ fn main() {
     let mut p = 0;
     let mut zoom = 1.0;
     let mut mode = 0;
-    
     // Headless default parameters
+    #[cfg(feature = "graphic")]
     let mut headless = false;
+    #[cfg(not(feature = "graphic"))]
+    let mut headless = true;
+
     let mut height = 1080;
     let mut width = 1920;
     let mut filename = "fibo_sequence.png".to_string();
@@ -103,12 +110,14 @@ fn main() {
     let mut renderer = renderer::Renderer::new(zoom, n_mpz, p, mode);
 
     if headless {
-        renderer.generate_sequences_texture(width, height, true, None);
+        renderer.generate_sequences_headless(width, height);
         renderer.save_image_headless(filename.as_str());
         return;
     } else {
+        #[cfg(feature = "graphic")]
         // Create the window
-        let mut wm = WindowManager::new(renderer);
+        let mut wm = window_manager::WindowManager::new(renderer);
+        #[cfg(feature = "graphic")]
         wm.run();
     }
 }

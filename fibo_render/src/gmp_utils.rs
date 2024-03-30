@@ -1,6 +1,9 @@
 use std::{borrow::{Borrow, BorrowMut}, mem::MaybeUninit};
 
-use gmp_mpfr_sys::gmp::{mpz_add, mpz_add_ui, mpz_cmp, mpz_cmp_si, mpz_divexact_ui, mpz_get_si, mpz_get_str, mpz_init, mpz_set_ui, mpz_sub_ui, mpz_t};
+#[cfg(feature = "graphic")]
+use gmp_mpfr_sys::gmp::{mpz_add_ui, mpz_cmp, mpz_cmp_si, mpz_divexact_ui, mpz_get_si, mpz_sub_ui};
+
+use gmp_mpfr_sys::gmp::{mpz_add, mpz_get_str, mpz_init, mpz_set_ui, mpz_t};
 use std::ffi::CStr;
 use gmp_mpfr_sys::gmp::mpz_set_str;
 
@@ -13,6 +16,7 @@ pub fn utils_mpz_init() -> mpz_t {
     mpz_start
 }
 
+#[cfg(feature = "graphic")]
 pub fn utils_mpz_to_i64(mpz_start: &mut mpz_t) -> i64 {
     unsafe {
         mpz_get_si(mpz_start.borrow())
@@ -48,31 +52,37 @@ pub fn utils_mpz_from_u64(n: u64) -> mpz_t {
     };
     mpz_start
 }
+#[cfg(feature = "graphic")]
 pub fn utils_mpz_add_u64(mpz_start: &mut mpz_t, n: u64) {
     unsafe {
         mpz_add_ui(mpz_start.borrow_mut(), mpz_start.borrow(), n);
     };
 }
+#[cfg(feature = "graphic")]
 pub fn utils_mpz_sub_u64(mpz_start: &mut mpz_t, n: u64) {
     unsafe {
         mpz_sub_ui(mpz_start.borrow_mut(), mpz_start.borrow(), n);
     };
 }
+#[cfg(feature = "graphic")]
 pub fn utils_mpz_compare_i64(mpz_start: &mut mpz_t, n: i64) -> i32 {
     unsafe {
         mpz_cmp_si(mpz_start.borrow(), n)
     }    
 }
+#[cfg(feature = "graphic")]
 pub fn utils_mpz_divexact_u64(mpz_start: &mut mpz_t, n: u64) {
     unsafe {
         mpz_divexact_ui(mpz_start.borrow_mut(), mpz_start.borrow(), n as u64);
     }    
 }
+#[cfg(feature = "graphic")]
 pub fn utils_mpz_compare_mpz(mpz_start: &mut mpz_t, mpz_end: &mut mpz_t) -> i32 {
     unsafe {
         mpz_cmp(mpz_start.borrow(), mpz_end.borrow())
     }    
 }
+
 pub fn utils_mpz_add_mpz(mpz_start: &mut mpz_t, mpz_end: &mut mpz_t) {
     unsafe {
         mpz_add(mpz_start.borrow_mut(), mpz_start.borrow(), mpz_end.borrow());

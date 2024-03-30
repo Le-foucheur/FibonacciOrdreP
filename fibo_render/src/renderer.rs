@@ -1,22 +1,36 @@
 use std::borrow::BorrowMut;
 
 use image::{Luma, Pixel};
+
+#[cfg(feature = "graphic")]
 use sfml::graphics::{
     Color, Image, RcSprite, RcTexture, RenderTarget, RenderWindow, Shape, Transformable,
 };
-
+#[cfg(feature = "graphic")]
 use crate::draw_utils::draw_line;
+#[cfg(feature = "graphic")]
+use crate::window_manager::manage_events;
+#[cfg(feature = "graphic")]
+use crate::gmp_utils::{
+    utils_mpz_compare_i64, utils_mpz_compare_mpz, utils_mpz_divexact_u64,
+    utils_mpz_sub_u64, utils_mpz_to_i64,
+};
+#[cfg(feature = "graphic")]
+use gmp_mpfr_sys::gmp::mpz_mul_ui;
+#[cfg(feature = "graphic")]
+use crate::constants::SHOW_IMAGE_TIMES;
+
 use crate::fibo_fast::init_serie;
 use crate::gmp_utils::{
-    utils_mpz_add_mpz, utils_mpz_compare_i64, utils_mpz_compare_mpz, utils_mpz_divexact_u64,
-    utils_mpz_sub_u64, utils_mpz_to_i64, utils_mpz_to_string,
+    utils_mpz_add_mpz, utils_mpz_to_string,
 };
-use crate::window_manager::manage_events;
-use crate::{constants::SHOW_IMAGE_TIMES, fibo_fast, gmp_utils::utils_mpz_from_u64, progressbar};
-use gmp_mpfr_sys::gmp::{mpz_mul_ui, mpz_t};
+use crate::{fibo_fast, gmp_utils::utils_mpz_from_u64, progressbar};
+use gmp_mpfr_sys::gmp::mpz_t;
 
 pub struct Renderer {
+    #[cfg(feature = "graphic")]
     pub current_sprite: RcSprite,
+    #[cfg(feature = "graphic")]
     pub current_texture: RcTexture,
     pub current_headless_buffer:
         Option<image::ImageBuffer<Luma<u8>, Vec<<Luma<u8> as Pixel>::Subpixel>>>,
@@ -34,7 +48,9 @@ pub struct Renderer {
 impl Renderer {
     pub fn new(pixel_size: f32, start_index_mpz: mpz_t, start_p: u64, mode: u8) -> Renderer {
         Renderer {
+            #[cfg(feature = "graphic")]
             current_sprite: RcSprite::new(),
+            #[cfg(feature = "graphic")]
             current_texture: RcTexture::new().unwrap(),
             current_headless_buffer: None,
             pixel_size,
@@ -49,6 +65,7 @@ impl Renderer {
         }
     }
 
+    #[cfg(feature = "graphic")]
     pub fn generate_line(&mut self, window: &mut RenderWindow, n: u32) {
         // generate lines -x, -/2x, ... -1/nx
         // Check if the start index can be converted to u64
@@ -109,6 +126,7 @@ impl Renderer {
         }
     }
 
+    #[cfg(feature = "graphic")]
     pub fn fill_buffer(&mut self, buffer: &mut Image, x: f32, y: f32, size: f32, color: f32) {
         for i in 0..size as u32 {
             for j in 0..size as u32 {
@@ -127,23 +145,7 @@ impl Renderer {
         }
     }
 
-    pub fn fill_buffer_wrapper(
-        &mut self,
-        buffer: &mut Image,
-        buffer_headless: &mut image::ImageBuffer<Luma<u8>, Vec<<Luma<u8> as Pixel>::Subpixel>>,
-        x: f32,
-        y: f32,
-        size: f32,
-        color: f32,
-        headless: bool,
-    ) {
-        if headless {
-            self.fill_buffer_headless(buffer_headless, x, y, size, color);
-        } else {
-            self.fill_buffer(buffer, x, y, size, color);
-        }
-    }
-
+    #[cfg(feature = "graphic")]
     fn generate_texture(&mut self, buffer: &Image, image_width: u32, image_height: u32) {
         if !self.current_texture.create(image_width, image_height) {
             panic!("Error creating texture");
@@ -152,12 +154,12 @@ impl Renderer {
         self.current_sprite = RcSprite::with_texture(&self.current_texture);
     }
 
+    #[cfg(feature = "graphic")]
     pub fn generate_sequences_texture(
         &mut self,
         image_width: u32,
         image_height: u32,
-        headless: bool,
-        mut window: Option<&mut RenderWindow>,
+        window: &mut RenderWindow,
     ) -> bool {
         let texture_generation_time = std::time::Instant::now();
         // Round pixel size for easier computation
@@ -183,7 +185,6 @@ impl Renderer {
 
         // Initialize buffer
         let mut buffer = Image::new(image_width, image_height);
-        let mut headless_buffer = image::GrayImage::new(image_width, image_height);
 
         init_serie(
             ((image_height as f32 / upixel_size).floor() * (1.0 / self.pixel_size).ceil()) as u64
@@ -199,23 +200,21 @@ impl Renderer {
             // Update progress bar and show the image sometimes
             progressbar.update(y.pow(2) as f32 / (image_height / upixel_size as u32).pow(2) as f32);
             progressbar.show();
-            if !headless {
-                let event = manage_events(window.as_mut().unwrap(), self);
-                if event == 1 {
-                    progressbar.clear();
-                    return true;
-                } else if event == 2 {
-                    progressbar.clear();
-                    return false;
-                }
-                if (image_height / SHOW_IMAGE_TIMES) != 0
-                    && y % (image_height / SHOW_IMAGE_TIMES) == 0
-                {
-                    self.generate_texture(&buffer, image_width, image_height);
-                    window.as_mut().unwrap().draw(&self.current_sprite);
-                    self.draw_position(window.as_mut().unwrap());
-                    window.as_mut().unwrap().display();
-                }
+            let event = manage_events(window, self);
+            if event == 1 {
+                progressbar.clear();
+                return true;
+            } else if event == 2 {
+                progressbar.clear();
+                return false;
+            }
+            if (image_height / SHOW_IMAGE_TIMES) != 0
+                && y % (image_height / SHOW_IMAGE_TIMES) == 0
+            {
+                self.generate_texture(&buffer, image_width, image_height);
+                window.draw(&self.current_sprite);
+                self.draw_position(window);
+                window.display();
             }
 
             let current_p = ((y as f32) * (1.0 / self.pixel_size).ceil()) as u64 + self.start_p + 1;
@@ -234,14 +233,12 @@ impl Renderer {
                                 [((x as f32) * (1.0 / self.pixel_size).ceil()) as usize + i]
                                 as u32;
                         }
-                        self.fill_buffer_wrapper(
+                        self.fill_buffer(
                             &mut buffer,
-                            &mut headless_buffer,
                             x as f32,
                             y as f32,
                             upixel_size as f32,
                             sum as f32 / (1.0 / self.pixel_size).ceil() as f32,
-                            headless,
                         );
                     }
                 }
@@ -249,14 +246,12 @@ impl Renderer {
                 1 => {
                     for x in 0..(image_width as f32 / upixel_size).floor() as u32 {
                         if sequence[((x as f32) * (1.0 / self.pixel_size).ceil()) as usize] {
-                            self.fill_buffer_wrapper(
+                            self.fill_buffer(
                                 &mut buffer,
-                                &mut headless_buffer,
                                 x as f32,
                                 y as f32,
                                 upixel_size as f32,
                                 1.0,
-                                headless,
                             );
                         }
                     }
@@ -283,14 +278,12 @@ impl Renderer {
                                     as u32;
                             }
                         }
-                        self.fill_buffer_wrapper(
+                        self.fill_buffer(
                             &mut buffer,
-                            &mut headless_buffer,
                             x as f32,
                             y as f32,
                             upixel_size as f32,
                             sum as f32 / (1.0 / (self.pixel_size * self.pixel_size)).ceil() as f32,
-                            headless,
                         );
                     }
                 }
@@ -298,11 +291,7 @@ impl Renderer {
             }
             progressbar.clear();
         }
-        if headless {
-            self.current_headless_buffer = Some(headless_buffer);
-        } else {
-            self.generate_texture(&buffer, image_width, image_height);
-        }
+        self.generate_texture(&buffer, image_width, image_height);
 
         println!(
             "End generating texture in {:.2} seconds",
@@ -311,10 +300,140 @@ impl Renderer {
         return false;
     }
 
+    pub fn generate_sequences_headless(
+        &mut self,
+        image_width: u32,
+        image_height: u32,
+    ) -> bool {
+        let texture_generation_time = std::time::Instant::now();
+        // Round pixel size for easier computation
+        let upixel_size = self.pixel_size.ceil() as f32;
+
+        let delta_n = (image_width as f32 / self.pixel_size).floor() as u64;
+        let delta_p = (((image_height as f32 / upixel_size).floor() - 1.0)
+            * (1.0 / self.pixel_size).ceil()) as u64
+            + 1;
+        println!(
+            "Start generating texture with pixel size: {}, n: {}, p: {}, delta_n: {}, delta_p: {}",
+            self.pixel_size,
+            utils_mpz_to_string(&mut self.start_index_mpz),
+            self.start_p,
+            delta_n,
+            delta_p
+        );
+
+        // Initialize the mpz at the right side of the generation
+        let mut mpz_start =
+            utils_mpz_from_u64(image_width as u64 * (1.0 / self.pixel_size).ceil() as u64 - 1);
+        utils_mpz_add_mpz(mpz_start.borrow_mut(), self.start_index_mpz.borrow_mut());
+
+        // Initialize buffer
+        let mut headless_buffer = image::GrayImage::new(image_width, image_height);
+
+        init_serie(
+            ((image_height as f32 / upixel_size).floor() * (1.0 / self.pixel_size).ceil()) as u64
+                + self.start_p
+                + 1
+                - 1,
+        );
+
+        let mut progressbar = progressbar::Progressbar::new();
+
+        // Loop over the image size divided by the pixel size
+        for y in 0_u32..(image_height as f32 / upixel_size).floor() as u32 {
+            // Update progress bar and show the image sometimes
+            progressbar.update(y.pow(2) as f32 / (image_height / upixel_size as u32).pow(2) as f32);
+            progressbar.show();
+
+            let current_p = ((y as f32) * (1.0 / self.pixel_size).ceil()) as u64 + self.start_p + 1;
+            let sequence = self.fibo.generate(
+                current_p,
+                ((image_width as f32) * (1.0 / self.pixel_size).ceil()) as u64,
+                mpz_start,
+            );
+            match self.mode {
+                // Average over n
+                0 => {
+                    for x in 0..(image_width as f32 / upixel_size).floor() as u32 {
+                        let mut sum = 0;
+                        for i in 0..(1.0 / self.pixel_size).ceil() as usize {
+                            sum += sequence
+                                [((x as f32) * (1.0 / self.pixel_size).ceil()) as usize + i]
+                                as u32;
+                        }
+                        self.fill_buffer_headless(
+                            &mut headless_buffer,
+                            x as f32,
+                            y as f32,
+                            upixel_size as f32,
+                            sum as f32 / (1.0 / self.pixel_size).ceil() as f32,
+                        );
+                    }
+                }
+                // Take only once cell
+                1 => {
+                    for x in 0..(image_width as f32 / upixel_size).floor() as u32 {
+                        if sequence[((x as f32) * (1.0 / self.pixel_size).ceil()) as usize] {
+                            self.fill_buffer_headless(
+                                &mut headless_buffer,
+                                x as f32,
+                                y as f32,
+                                upixel_size as f32,
+                                1.0,
+                            );
+                        }
+                    }
+                }
+                // Average over n and p
+                2 => {
+                    let mut sequences = vec![];
+                    for j in 0..(1.0 / self.pixel_size).ceil() as usize {
+                        sequences.push(self.fibo.generate(
+                            ((y as f32) * (1.0 / self.pixel_size).ceil()) as u64
+                                + self.start_p
+                                + 1
+                                + j as u64,
+                            ((image_width as f32) * (1.0 / self.pixel_size).ceil()) as u64,
+                            mpz_start,
+                        ));
+                    }
+                    for x in 0..(image_width as f32 / upixel_size).floor() as u32 {
+                        let mut sum = 0;
+                        for i in 0..(1.0 / self.pixel_size).ceil() as usize {
+                            for j in 0..(1.0 / self.pixel_size).ceil() as usize {
+                                sum += sequences[i]
+                                    [((x as f32) * (1.0 / self.pixel_size).ceil()) as usize + j]
+                                    as u32;
+                            }
+                        }
+                        self.fill_buffer_headless(
+                            &mut headless_buffer,
+                            x as f32,
+                            y as f32,
+                            upixel_size as f32,
+                            sum as f32 / (1.0 / (self.pixel_size * self.pixel_size)).ceil() as f32,
+                        );
+                    }
+                }
+                _ => {}
+            }
+            progressbar.clear();
+        }
+        self.current_headless_buffer = Some(headless_buffer);
+
+        println!(
+            "End generating texture in {:.2} seconds",
+            texture_generation_time.elapsed().as_secs_f32()
+        );
+        return false;
+    }
+
+    #[cfg(feature = "graphic")]
     pub fn change_mode(&mut self) {
         self.mode = (self.mode + 1) % 3;
     }
 
+    #[cfg(feature = "graphic")]
     // Move the start index to the right, to center the screen on the next power of 2
     pub fn move_right_next_power_of_2(&mut self, window: &mut RenderWindow) {
         // Get the position at the center of the screen
@@ -341,6 +460,7 @@ impl Renderer {
         self.start_index_mpz = next_power_of_2;
     }
 
+    #[cfg(feature = "graphic")]
     // Move the start index to the left, center on the previous power of two
     pub fn move_left_previous_power_of_two(&mut self, window: &mut RenderWindow) {
         // Get the position at the center of the screen
@@ -370,6 +490,7 @@ impl Renderer {
         self.start_index_mpz = next_power_of_2;
     }
 
+    #[cfg(feature = "graphic")]
     // Move the start p index to the bottom, center on the next power of two
     pub fn move_bottom_next_power_of_two(&mut self, window: &mut RenderWindow) {
         // Get the position at the center of the screen
@@ -388,6 +509,7 @@ impl Renderer {
         }
     }
 
+    #[cfg(feature = "graphic")]
     // Move the start p index to the top, center on the previous power of two
     pub fn move_top_previous_power_of_two(&mut self, window: &mut RenderWindow) {
         // Get the position at the center of the screen
@@ -408,6 +530,7 @@ impl Renderer {
         }
     }
 
+    #[cfg(feature = "graphic")]
     pub fn save_image(&self, filename: &str) {
         // Save current texture
         println!("Start image conversion...");
@@ -459,6 +582,7 @@ impl Renderer {
         };
     }
 
+    #[cfg(feature = "graphic")]
     // Draw text in the right left corner of the window to show the n and p under the mouse
     pub fn draw_position(&mut self, window: &mut RenderWindow) {
         // Draw text
