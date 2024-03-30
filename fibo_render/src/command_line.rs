@@ -15,6 +15,8 @@ pub const HELP_MESSAGE: &str = "Command line usage:
     
 Graphical usage:
     Left/Right/Up/Down arrow: move start index for n and p
+        +Ctrl: Move to the next/previous power of two (Placed at the center of the screen)
+        +Maj: Move by one
     Z/S: zoom/dezoom
     L: Show/Hide patterns lines
     P: print current render in an image file
