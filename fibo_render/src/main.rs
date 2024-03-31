@@ -3,7 +3,7 @@ use std::env;
 use command_line::{load_argument_f32, load_argument_mpz, load_argument_string, load_argument_u32, load_argument_u64, load_argument_u8};
 
 use crate::{command_line::HELP_MESSAGE, gmp_utils::utils_mpz_init};
-mod fibo;
+// mod fibo;
 mod fibo_fast;
 mod gmp_utils;
 mod command_line;
@@ -114,8 +114,8 @@ fn main() {
         renderer.save_image_headless(filename.as_str(), &mut buffer, width, height);
         return;
     } else {
-        #[cfg(feature = "graphic")]
         // Create the window
+        #[cfg(feature = "graphic")]
         let mut wm = window_manager::WindowManager::new(renderer);
         #[cfg(feature = "graphic")]
         wm.run();

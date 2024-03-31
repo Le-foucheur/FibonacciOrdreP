@@ -37,6 +37,8 @@ extern "C" {
     pub fn mpz_set_ui(rop: mpz_ptr, op: c_ulong);
     #[link_name = "__gmpz_set_str"]
     pub fn mpz_set_str(rop: mpz_ptr, str: *const c_char, base: c_int) -> c_int;
+    #[link_name = "__gmpz_sizeinbase"]
+    pub fn mpz_sizeinbase(arg1: mpz_srcptr, arg2: c_int) -> usize;
 }
 #[cfg(feature = "graphic")]
 extern "C" {
@@ -84,7 +86,8 @@ pub fn utils_mpz_set_string(mut n: String, mpz_start: &mut mpz_t) {
 }
 
 pub fn utils_mpz_to_string(mpz_start: &mut mpz_t) -> String {
-    let mut buffer: Vec<u8> = vec![0; 1000];
+    let size = unsafe { mpz_sizeinbase(mpz_start.borrow(), 10) };
+    let mut buffer: Vec<u8> = vec![0; size+5];
     unsafe {
         let cstr = CStr::from_ptr(buffer.as_mut_ptr() as *mut i8);
         let ptr = cstr.as_ptr() as *mut i8;
