@@ -74,8 +74,10 @@ help:
 	@echo "    make mpropper      Cleans compilation files and executable and gmp compiled files"
 	@echo "    make help          Displays this help"
 	@echo "Special compilation flags: pass them using CFLAGS=\"Flags\" make [target]"
-	@echo "   -D FIBO_NO_AVX      disable AVX2 and AVX512 implementations"
+	@echo "   -D FIBO_NO_AVX      disable AVX and AVX512 implementations"
 	@echo "   -D FIBO_NO_AVX512   disable AVX512 implementation"
+	@echo "   -D FIBO_NO_SSE      disable AVX and SSE implementation"
+	
 
 fibo_calc: $(OBJECTS) src/external/gmp-6.3.0/.libs/libgmp.a
 	$(CC) $^ $(LDFLAGS) -I src/external/gmp-6.3.0/.libs -o fibo_calc

@@ -71,7 +71,7 @@ typedef unsigned char cond_t;
 
 #if FIBO_IMPLEM == 'i'
 //int64 only
-#warning "Your CPU do not support AVX2, slow code will be used"
+#warning "Your CPU do not support AVX or SSE, slow code (int64 only) will be used"
 
   typedef uint64_t bytes_t;
   #define byte_zero 0
@@ -81,6 +81,7 @@ typedef unsigned char cond_t;
   #define BATCH_SIZE 7
 #endif
 #if FIBO_IMPLEM == 'S'
+#warning "Your CPU do not support AVX, slow code (SSE only) will be used"
   typedef __m128i bytes_t;
   #define byte_zero _mm_setzero_si128 ()
   #define get_bytes arr_get2i
@@ -90,7 +91,7 @@ typedef unsigned char cond_t;
   
 #endif
 #if FIBO_IMPLEM == '2'
-  #warning "Your CPU do not support AVX512, slow code (using AVX2 only) will be used"
+  #warning "Your CPU do not support AVX512, slow code (using AVX only) will be used"
 
   //AVX2 specific function
   __m256i arr_get4i(unsigned char* array,ptrdiff_t index);
