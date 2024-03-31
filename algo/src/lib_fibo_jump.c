@@ -292,7 +292,7 @@ mpz_array fibo(ull p_arg,mpz_t n){
       } else {
         while (index>1) {
 
-          printf("jumps left to calculate: %llu\n",index);
+          //printf("jumps left to calculate: %llu\n",index);
           
           threaded_jump_batch(0);
           shift_by(work_buffer2, main_size, main_work_buffer, mpz_tstbit(n,index));
@@ -306,6 +306,6 @@ mpz_array fibo(ull p_arg,mpz_t n){
   }
 }
 
-    printf("result calculated, printing ... \n");
+    //printf("result calculated, printing ... \n");
     return work_buffer2;
 }

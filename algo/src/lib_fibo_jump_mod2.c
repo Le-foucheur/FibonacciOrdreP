@@ -703,7 +703,7 @@ void jump_formula(void* k_arg){
 void initialize_big(size_t last_valid,ptrdiff_t init_max){
   if (init_max>=0){
     init_max+=1; //now, init_max = number of 1
-    for (size_t i=0;i<init_max>>3;i++){
+    for (size_t i=0;i<(size_t)(init_max)>>3;i++){
       arr_setc(big_buffer,i,0xFF);
     }
     arr_setc(big_buffer,init_max>>3,0xFF>>(8-(init_max&0b111)));
@@ -718,7 +718,7 @@ void initialize_big(size_t last_valid,ptrdiff_t init_max){
     for (ptrdiff_t i=-1;i<(ptrdiff_t)(last_valid>>3)+1;i++)
       arr_setc(big_buffer, i, 0);
     arr_setb(big_buffer,p+init_max+1,1);
-    for (ptrdiff_t i=p+init_max;i<last_valid-(p+1);i++){
+    for (ptrdiff_t i=p+init_max;i<(ptrdiff_t)(last_valid)-((ptrdiff_t)(p)+1);i++){
       //TODO can be optimized, especially for big p
       arr_setb(big_buffer,i+p+1, arr_getb(big_buffer,i) ^ arr_getb(big_buffer, i+1) );
     }

@@ -16,7 +16,7 @@ int main(int argc, char* argv[]){
   }
   if(fibo_mod2_initialization(p)) exit(1);
   if (argc>3){
-    int temp;
+    uint temp;
     if(sscanf(argv[3],"%u",&temp)!=1){
       printf("number not formated as decimal");
       exit(1);

@@ -95,7 +95,7 @@ typedef unsigned char cond_t;
 
   //AVX2 specific function
   __m256i arr_get4i(unsigned char* array,ptrdiff_t index);
-  __attribute__((always_inline)) inline void arr_set31c(unsigned char* array,ptrdiff_t base_index,__m256i value);
+  //__attribute__((always_inline)) inline void arr_set31c(unsigned char* array,ptrdiff_t base_index,__m256i value);
   __m256i arr_broadload(unsigned char* array,ptrdiff_t index);
 
   typedef __m256i bytes_t;
