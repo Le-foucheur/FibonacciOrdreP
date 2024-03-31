@@ -23,6 +23,7 @@ clean:
 
 clean_all: clean
 clean_all:
+	cd ../algo && make mpropper
 	cargo clean
 
 help:
