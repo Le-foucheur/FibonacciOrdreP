@@ -7,9 +7,9 @@ edition = "2021"
 
 [dependencies]
 sfml = { version = "0.21.0", optional = true }
-libc = "0.2.110"
+libc = "0.2.153"
 gmp-mpfr-sys = "1.6"
-png = "0.17.6"
+png = "0.17.13"
 
 [features]
 graphic = ["dep:sfml"]
