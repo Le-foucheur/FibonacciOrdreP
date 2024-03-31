@@ -45,10 +45,10 @@
 
 //autocompletion purpose: comment when building/releasing
 //#define __AVX__
-//#define __AVX512F__
+#define __AVX512F__
 //#define FIBO_AVX512_TEST
 
-#if defined (__AVX512F__) && defined(__AVX512BW__) && defined(__AVX512VBMI__) && (!defined (FIBO_NO_AVX512)) && (!defined (FIBO_NO_SSE))
+#if defined (__AVX512F__) && (!defined (FIBO_NO_AVX512)) && (!defined (FIBO_NO_SSE))
 //#if defined(FIBO_AVX512_TEST)
 //#define FIBO_IMPLEM 'T'
 //#else //for Test

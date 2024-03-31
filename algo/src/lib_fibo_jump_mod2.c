@@ -135,10 +135,27 @@ __m512i arr_get8i(unsigned char* array,ptrdiff_t index){  return _mm512_loadu_si
 
 __attribute__((always_inline)) inline
 void arr_set63c(unsigned char* array,ptrdiff_t base_index,__m512i value){
+  #if defined (__AVX512BW__)
   _mm512_mask_storeu_epi8(array+base_index*INDEX_MULT-(31*INDEX_FLAT),0x7FFFFFFFFFFFFFFFUL,value);
+  #else
+  #warning "AVX512 BW not available, not using mask_storeu_epi8"
+  _mm512_mask_storeu_epi64(array+base_index*INDEX_MULT-(31*INDEX_FLAT),0x7F,value);
+  arr_set7c(array,base_index+(8*7),value[7]);
+  #endif
 }
 
 #define bytes_xor(a,b) _mm512_xor_epi64 (a,b)
+
+#if defined(__AVX512VBMI2__)
+#define shrdi_epi64  _mm512_shrdi_epi64
+#else
+#warning "NO VBMI2: Reimplementing shrdi_epi64"
+__m512i shrdi_epi64(__m512i a,__m512i b,uint shift){
+  __m512i result = _mm512_srli_epi64(a,shift);
+  result = _mm512_or_epi64(result,_mm512_slli_epi64(b,64-shift));
+  return result;
+}
+#endif
 
 static __attribute__((always_inline)) inline
 bytes_t finalize(accumulator acc, bytes_t result0){
@@ -148,36 +165,36 @@ bytes_t finalize(accumulator acc, bytes_t result0){
 */
   __m512i temp = _mm512_alignr_epi64(result0,result0,1);
   //__m512i temp2;
-  result0 = _mm512_shrdi_epi64 (result0, temp, 7);
+  result0 = shrdi_epi64 (result0, temp, 7);
 
   temp = _mm512_alignr_epi64(acc.part1,acc.part1,1);
   result0 = _mm512_xor_epi64(result0,acc.part0);
 
-  acc.part1 = _mm512_shrdi_epi64(acc.part1,temp,1);
+  acc.part1 = shrdi_epi64(acc.part1,temp,1);
   temp = _mm512_alignr_epi64(acc.part2,acc.part2,1);
   result0 = _mm512_xor_epi64(result0, acc.part1);
   
-  acc.part2 = _mm512_shrdi_epi64(acc.part2,temp,2);
+  acc.part2 = shrdi_epi64(acc.part2,temp,2);
   temp = _mm512_alignr_epi64(acc.part3,acc.part3,1);
   result0 = _mm512_xor_epi64(result0, acc.part2);
    
-  acc.part3 = _mm512_shrdi_epi64(acc.part3,temp,3);
+  acc.part3 = shrdi_epi64(acc.part3,temp,3);
   temp = _mm512_alignr_epi64(acc.part4,acc.part4,1);
   result0 = _mm512_xor_epi64(result0, acc.part3);
 
-  acc.part4 = _mm512_shrdi_epi64(acc.part4,temp,4);
+  acc.part4 = shrdi_epi64(acc.part4,temp,4);
   temp = _mm512_alignr_epi64(acc.part5,acc.part5,1);
   result0 = _mm512_xor_epi64(result0, acc.part4);
 
-  acc.part5 = _mm512_shrdi_epi64(acc.part5,temp,5);
+  acc.part5 = shrdi_epi64(acc.part5,temp,5);
   temp = _mm512_alignr_epi64(acc.part6,acc.part6,1);
   result0 = _mm512_xor_epi64(result0, acc.part5);
 
-  acc.part6 = _mm512_shrdi_epi64(acc.part6,temp,6);
+  acc.part6 = shrdi_epi64(acc.part6,temp,6);
   temp = _mm512_alignr_epi64(acc.part7,acc.part7,1);
   result0 = _mm512_xor_epi64(result0, acc.part6);
 
-  acc.part7 = _mm512_shrdi_epi64(acc.part7,temp,7);
+  acc.part7 = shrdi_epi64(acc.part7,temp,7);
   result0 = _mm512_xor_epi64(result0, acc.part7);
 
   return result0;
