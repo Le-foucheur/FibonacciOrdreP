@@ -21,8 +21,8 @@ clean:
 	rm -f libgmp.a
 	rm -f gnom.out perf.data perf.data.old
 
-clean_all: clean
-clean_all:
+mpropper: clean
+mpropper:
 	cd ../algo && make mpropper
 	cargo clean
 
@@ -33,5 +33,5 @@ help:
 	@echo "    make debug  		  Run fibo_render in dev mode (Headless by default)"
 	@echo "    make build         Build GMP and computation lib, and copy .a files"
 	@echo "    make clean         Cleans compilation temporary files (Without Rust libs)"
-	@echo "    make clean_all     Cleans compilation temporary files (With Rust libs)"
+	@echo "    make mpropper     Cleans compilation temporary files (With Rust libs)"
 	@echo "    make help          Displays this help"

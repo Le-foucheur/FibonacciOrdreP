@@ -1,29 +1,25 @@
 use std::borrow::BorrowMut;
 
-use image::{Luma, Pixel};
-
+#[cfg(feature = "graphic")]
+use crate::constants::SHOW_IMAGE_TIMES;
+#[cfg(feature = "graphic")]
+use crate::draw_utils::draw_line;
+#[cfg(feature = "graphic")]
+use crate::gmp_utils::{
+    utils_mpz_compare_i64, utils_mpz_compare_mpz, utils_mpz_divexact_u64, utils_mpz_sub_u64,
+    utils_mpz_to_i64,
+};
+#[cfg(feature = "graphic")]
+use crate::window_manager::manage_events;
+#[cfg(feature = "graphic")]
+use gmp_mpfr_sys::gmp::mpz_mul_ui;
 #[cfg(feature = "graphic")]
 use sfml::graphics::{
     Color, Image, RcSprite, RcTexture, RenderTarget, RenderWindow, Shape, Transformable,
 };
-#[cfg(feature = "graphic")]
-use crate::draw_utils::draw_line;
-#[cfg(feature = "graphic")]
-use crate::window_manager::manage_events;
-#[cfg(feature = "graphic")]
-use crate::gmp_utils::{
-    utils_mpz_compare_i64, utils_mpz_compare_mpz, utils_mpz_divexact_u64,
-    utils_mpz_sub_u64, utils_mpz_to_i64,
-};
-#[cfg(feature = "graphic")]
-use gmp_mpfr_sys::gmp::mpz_mul_ui;
-#[cfg(feature = "graphic")]
-use crate::constants::SHOW_IMAGE_TIMES;
 
 use crate::fibo_fast::init_serie;
-use crate::gmp_utils::{
-    utils_mpz_add_mpz, utils_mpz_to_string,
-};
+use crate::gmp_utils::{utils_mpz_add_mpz, utils_mpz_to_string};
 use crate::{fibo_fast, gmp_utils::utils_mpz_from_u64, progressbar};
 use gmp_mpfr_sys::gmp::mpz_t;
 
@@ -32,8 +28,6 @@ pub struct Renderer {
     pub current_sprite: RcSprite,
     #[cfg(feature = "graphic")]
     pub current_texture: RcTexture,
-    pub current_headless_buffer:
-        Option<image::ImageBuffer<Luma<u8>, Vec<<Luma<u8> as Pixel>::Subpixel>>>,
     pub pixel_size: f32,
     pub start_index_mpz: mpz_t,
     pub start_p: u64,
@@ -52,7 +46,6 @@ impl Renderer {
             current_sprite: RcSprite::new(),
             #[cfg(feature = "graphic")]
             current_texture: RcTexture::new().unwrap(),
-            current_headless_buffer: None,
             pixel_size,
             start_index_mpz,
             start_p,
@@ -109,7 +102,8 @@ impl Renderer {
 
     pub fn fill_buffer_headless(
         &mut self,
-        buffer: &mut image::ImageBuffer<Luma<u8>, Vec<<Luma<u8> as Pixel>::Subpixel>>,
+        buffer: &mut Vec<u8>,
+        image_width: usize,
         x: f32,
         y: f32,
         size: f32,
@@ -117,11 +111,8 @@ impl Renderer {
     ) {
         for i in 0..size as u32 {
             for j in 0..size as u32 {
-                buffer.put_pixel(
-                    (x * size + i as f32) as u32,
-                    (y * size + j as f32) as u32,
-                    Luma([((255.0 * color).ceil()) as u8]),
-                );
+                buffer[(y * size + j as f32) as usize * image_width
+                    + (x * size + i as f32) as usize] = ((255.0 * color).ceil()) as u8;
             }
         }
     }
@@ -208,8 +199,7 @@ impl Renderer {
                 progressbar.clear();
                 return false;
             }
-            if (image_height / SHOW_IMAGE_TIMES) != 0
-                && y % (image_height / SHOW_IMAGE_TIMES) == 0
+            if (image_height / SHOW_IMAGE_TIMES) != 0 && y % (image_height / SHOW_IMAGE_TIMES) == 0
             {
                 self.generate_texture(&buffer, image_width, image_height);
                 window.draw(&self.current_sprite);
@@ -304,7 +294,7 @@ impl Renderer {
         &mut self,
         image_width: u32,
         image_height: u32,
-    ) -> bool {
+    ) -> Vec<u8> {
         let texture_generation_time = std::time::Instant::now();
         // Round pixel size for easier computation
         let upixel_size = self.pixel_size.ceil() as f32;
@@ -328,7 +318,7 @@ impl Renderer {
         utils_mpz_add_mpz(mpz_start.borrow_mut(), self.start_index_mpz.borrow_mut());
 
         // Initialize buffer
-        let mut headless_buffer = image::GrayImage::new(image_width, image_height);
+        let mut headless_buffer: Vec<u8> = vec![0; (image_width * image_height) as usize];
 
         init_serie(
             ((image_height as f32 / upixel_size).floor() * (1.0 / self.pixel_size).ceil()) as u64
@@ -363,6 +353,7 @@ impl Renderer {
                         }
                         self.fill_buffer_headless(
                             &mut headless_buffer,
+                            image_width as usize,
                             x as f32,
                             y as f32,
                             upixel_size as f32,
@@ -376,6 +367,7 @@ impl Renderer {
                         if sequence[((x as f32) * (1.0 / self.pixel_size).ceil()) as usize] {
                             self.fill_buffer_headless(
                                 &mut headless_buffer,
+                                image_width as usize,
                                 x as f32,
                                 y as f32,
                                 upixel_size as f32,
@@ -408,6 +400,7 @@ impl Renderer {
                         }
                         self.fill_buffer_headless(
                             &mut headless_buffer,
+                            image_width as usize,
                             x as f32,
                             y as f32,
                             upixel_size as f32,
@@ -419,13 +412,12 @@ impl Renderer {
             }
             progressbar.clear();
         }
-        self.current_headless_buffer = Some(headless_buffer);
 
         println!(
             "End generating texture in {:.2} seconds",
             texture_generation_time.elapsed().as_secs_f32()
         );
-        return false;
+        return headless_buffer;
     }
 
     #[cfg(feature = "graphic")]
@@ -497,7 +489,7 @@ impl Renderer {
         let center = (window.size().y as f32 * (1.0 / self.pixel_size)).floor() as u64 / 2;
         // Get the next power of 2
         let mut next_power_of_2 = 1;
-        while next_power_of_2 <= center + self.start_p{
+        while next_power_of_2 <= center + self.start_p {
             next_power_of_2 *= 2;
         }
         // Compute the new start index (next power of 2 - half of the screen)
@@ -516,7 +508,7 @@ impl Renderer {
         let center = (window.size().y as f32 * (1.0 / self.pixel_size)).floor() as u64 / 2;
         // Get the next power of 2
         let mut next_power_of_2 = 1;
-        while next_power_of_2 < center + self.start_p{
+        while next_power_of_2 < center + self.start_p {
             next_power_of_2 *= 2;
         }
         // Divide by two to get the previous power of two
@@ -549,37 +541,37 @@ impl Renderer {
         };
     }
 
-    pub fn save_image_headless(&self, filename: &str) {
-        // Save current texture
+    pub fn save_image_headless(
+        &self,
+        filename: &str,
+        buffer: &mut Vec<u8>,
+        image_width: u32,
+        image_height: u32
+    ) {
         println!("Start image conversion...");
-        match self.current_headless_buffer {
-            Some(ref buffer) => {
-                println!("Saving image...");
-                let file = match std::fs::File::create(filename) {
-                    Ok(f) => f,
-                    Err(e) => {
-                        println!("Error while saving the image: {}", e);
-                        return;
-                    }
-                };
-                let encoder = image::codecs::png::PngEncoder::new_with_quality(
-                    file,
-                    image::codecs::png::CompressionType::Best,
-                    image::codecs::png::FilterType::NoFilter,
-                );
-                match buffer.write_with_encoder(encoder) {
-                    Ok(_) => {
-                        println!("Image saved successfully as {}", filename);
-                    }
-                    Err(e) => {
-                        println!("Error while saving the image: {}", e);
-                    }
-                }
-            }
-            None => {
-                println!("Error while saving the image");
+        let file = match std::fs::File::create(filename) {
+            Ok(f) => f,
+            Err(e) => {
+                println!("Error while saving the image: {}", e);
+                return;
             }
         };
+        let mut encoder = png::Encoder::new(file, image_width, image_height);
+        encoder.set_compression(png::Compression::Best);
+        encoder.set_filter(png::FilterType::NoFilter);
+        encoder.set_color(png::ColorType::Grayscale);
+
+        let mut writer = encoder.write_header().unwrap();
+        println!("Saving image...");
+        // match buffer.write_with_encoder(encoder) {
+        match writer.write_image_data(buffer) {
+            Ok(_) => {
+                println!("Image saved successfully as {}", filename);
+            }
+            Err(e) => {
+                println!("Error while saving the image: {}", e);
+            }
+        }
     }
 
     #[cfg(feature = "graphic")]

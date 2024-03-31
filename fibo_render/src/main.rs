@@ -110,8 +110,8 @@ fn main() {
     let mut renderer = renderer::Renderer::new(zoom, n_mpz, p, mode);
 
     if headless {
-        renderer.generate_sequences_headless(width, height);
-        renderer.save_image_headless(filename.as_str());
+        let mut buffer = renderer.generate_sequences_headless(width, height);
+        renderer.save_image_headless(filename.as_str(), &mut buffer, width, height);
         return;
     } else {
         #[cfg(feature = "graphic")]
