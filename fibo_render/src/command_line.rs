@@ -1,5 +1,4 @@
-use crate::gmp_utils::utils_mpz_set_string;
-use gmp_mpfr_sys::gmp::mpz_t;
+use crate::gmp_utils::{utils_mpz_set_string, mpz_t};
 
 pub const HELP_MESSAGE: &str = "Command line usage:
     -n <n_start_index>: start index of the sequence (default=0)

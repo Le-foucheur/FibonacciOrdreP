@@ -1,10 +1,7 @@
-extern crate libc;
-
-use gmp_mpfr_sys::gmp::mpz_t;
-use libc::c_uchar;
+use crate::gmp_utils::mpz_t;
+use std::ffi::c_uchar;
 use std::borrow::BorrowMut;
 
-#[link(name = "fibo_mod2", kind = "static")]
 extern "C" {
     fn fibo_mod2_initialization(p: isize) -> *mut c_uchar;
     fn fibo_mod2(p: isize, n: *mut mpz_t) -> *mut c_uchar;

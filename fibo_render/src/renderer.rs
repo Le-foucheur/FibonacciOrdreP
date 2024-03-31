@@ -5,6 +5,8 @@ use crate::constants::SHOW_IMAGE_TIMES;
 #[cfg(feature = "graphic")]
 use crate::draw_utils::draw_line;
 #[cfg(feature = "graphic")]
+use crate::gmp_utils::mpz_mul_ui;
+#[cfg(feature = "graphic")]
 use crate::gmp_utils::{
     utils_mpz_compare_i64, utils_mpz_compare_mpz, utils_mpz_divexact_u64, utils_mpz_sub_u64,
     utils_mpz_to_i64,
@@ -12,16 +14,14 @@ use crate::gmp_utils::{
 #[cfg(feature = "graphic")]
 use crate::window_manager::manage_events;
 #[cfg(feature = "graphic")]
-use gmp_mpfr_sys::gmp::mpz_mul_ui;
-#[cfg(feature = "graphic")]
 use sfml::graphics::{
     Color, Image, RcSprite, RcTexture, RenderTarget, RenderWindow, Shape, Transformable,
 };
 
 use crate::fibo_fast::init_serie;
+use crate::gmp_utils::mpz_t;
 use crate::gmp_utils::{utils_mpz_add_mpz, utils_mpz_to_string};
 use crate::{fibo_fast, gmp_utils::utils_mpz_from_u64, progressbar};
-use gmp_mpfr_sys::gmp::mpz_t;
 
 pub struct Renderer {
     #[cfg(feature = "graphic")]
@@ -290,11 +290,7 @@ impl Renderer {
         return false;
     }
 
-    pub fn generate_sequences_headless(
-        &mut self,
-        image_width: u32,
-        image_height: u32,
-    ) -> Vec<u8> {
+    pub fn generate_sequences_headless(&mut self, image_width: u32, image_height: u32) -> Vec<u8> {
         let texture_generation_time = std::time::Instant::now();
         // Round pixel size for easier computation
         let upixel_size = self.pixel_size.ceil() as f32;
@@ -546,7 +542,7 @@ impl Renderer {
         filename: &str,
         buffer: &mut Vec<u8>,
         image_width: u32,
-        image_height: u32
+        image_height: u32,
     ) {
         println!("Start image conversion...");
         let file = match std::fs::File::create(filename) {

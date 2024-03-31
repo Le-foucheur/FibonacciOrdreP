@@ -1,11 +1,62 @@
-use std::{borrow::{Borrow, BorrowMut}, mem::MaybeUninit};
+#![allow(non_camel_case_types, non_snake_case)]
+use std::{
+    borrow::{Borrow, BorrowMut},
+    mem::MaybeUninit,
+    ptr::NonNull,
+};
 
+// pub use gmp_mpfr_sys::gmp::mpz_t;
 #[cfg(feature = "graphic")]
-use gmp_mpfr_sys::gmp::{mpz_add_ui, mpz_cmp, mpz_cmp_si, mpz_divexact_ui, mpz_get_si, mpz_sub_ui};
-
-use gmp_mpfr_sys::gmp::{mpz_add, mpz_get_str, mpz_init, mpz_set_ui, mpz_t};
+use std::ffi::c_long;
 use std::ffi::CStr;
-use gmp_mpfr_sys::gmp::mpz_set_str;
+use std::ffi::{c_char, c_int, c_ulong};
+
+// Link to lib funcs
+/// This part is copied from the "gmp_mpfr_sys" crate
+
+type GMP_LIMB_T = c_ulong;
+pub type limb_t = GMP_LIMB_T;
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct mpz_t {
+    pub alloc: c_int,
+    pub size: c_int,
+    pub d: NonNull<limb_t>,
+}
+pub type mpz_ptr = *mut mpz_t;
+pub type mpz_srcptr = *const mpz_t;
+extern "C" {
+    #[link_name = "__gmpz_init"]
+    pub fn mpz_init(x: mpz_ptr);
+
+    #[link_name = "__gmpz_add"]
+    pub fn mpz_add(rop: mpz_ptr, op1: mpz_srcptr, op2: mpz_srcptr);
+    #[link_name = "__gmpz_get_str"]
+    pub fn mpz_get_str(str: *mut c_char, base: c_int, op: mpz_srcptr) -> *mut c_char;
+    #[link_name = "__gmpz_set_ui"]
+    pub fn mpz_set_ui(rop: mpz_ptr, op: c_ulong);
+    #[link_name = "__gmpz_set_str"]
+    pub fn mpz_set_str(rop: mpz_ptr, str: *const c_char, base: c_int) -> c_int;
+}
+#[cfg(feature = "graphic")]
+extern "C" {
+    #[link_name = "__gmpz_add_ui"]
+    pub fn mpz_add_ui(rop: mpz_ptr, op1: mpz_srcptr, op2: c_ulong);
+    #[link_name = "__gmpz_cmp"]
+    pub fn mpz_cmp(op1: mpz_srcptr, op2: mpz_srcptr) -> c_int;
+    #[link_name = "__gmpz_cmp_si"]
+    pub fn mpz_cmp_si(op1: mpz_srcptr, op2: c_long) -> c_int;
+    #[link_name = "__gmpz_divexact_ui"]
+    pub fn mpz_divexact_ui(q: mpz_ptr, n: mpz_srcptr, d: c_ulong);
+    #[link_name = "__gmpz_get_si"]
+    pub fn mpz_get_si(op: mpz_srcptr) -> c_long;
+    #[link_name = "__gmpz_sub_ui"]
+    pub fn mpz_sub_ui(rop: mpz_ptr, op1: mpz_srcptr, op2: c_ulong);
+    #[link_name = "__gmpz_mul_ui"]
+    pub fn mpz_mul_ui(rop: mpz_ptr, op1: mpz_srcptr, op2: c_ulong);
+}
+
+// Utils functions
 
 pub fn utils_mpz_init() -> mpz_t {
     let mpz_start = unsafe {
@@ -18,9 +69,7 @@ pub fn utils_mpz_init() -> mpz_t {
 
 #[cfg(feature = "graphic")]
 pub fn utils_mpz_to_i64(mpz_start: &mut mpz_t) -> i64 {
-    unsafe {
-        mpz_get_si(mpz_start.borrow())
-    }
+    unsafe { mpz_get_si(mpz_start.borrow()) }
 }
 
 pub fn utils_mpz_set_string(mut n: String, mpz_start: &mut mpz_t) {
@@ -66,21 +115,17 @@ pub fn utils_mpz_sub_u64(mpz_start: &mut mpz_t, n: u64) {
 }
 #[cfg(feature = "graphic")]
 pub fn utils_mpz_compare_i64(mpz_start: &mut mpz_t, n: i64) -> i32 {
-    unsafe {
-        mpz_cmp_si(mpz_start.borrow(), n)
-    }    
+    unsafe { mpz_cmp_si(mpz_start.borrow(), n) }
 }
 #[cfg(feature = "graphic")]
 pub fn utils_mpz_divexact_u64(mpz_start: &mut mpz_t, n: u64) {
     unsafe {
         mpz_divexact_ui(mpz_start.borrow_mut(), mpz_start.borrow(), n as u64);
-    }    
+    }
 }
 #[cfg(feature = "graphic")]
 pub fn utils_mpz_compare_mpz(mpz_start: &mut mpz_t, mpz_end: &mut mpz_t) -> i32 {
-    unsafe {
-        mpz_cmp(mpz_start.borrow(), mpz_end.borrow())
-    }    
+    unsafe { mpz_cmp(mpz_start.borrow(), mpz_end.borrow()) }
 }
 
 pub fn utils_mpz_add_mpz(mpz_start: &mut mpz_t, mpz_end: &mut mpz_t) {
