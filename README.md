@@ -6,7 +6,7 @@ ainsi que des programmes pour calculer et prévisualiser leur termes
 
 Nous tenons a remercier le projet Grid5000, qui nous a permis d'utiliser leur supercalculateurs afin de lancer les programmes de calcul pour de très grand termes de ces suites
 
-La suite de suite est définie telle que F^p_n vaut 1 pour les p+1 premiers éléments, puis F^p_(n+1) = F^p_n + F^p__(n-p)
+La suite de suite est définie telle que (F(p)) vaut 1 pour les p+1 premiers éléments, puis F(p,(n+1)) = F(p,n) + F(p,(n-p))
 
 Plus de détails sur la suite, et les résultats de recherches sont disponibles dans
 [Doc/DocFib.pdf](https://github.com/Le-foucheur/FibonacciOrdreP/blob/main/Doc/DocFib.pdf)
