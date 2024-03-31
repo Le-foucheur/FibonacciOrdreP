@@ -10,6 +10,10 @@ use std::{
 use std::ffi::c_long;
 use std::ffi::CStr;
 use std::ffi::{c_char, c_int, c_ulong};
+extern crate libc_stdhandle;
+extern crate libc;
+use libc::FILE;
+
 
 // Link to lib funcs
 /// This part is copied from the "gmp_mpfr_sys" crate
@@ -56,6 +60,8 @@ extern "C" {
     pub fn mpz_sub_ui(rop: mpz_ptr, op1: mpz_srcptr, op2: c_ulong);
     #[link_name = "__gmpz_mul_ui"]
     pub fn mpz_mul_ui(rop: mpz_ptr, op1: mpz_srcptr, op2: c_ulong);
+    #[link_name = "__gmpz_inp_str"]
+    pub fn mpz_inp_str(rop: mpz_ptr, stream: *mut FILE, base: c_int) -> c_int;
 }
 
 // Utils functions
@@ -82,6 +88,12 @@ pub fn utils_mpz_set_string(mut n: String, mpz_start: &mut mpz_t) {
     let k = n_uchar.as_ptr();
     unsafe {
         mpz_set_str(mpz_start.borrow_mut(), k, 10);
+    }
+}
+
+pub fn utils_mpz_set_stdin(mpz_start: &mut mpz_t){
+    unsafe {
+        mpz_inp_str(mpz_start.borrow_mut(), libc_stdhandle::stdout(),10);
     }
 }
 

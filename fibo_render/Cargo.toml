@@ -8,6 +8,8 @@ edition = "2021"
 [dependencies]
 sfml = { version = "0.21.0", optional = true }
 png = "0.17.13"
+libc-stdhandle = "0.1.0"
+libc = "0.2"
 
 [features]
 graphic = ["dep:sfml"]
