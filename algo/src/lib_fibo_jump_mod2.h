@@ -47,7 +47,7 @@
 //#define __AVX__
 //#define __AVX512F__
 //#define FIBO_AVX512_TEST
-#define FIBO_USE_OPENMP
+//#define FIBO_USE_OPENMP
 
 #if defined FIBO_USE_OPENMP
 #define FIBO_IMPLEM 'M'
