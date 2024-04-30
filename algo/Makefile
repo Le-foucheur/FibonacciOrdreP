@@ -7,7 +7,7 @@ WARNINGS := -Wall -Wextra -pedantic -Wshadow -Wpointer-arith -Wcast-align \
 CFLAGS+=-lpthread $(WARNINGS) -Isrc/ --std=gnu2x
 LDFLAGS+=-lpthread ${WARNINGS}
 
-RELEASE_FLAGS=-O3 -march=native -mtune=native -flto -fwhole-program -fomit-frame-pointer -static
+RELEASE_FLAGS=-O3 -march=native -mtune=native -flto -fwhole-program -fomit-frame-pointer
 DEBUG_FLAGS=-ggdb -g3 -O0 -fno-inline -march=native
 
 SOURCES=
@@ -84,7 +84,7 @@ fibo_calc: $(OBJECTS) src/external/gmp-6.3.0/.libs/libgmp.a
 	@echo "La compilation a réussie! Le programme s'apelle fibo_calc, lancez le en terminal avec la commande ./fibo_calc"
 
 fibo_calc_mod2: $(OBJECTS_M2) src/external/gmp-6.3.0/.libs/libgmp.a
-	$(CC) $^ $(LDFLAGS) -I src/external/gmp-6.3.0/.libs -o fibo_calc_mod2
+	$(CC) $(LDFLAGS) -I src/external/gmp-6.3.0/.libs -o fibo_calc_mod2 $^
 	@echo "La compilation a réussie! Le programme s'apelle fibo_calc_mod2, lancez le en terminal avec la commande ./fibo_calc_mod2"
 
 fibo_mod2.a: $(OBJECTS_M2)

@@ -47,7 +47,11 @@
 //#define __AVX__
 //#define __AVX512F__
 //#define FIBO_AVX512_TEST
+#define FIBO_USE_OPENMP
 
+#if defined FIBO_USE_OPENMP
+#define FIBO_IMPLEM 'M'
+#else
 #if defined (__AVX512F__) && (!defined (FIBO_NO_AVX512)) && (!defined (FIBO_NO_SSE))
 //#if defined(FIBO_AVX512_TEST)
 //#define FIBO_IMPLEM 'T'
@@ -66,9 +70,18 @@
 #endif //for Ints only
 #endif
 #endif
+#endif
 
 typedef unsigned char cond_t;
 
+#if FIBO_IMPLEM == 'M'
+#warning "Test OpenMP imlpementation. test with care before use"
+  typedef uint64_t bytes_t;
+  #define byte_zero 0
+  #define get_bytes arr_geti
+  #define arr_set_result arr_set7c
+  #define BATCH_SIZE 7
+#endif
 #if FIBO_IMPLEM == 'i'
 //int64 only
 #warning "Your CPU do not support AVX or SSE, slow code (int64 only) will be used"
