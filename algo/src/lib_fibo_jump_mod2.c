@@ -622,7 +622,7 @@ unsigned char* fibo_mod2(size_t p_arg,mpz_t n){
 
 
     #pragma omp target map(to: big_buffer[-1:big_buffer_size+8],) map(from: little_buffer[0:little_buffer_size+8])
-    #pragma omp parallel for
+    #pragma omp target teams distribute parallel for
     for (size_t i=0;i<little_buffer_size;i+=BATCH_SIZE){
       jump_function((void*)i);
     }
@@ -646,7 +646,7 @@ unsigned char* fibo_mod2(size_t p_arg,mpz_t n){
 #if FIBO_IMPLEM == 'M'
 
   #pragma omp target map(to: big_buffer[-1:big_buffer_size+8],) map(from: little_buffer[0:little_buffer_size+8])
-  #pragma omp parallel for
+  #pragma omp target teams distribute parallel for
   for (size_t i=0;i<little_buffer_size;i+=BATCH_SIZE){
       jump_function((void*)i);
     }
