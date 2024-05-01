@@ -8,13 +8,12 @@ use std::{
 // pub use gmp_mpfr_sys::gmp::mpz_t;
 #[cfg(feature = "graphic")]
 use std::ffi::c_long;
+#[cfg(feature = "graphic")]
+use libc::FILE;
 use std::ffi::CStr;
 use std::ffi::{c_char, c_int, c_ulong};
-extern crate libc_stdhandle;
 extern crate libc;
-use libc::FILE;
-
-
+extern crate libc_stdhandle;
 // Link to lib funcs
 /// This part is copied from the "gmp_mpfr_sys" crate
 
@@ -91,15 +90,9 @@ pub fn utils_mpz_set_string(mut n: String, mpz_start: &mut mpz_t) {
     }
 }
 
-pub fn utils_mpz_set_stdin(mpz_start: &mut mpz_t){
-    unsafe {
-        mpz_inp_str(mpz_start.borrow_mut(), libc_stdhandle::stdout(),10);
-    }
-}
-
 pub fn utils_mpz_to_string(mpz_start: &mut mpz_t) -> String {
     let size = unsafe { mpz_sizeinbase(mpz_start.borrow(), 10) };
-    let mut buffer: Vec<u8> = vec![0; size+5];
+    let mut buffer: Vec<u8> = vec![0; size + 5];
     unsafe {
         let cstr = CStr::from_ptr(buffer.as_mut_ptr() as *mut i8);
         let ptr = cstr.as_ptr() as *mut i8;
@@ -141,6 +134,13 @@ pub fn utils_mpz_divexact_u64(mpz_start: &mut mpz_t, n: u64) {
 #[cfg(feature = "graphic")]
 pub fn utils_mpz_compare_mpz(mpz_start: &mut mpz_t, mpz_end: &mut mpz_t) -> i32 {
     unsafe { mpz_cmp(mpz_start.borrow(), mpz_end.borrow()) }
+}
+
+#[cfg(feature = "graphic")]
+pub fn utils_mpz_set_stdin(mpz_start: &mut mpz_t) {
+    unsafe {
+        mpz_inp_str(mpz_start.borrow_mut(), libc_stdhandle::stdin(), 10);
+    }
 }
 
 pub fn utils_mpz_add_mpz(mpz_start: &mut mpz_t, mpz_end: &mut mpz_t) {

@@ -8,7 +8,7 @@ use sfml::{
 use crate::{
     command_line::HELP_MESSAGE,
     constants::MOVE_STEP,
-    gmp_utils::{utils_mpz_add_u64, utils_mpz_set_string, utils_mpz_sub_u64},
+    gmp_utils::{utils_mpz_add_u64, utils_mpz_set_stdin, utils_mpz_sub_u64},
     renderer::Renderer,
 };
 
@@ -20,11 +20,7 @@ pub struct WindowManager {
 pub fn generate_sequences(window: &mut RenderWindow, renderer: &mut Renderer) {
     let mut flag = true;
     while flag {
-        flag = renderer.generate_sequences_texture(
-            window.size().x,
-            window.size().y,
-            window
-        );
+        flag = renderer.generate_sequences_texture(window.size().x, window.size().y, window);
     }
 }
 
@@ -109,12 +105,14 @@ pub fn manage_events(window: &mut RenderWindow, renderer: &mut Renderer) -> u8 {
                     // Input start index
                     print!("Enter n start index: ");
                     std::io::stdout().flush().unwrap();
-                    let mut input = String::new();
-                    std::io::stdin().read_line(&mut input).unwrap();
-                    utils_mpz_set_string(
-                        input.trim().to_string(),
-                        renderer.start_index_mpz.borrow_mut(),
-                    );
+                    utils_mpz_set_stdin(renderer.start_index_mpz.borrow_mut());
+                    // std::io::stdout().flush().unwrap();
+                    // let mut input = String::new();
+                    // std::io::stdin().read_line(&mut input).unwrap();
+                    // utils_mpz_set_string(
+                    //     input.trim().to_string(),
+                    //     renderer.start_index_mpz.borrow_mut(),
+                    // );
                     result = 1;
                 }
                 sfml::window::Key::B => {
