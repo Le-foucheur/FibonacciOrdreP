@@ -4,8 +4,8 @@ WARNINGS := -Wall -Wextra -pedantic -Wshadow -Wpointer-arith -Wcast-align \
             -Wstrict-prototypes -Werror=odr -Werror=lto-type-mismatch -Werror=strict-aliasing -Wstrict-overflow=2
 			#-Wconversion
 
-CFLAGS+=-lpthread $(WARNINGS) -Isrc/ --std=gnu2x
-LDFLAGS+=-lpthread ${WARNINGS}
+CFLAGS+=-lpthread -pthread $(WARNINGS) -Isrc/ --std=gnu2x
+LDFLAGS+=-lpthread -pthread ${WARNINGS}
 
 RELEASE_FLAGS=-O3 -march=native -mtune=native -flto -fwhole-program -fomit-frame-pointer
 DEBUG_FLAGS=-ggdb -g3 -O0 -fno-inline -march=native
