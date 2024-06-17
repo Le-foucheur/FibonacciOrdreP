@@ -4,10 +4,12 @@ WARNINGS := -Wall -Wextra -pedantic -Wshadow -Wpointer-arith -Wcast-align \
             -Wstrict-prototypes -Werror=odr -Werror=lto-type-mismatch -Werror=strict-aliasing -Wstrict-overflow=2
 			#-Wconversion
 
-CFLAGS+=-lpthread -pthread --static $(WARNINGS) -Isrc/ --std=gnu2x
-LDFLAGS+=-lpthread -pthread --static ${WARNINGS}
+CFLAGS+=-lpthread -pthread $(WARNINGS) -Isrc/ --std=gnu2x
+LDFLAGS+=-lpthread -pthread ${WARNINGS}
+#--static
 
-RELEASE_FLAGS=-O3 -march=native -mtune=native -flto -fwhole-program -fomit-frame-pointer
+RELEASE_FLAGS=-O3 -march=native -mtune=native -flto -fwhole-program -fomit-frame-pointer -fopenmp
+# -fopenmp
 DEBUG_FLAGS=-ggdb -g3 -O0 -fno-inline -march=native
 
 SOURCES=
@@ -28,7 +30,7 @@ OBJECTS_M2+=$(patsubst %.c,build/%.o,$(SOURCES_M2))
 all: help
 
 -include build/external/C-Thread-Pool/thpool.d
--include biuld/*.d
+-include build/*.d
 
 main: CFLAGS+=$(RELEASE_FLAGS)
 main: LDFLAGS+=-s $(RELEASE_FLAGS)
