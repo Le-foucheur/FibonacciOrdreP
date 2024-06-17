@@ -43,14 +43,15 @@ loop_once(accumulator acc, cond_t condition, bytes_t bits);
 #pragma omp declare target
 #endif
 static unsigned char *big_buffer;
-static size_t big_buffer_size;
 unsigned char *little_buffer;
-static size_t little_buffer_size;
 static size_t p;
 #if FIBO_IMPLEM == 'M'
 #pragma omp end declare target
 #endif
 
+
+static size_t big_buffer_size;
+static size_t little_buffer_size;
 // get number of available calculation cores
 int getNumCores(void) {
 #ifdef WIN32
