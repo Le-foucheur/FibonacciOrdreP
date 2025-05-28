@@ -1,6 +1,7 @@
 use std::{borrow::BorrowMut, io::Write};
 
 use sfml::{
+    cpp::FBox,
     graphics::{RenderTarget, RenderWindow},
     window::{Event, Key},
 };
@@ -8,12 +9,12 @@ use sfml::{
 use crate::{
     command_line::HELP_MESSAGE,
     constants::MOVE_STEP,
-    gmp_utils::{utils_mpz_add_u64, utils_mpz_set_stdin, utils_mpz_sub_u64},
+    gmp_utils::{utils_mpz_add_u64, utils_mpz_set_string, utils_mpz_sub_u64},
     renderer::Renderer,
 };
 
 pub struct WindowManager {
-    window: RenderWindow,
+    window: FBox<RenderWindow>,
     renderer: Renderer,
 }
 
@@ -30,7 +31,7 @@ pub fn manage_events(window: &mut RenderWindow, renderer: &mut Renderer) -> u8 {
         match ev {
             Event::Closed => window.close(),
             Event::Resized { width, height } => {
-                window.set_view(&sfml::graphics::View::new(
+                window.set_view(&sfml::graphics::View::with_center_and_size(
                     sfml::system::Vector2::new(width as f32 / 2.0, height as f32 / 2.0),
                     sfml::system::Vector2::new(width as f32, height as f32),
                 ));
@@ -105,14 +106,12 @@ pub fn manage_events(window: &mut RenderWindow, renderer: &mut Renderer) -> u8 {
                     // Input start index
                     print!("Enter n start index: ");
                     std::io::stdout().flush().unwrap();
-                    utils_mpz_set_stdin(renderer.start_index_mpz.borrow_mut());
-                    // std::io::stdout().flush().unwrap();
-                    // let mut input = String::new();
-                    // std::io::stdin().read_line(&mut input).unwrap();
-                    // utils_mpz_set_string(
-                    //     input.trim().to_string(),
-                    //     renderer.start_index_mpz.borrow_mut(),
-                    // );
+                    let mut input = String::new();
+                    std::io::stdin().read_line(&mut input).unwrap();
+                    utils_mpz_set_string(
+                        input.trim().to_string(),
+                        renderer.start_index_mpz.borrow_mut(),
+                    );
                     result = 1;
                 }
                 sfml::window::Key::B => {
@@ -146,7 +145,8 @@ impl WindowManager {
             "Fibonacci sequence modulo 2",
             sfml::window::Style::DEFAULT,
             &Default::default(),
-        );
+        )
+        .unwrap();
         window.set_vertical_sync_enabled(true);
 
         WindowManager { window, renderer }

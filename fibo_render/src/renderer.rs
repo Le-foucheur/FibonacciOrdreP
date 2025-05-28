@@ -138,7 +138,11 @@ impl Renderer {
 
     #[cfg(feature = "graphic")]
     fn generate_texture(&mut self, buffer: &Image, image_width: u32, image_height: u32) {
-        if !self.current_texture.create(image_width, image_height) {
+        if self
+            .current_texture
+            .create(image_width, image_height)
+            .is_err()
+        {
             panic!("Error creating texture");
         }
         unsafe { self.current_texture.update_from_image(buffer, 0, 0) };
@@ -175,7 +179,7 @@ impl Renderer {
         utils_mpz_add_mpz(mpz_start.borrow_mut(), self.start_index_mpz.borrow_mut());
 
         // Initialize buffer
-        let mut buffer = Image::new(image_width, image_height);
+        let mut buffer = Image::new_solid(image_width, image_height, Color::BLACK).unwrap();
 
         init_serie(
             ((image_height as f32 / upixel_size).floor() * (1.0 / self.pixel_size).ceil()) as u64
@@ -523,15 +527,15 @@ impl Renderer {
         // Save current texture
         println!("Start image conversion...");
         match self.current_texture.copy_to_image() {
-            Some(image) => {
+            Ok(image) => {
                 println!("Saving image...");
-                if image.save_to_file(filename) {
+                if (*image).save_to_file(filename).is_ok() {
                     println!("Image saved successfully as {}", filename);
                 } else {
                     println!("Error while saving the image");
                 }
             }
-            None => {
+            Err(_) => {
                 println!("Error while saving the image");
             }
         };
