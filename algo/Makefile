@@ -118,7 +118,7 @@ src/external/gmp-6.3.0/.libs/libgmp.a:
 	tar -xvf gmp-6.3.0.tar.xz
 	cd src/external/gmp-6.3.0/ && \
 	export CFLAGS="-O3 -march=native -mtune=native" && \
-	./configure --enable-static=yes --enable-shared=no --disable-cxx && \
+	./configure --enable-static=yes --enable-shared=no --disable-cxx CFLAGS="-std=gnu99 -O3 -march=native -mtune=native" && \
 	make
 
 src/external/C-Thread-Pool/thpool.c:

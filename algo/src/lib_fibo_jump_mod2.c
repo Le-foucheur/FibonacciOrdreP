@@ -6,7 +6,9 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <omp.h>
+#if FIBO_IMPLEM == 'M'
+  #include <omp.h>
+#endif
 
 #ifdef _WIN32
 #include <windows.h>
@@ -640,7 +642,7 @@ void looper2() {
 #endif
 
 unsigned char *fibo_mod2(size_t p_arg, mpz_t n) {
-  fprintf(stderr,"OmpDevice count: %i\n",omp_get_num_devices());
+//  fprintf(stderr,"OmpDevice count: %i\n",omp_get_num_devices());
   size_t min_valid_size =
       (MIN(2 * p_arg + 4, p_arg + p_arg / 2 + 7 * BATCH_SIZE * 8 + 4));
   p = p_arg;
