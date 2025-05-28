@@ -10,7 +10,7 @@
 #include <endian.h>
 #include <assert.h>
 #include <limits.h>
-#include <immintrin.h>
+
 #include "external/gmp-6.3.0/gmp.h"
 
 
@@ -70,6 +70,11 @@
 #endif //for Ints only
 #endif
 #endif
+#endif
+
+
+#if FIBO_IMPLEM != 'i'
+#include <immintrin.h>
 #endif
 
 typedef unsigned char cond_t;

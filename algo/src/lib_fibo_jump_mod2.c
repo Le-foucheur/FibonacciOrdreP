@@ -1,7 +1,6 @@
 #include "lib_fibo_jump_mod2.h"
 #include "external/C-Thread-Pool/thpool.h"
 #include "external/gmp-6.3.0/gmp.h"
-#include <smmintrin.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
