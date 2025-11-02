@@ -113,7 +113,7 @@ $ Fnp = display(sum_(i=1)^(p+1))  R_i^(n+p)/display(product_(j=1\ j!=i)^(p+1)(R_
 $ forall n,p in NN, sum_(k=0)^(floor(n/(p+1))+1) binom(n-p k,k)  $
 
 ===
-On souhaite montré par récurrance sur $n$ et à $p$ fixé la proposition sus écrite
+On souhaite montrer par récurrance sur $n$ et à $p$ fixé la proposition écrite sus
 Posons $display(P(n): F^((p))_n = sum_(k=0)^(floor(n/(p+1))+1) binom(n - p k, k))$
 
 _Initialisation :_ Pour $n<=p$, on a
