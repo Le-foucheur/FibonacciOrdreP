@@ -113,6 +113,7 @@ $ Fnp = display(sum_(i=1)^(p+1))  R_i^(n+p)/display(product_(j=1\ j!=i)^(p+1)(R_
 $ forall n,p in NN, sum_(k=0)^(floor(n/(p+1))+1) binom(n-p k,k)  $
 
 ===
+On souhaite montré par récurrance sur $n$ et à $p$ fixé la proposition sus écrite
 Posons $display(P(n): F^((p))_n = sum_(k=0)^(floor(n/(p+1))+1) binom(n - p k, k))$
 
 _Initialisation :_ Pour $n<=p$, on a
@@ -153,7 +154,7 @@ $
   &<=> n-p(floor((n-p)/(p+1))+2) < -1 +floor((n-p)/(p+1))+2 \
   &<=> n-p(floor((n-p)/(p+1))+2) < floor((n-p)/(p+1)) + 2 \
 $
-Donc $display(binom(n-floor((n-p)/(p+1))+2, floor((n-p)/(p+1))+2)) = 0$, ce qui permet d'utiliser $floor((n-p)/(p+1))+2$ comme indice commun aux deux sommes, qu'on peut donc regrouper :
+Donc $display(binom(n-p (floor((n-p)/(p+1))+2) , floor((n-p)/(p+1))+2)) = 0$, ce qui permet d'utiliser $floor((n-p)/(p+1))+2$ comme indice commun aux deux sommes, qu'on peut donc regrouper :
 
 $
     F^((p))_(n+1)&= sum_(k=0)^(floor((n-p)/(p+1))+2) (binom(n - p k, k-1) + binom(n - p k, k)) \
