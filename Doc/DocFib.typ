@@ -12,8 +12,8 @@
 #let local_link = (label, content) => link(label, {
   super[[#text(fill: blue)[#content]]]
 })
-#import "@preview/cetz:0.2.0" : *
-#import "@preview/tablex:0.0.8" : *
+#import "@preview/cetz:0.4.2" : *
+#import "@preview/cetz-plot:0.1.3": plot
 
 #align(left)[Gaspar Daguet\ Julien Thillard\ Louwen Fricout\ Albin Chaboissier]
 
@@ -174,17 +174,17 @@ $ forall n in NN, sum_(k=0)^(n+1) binom(n,k) = 2^n = F_n^((0)) $
   columns: (1fr,1fr),
   align(center)[
     *Pour $p = 2$*
-    #tablex(
+    #table(
       columns: 10,
-      auto-lines: false,
+      stroke: none,
       ..pasc(9,10)
     )
   ],
   align(center)[
     *Pour $p=3$*
-    #tablex(
+    #table(
       columns: 10,
-      auto-lines: false,
+      stroke: none,
       ..pasc(9,10)
     )
   ]
@@ -240,6 +240,41 @@ Il est connue que la limite du quotient la suite de Fibonacci tend vers $(1+sqrt
 
 *Pour p >1*\
 Au delà 1, il devient difficile de calculer algébriquement le quotient, nous pouvons donc le calculer informatiquement jusqu'à $p = 30$ :
+
+#let ratio = (
+  (0,2),
+  (1,1.618033989),
+  (2,1.465571232),
+  (3,1.380277569),
+  (4,1.324717957),
+  (5,1.285199033),
+  (6,1.255422871),
+  (7,1.232054631),
+  (8,1.213149723),
+  (9,1.197491434),
+  (10,1.184276322),
+  (11,1.172950750),
+  (12,1.163119791),
+  (13,1.154493551),
+  (14,1.146854042),
+  (15,1.140033937),
+  (16,1.133902490),
+  (17,1.128355940),
+  (18,1.123310806),
+  (19,1.118699108),
+  (20,1.114464880),
+  (21,1.110561598),
+  (22,1.106950245),
+  (23,1.103597835),
+  (24,1.100476279),
+  (25,1.097561494),
+  (26,1.094832708),
+  (27,1.092271899),
+  (28,1.089863353),
+  (29,1.087593296),
+  (30,1.085449605)
+)
+
 #grid(
   columns: (auto, auto),
   align(left)[
@@ -256,38 +291,7 @@ Au delà 1, il devient difficile de calculer algébriquement le quotient, nous p
        y-label:"",
        {
         plot.add(
-          ((0,2),
-            (1,1.618033989),
-            (2,1.465571232),
-            (3,1.380277569),
-            (4,1.324717957),
-            (5,1.285199033),
-            (6,1.255422871),
-            (7,1.232054631),
-            (8,1.213149723),
-            (9,1.197491434),
-            (10,1.184276322),
-            (11,1.172950750),
-            (12,1.163119791),
-            (13,1.154493551),
-            (14,1.146854042),
-            (15,1.140033937),
-            (16,1.133902490),
-            (17,1.128355940),
-            (18,1.123310806),
-            (19,1.118699108),
-            (20,1.114464880),
-            (21,1.110561598),
-            (22,1.106950245),
-            (23,1.103597835),
-            (24,1.100476279),
-            (25,1.097561494),
-            (26,1.094832708),
-            (27,1.092271899),
-            (28,1.089863353),
-            (29,1.087593296),
-            (30,1.085449605)
-            )
+          ratio
         )
         plot.add-hline(1)
        }
@@ -303,50 +307,16 @@ Au delà 1, il devient difficile de calculer algébriquement le quotient, nous p
        size: (11,5.5),
        x-min: 0,
        x-max: 30,
-       y-max: 2,
-       y-min: .9,
+       y-max: 1.01,
+       y-min: .8,
        x-label:$p$,
        y-label:"",
-       legend: "legend.inner-north-east",
+       legend:"inner-south-east",
        legend-style: (stroke: 0pt, spacing: 1),
        {
-        plot.add(domain: (0,30), x => 1+1/(calc.pow(x+1,0.710083)), label: $ upright(A)_p $)
-        plot.add(
-          ((0,2),
-            (1,1.618033989),
-            (2,1.465571232),
-            (3,1.380277569),
-            (4,1.324717957),
-            (5,1.285199033),
-            (6,1.255422871),
-            (7,1.232054631),
-            (8,1.213149723),
-            (9,1.197491434),
-            (10,1.184276322),
-            (11,1.172950750),
-            (12,1.163119791),
-            (13,1.154493551),
-            (14,1.146854042),
-            (15,1.140033937),
-            (16,1.133902490),
-            (17,1.128355940),
-            (18,1.123310806),
-            (19,1.118699108),
-            (20,1.114464880),
-            (21,1.110561598),
-            (22,1.106950245),
-            (23,1.103597835),
-            (24,1.100476279),
-            (25,1.097561494),
-            (26,1.094832708),
-            (27,1.092271899),
-            (28,1.089863353),
-            (29,1.087593296),
-            (30,1.085449605)
-            ),
-            label: "Quotient"
-        )
+        let f(x) = 1+1/(calc.pow(x+1,0.710083));
         plot.add-hline(1)
+        plot.add(domain: (0,30), x => f(x)/ratio.at(calc.floor(x)).at(-1), label: $ upright(A)_p / R_p $)
        }
     )
   })
