@@ -7,9 +7,9 @@ use std::{
 
 // pub use gmp_mpfr_sys::gmp::mpz_t;
 #[cfg(feature = "graphic")]
-use std::ffi::c_long;
-#[cfg(feature = "graphic")]
 use libc::FILE;
+#[cfg(feature = "graphic")]
+use std::ffi::c_long;
 use std::ffi::CStr;
 use std::ffi::{c_char, c_int, c_ulong};
 extern crate libc;
@@ -94,8 +94,8 @@ pub fn utils_mpz_to_string(mpz_start: &mut mpz_t) -> String {
     let size = unsafe { mpz_sizeinbase(mpz_start.borrow(), 10) };
     let mut buffer: Vec<u8> = vec![0; size + 5];
     unsafe {
-        let cstr = CStr::from_ptr(buffer.as_mut_ptr() as *mut i8);
-        let ptr = cstr.as_ptr() as *mut i8;
+        let cstr = CStr::from_ptr(buffer.as_ptr() as *const c_char);
+        let ptr = cstr.as_ptr() as *mut c_char;
         mpz_get_str(ptr, 10, mpz_start.borrow());
         let s = CStr::from_ptr(ptr).to_str().unwrap();
         s.to_string()

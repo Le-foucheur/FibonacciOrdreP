@@ -38,7 +38,7 @@ Mais parmi toutes ces généralisations, beaucoup sont laissées de coté, et no
 
 Comme beaucoup le savent la suite de Fibonacci est construite de manière récurrente en sommant les deux termes précédent et en prenant $F_0 = 1 et F_1 = 1$ (ou parfois $F_0 = 0 et F_1 = 1$), i.e.
 $ forall n in NN, F_n := cases(F_0 = F_1 = 1, F_(n+2) = F_(n+1) + F_n \, n>= 2) $
-Pour généraliser cette suite nous n'allons pas sommer les deux termes précédents, mais le terme précédent et un terme se trouvant $p$ terme plus loin de ce premier terme et pour ce faire nous avons besoin que les $p$ premiers termes valent 1, i.e.
+Pour généraliser cette suite nous n'allons pas sommer les deux termes précédents, mais le terme précédent et un terme se trouvant $p$ terme plus loin de ce premier terme et pour ce faire nous avons besoin que les $p+1$ premiers termes valent 1, i.e.
 $
   forall n, p in NN, F_n^((p)) := cases(F_j^((p)) = 1\, "si " 0 <=j <= p, F_(n+p+1)^((p)) = F^((p))_(n+p) + F^((p))_n "si " n>p)
 $
@@ -170,6 +170,7 @@ $ Fnp = display(sum_(i=1)^(p+1)) R_i^(n+p)/display(product_(j=1\ j!=i)^(p+1)(R_i
 $ forall n,p in NN, F_n^((p)) = sum_(k=0)^(floor(n/(p+1))+1) binom(n-p k, k) $
 
 ===
+On souhaite montrer par récurrance sur $n$ et à $p$ fixé la proposition écrite ci-dessus\
 Posons $display(P(n): F^((p))_n = sum_(k=0)^(floor(n/(p+1))+1) binom(n - p k, k))$
 
 _Initialisation :_ Pour $n<=p$, on a
@@ -214,7 +215,7 @@ $
                                        & <=> n-p(floor((n-p)/(p+1))+2) < -1 +floor((n-p)/(p+1))+2 \
                                        & <=> n-p(floor((n-p)/(p+1))+2) < floor((n-p)/(p+1)) + 2 \
 $
-Donc $display(binom(n-floor((n-p)/(p+1))+2, floor((n-p)/(p+1))+2)) = 0$, ce qui permet d'utiliser $floor((n-p)/(p+1))+2$ comme indice commun aux deux sommes, qu'on peut donc regrouper :
+Donc $display(binom(n-p (floor((n-p)/(p+1))+2), floor((n-p)/(p+1))+2)) = 0$, ce qui permet d'utiliser $floor((n-p)/(p+1))+2$ comme indice commun aux deux sommes, qu'on peut donc regrouper :
 
 $
   F^((p))_(n+1) & = sum_(k=0)^(floor((n-p)/(p+1))+2) (binom(n - p k, k-1) + binom(n - p k, k)) \
@@ -238,7 +239,7 @@ $ forall n in NN, sum_(k=0)^(n+1) binom(n, k) = 2^n = F_n^((0)) $
     #table(
       columns: 10,
       stroke: none,
-      ..pasc(9, 10),
+      ..pasc(9, 10)
     )
   ],
   align(center)[
@@ -246,7 +247,7 @@ $ forall n in NN, sum_(k=0)^(n+1) binom(n, k) = 2^n = F_n^((0)) $
     #table(
       columns: 10,
       stroke: none,
-      ..pasc(9, 10),
+      ..pasc(9, 10)
     )
   ],
 )
