@@ -21,8 +21,20 @@ Narayana:
   url: https://oeis.org/A000930
   autor: O.E.I.S.
 
+Suitereclin: 
+  type: web
+  title: Suite récurrente linéaire
+  url : https://fr.wikipedia.org/wiki/Suite_récurrente_linéaire
+  autor : Wikipédia
+
 InverVander:
   type: web
   title: The Inverse matrix of Vandermonde matrix
   url: http://www.vesnik.math.rs/vol/mv19303.pdf
   autor: None
+
+finitcalc:
+  type: book
+  title: Finite Calculus:A Tutorial for Solving Nasty Sums
+  url: https://www.cs.purdue.edu/homes/dgleich/publications/Gleich%202005%20-%20finite%20calculus.pdf
+  autor: David Gleich
