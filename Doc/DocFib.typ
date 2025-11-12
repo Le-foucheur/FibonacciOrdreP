@@ -85,7 +85,7 @@ $ cases(lambda_1 + lambda_2 + lambda_3 + ...  +lambda_(p+1) = F_0^((p)) = 0,
   lambda_1 R_1^2+ lambda_2 R_2^2+ lambda_3 R_3^2+ ...  +lambda_(p+1) R_(p+1)^2= F_2^((p)) = 0,
   #h(1em) dots.v #h(3em) dots.v #h(3em) dots.v #h(3em) dots.v #h(3em) dots.v #h(3em) dots.v #h(3em) dots.v,
   lambda_1 R_1^(p+1)+ lambda_2 R_2^(p+1)+ lambda_3 R_3^(p+1)+ ...  +lambda_(p+1) R_(p+1)^(p+1)= F_(p)^((p)) = 1) $
-Ce qui est équivalent au système suivant :
+Ce qui est équivalent à l’équation matricielle suivante :
 $ mat(
 1, 1, 1, ..., 1;
 R_1, R_2, R_3, ..., R_(p+1);
@@ -97,7 +97,7 @@ lambda_2;
 lambda_3;
 dots.v;
 lambda_(p+1)) = mat(0;0;0;dots.v;1) $
-On reconnaît la transposée d'une matrice de Vandermonde carré d'ordre $p+1$ dont les coefficients sont deux à deux distincts. Cette matrice est donc inversible, notons $upright(A)$ cette matrice et $Lambda$ la matrice composée des coefficients que l'on cherche. On a alors :
+On reconnaît la transposée d'une matrice de Vandermonde d'ordre $p+1$ dont les coefficients sont deux à deux distincts. Cette matrice est donc inversible, notons $upright(A)$ cette matrice et $Lambda$ la matrice composée des coefficients que l'on cherche. On a alors :
 $ Lambda = upright(A)^(-1) mat(0;0;0;dots.v;1) $
 Ainsi ce produit indique que l'on ne s'intéresse qu'à la dernière colonne de $upright(A)^(-1)$.\
 De plus, on sait que le $i$-ème coefficient de la dernière ligne de l'inverse d'une matrice de Vandermonde @InverVander (colonne ici, car on a la transposée) est égale à : $ 1/display(product_(j=1\ j!=i)^(p+1)(R_i-R_j)) $  \
@@ -240,7 +240,7 @@ Il est connue que la limite du quotient la suite de Fibonacci tend vers $(1+sqrt
 #pagebreak()
 
 *Pour p >1*\
-Au delà 1, il devient difficile de calculer algébriquement le quotient, nous pouvons donc le calculer informatiquement jusqu'à $p = 30$ :
+Au delà 1, il devient difficile de calculer algébriquement le quotient, nous pouvons donc les calculer informatiquement jusqu'à $p = 30$ :
 
 #let ratio = (
   (0,2),
@@ -299,9 +299,9 @@ Au delà 1, il devient difficile de calculer algébriquement le quotient, nous p
     )
   })
   On remarque clairement que le quotient tend vers 1. \
-  On peut définir l'approximation suivante à partir de cette courbe :
+  On peut définir empiriquement l'approximation suivante à partir de cette courbe :
   $ upright(A)_p = 1 + 1/((1+p)^(k)) "avec" k approx 0,710083 $
-  Dont voici la courbe représentative : \
+  Dont voici le rapport avec $R_p$ représentative : \
   #canvas({
     plot.plot(
       axis-style: "left",
@@ -465,7 +465,7 @@ $ forall p in NN, forall n in [|0; p|], Fnp = 1 $
 Ceci est immédiat via la définition
 
 == \
-$ forall p in NN, forall n in [|p+1; 2p+1|], Fnp = 1 + n - p $ \
+$ forall p in NN, forall n in [|p; 2p+1|], Fnp = 1 + n - p $ \
 i.e. que pour $n$ compris entre $p$ et $2p$, #Fnp se comporte comme une suite arithmétique de raison $1$ et de premier termes $1-p$
 
 === \
@@ -479,12 +479,17 @@ $ Fnp = F_(n-1)^((p)) +1 $
 Donc $(Fnp)_(p+1<=n<=2p+1)$ est suite arithmétique de raison $1$\ et de premier termes $F_(p+1)^((n)) = F_(p)^((p)) + F_(0)^((p)) = 2$\
 Donc
 $ forall p in NN, forall [|p+1; 2p+1|], F_(n)^((p)) = 1+n -p $
+De plus comme $F_p^((p)) = 1 = 1 + p - p$, alors $F_p^((p))$ vérifie également la propriété, on peut donc l’inclure $n = p$ dans l’intervale.\
+Ainsi on à bien :
+$
+  forall p in NN, forall n in [|p; 2p+1|], Fnp = 1 + n - p
+$
 #QED
 
 ==== \
-soit $k in NN$, les termes modulo 2 de $F_(k p+1)^((p))$ à $F_((k+1) p)^((p))$ forme un paterne\
+soit $k in NN$, les termes modulo 2 de $F_(k p)^((p))$ à $F_((k+1) p)^((p))$ forme un paterne\
 Note: Ceci à déjà été démontrer dans les cas particuliers pour $k=0$ et $k=1$
-#pagebreak()
+
 
 #align(center)[= Dessin créé par $(Fnp)$ modulo $2$]
 Si l'on prend sur une feuille à carreaux et que l'on mets dans la case d'indice $n,p$, le termes $F_n^((p))$ modulo 2, et que l'on colorise la dite case en noir ou en blanc si sa valeur est $1$ ou $0$, comme ci-dessous:
