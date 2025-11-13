@@ -294,7 +294,11 @@ C'est pourquoi nous allons voir les propriétés de deux généralisation de la 
 
 *1#super("ère") généralisation:*\
 Pour cette première généralisation, nous ne généraliserons par réellement le quotient, i.e. que nous allons nous intéresser à:
-$ forall p in NN, lim_(n -> +oo) F_(n+1)^((p))/Fnp $
+$ forall p in NN,Rf_p = lim_(n -> +oo) F_(n+1)^((p))/Fnp $
+
+Nous notrons ce quotiens par $Rf_p$, que nous appellerons le $p$-ième nombre périodique, et nous ferons une bijection entre les 118 élément du tableau périodique des éléments et les 118 premier nombre périodique. Ainsi $2$ est le nombre de l’hydrogène; $(1+sqrt(5))/2$ est le nombre de l’hélium et ainsi de suite.\
+
+Ainsi par cette appelation il y a deux nombres d’or, $(1+sqrt(5))/2$ et $Rf_79$, ainsi nous nous référerons par rapport au nombre périodique pour tout le reste de l’article
 
 Regardons ce que cela donne pour certains $p$:
 
@@ -369,7 +373,7 @@ Au delà 1, il devient difficile de calculer algébriquement le quotient, nous p
       On remarque clairement que le quotient tend vers 1. \
       On peut définir empiriquement l'approximation suivante à partir de cette courbe :
       $ upright(A)_p = 1 + 1/((1+p)^(k)) "avec" k approx 0,710083 $
-      Dont voici le rapport avec $R_p$ représentative : \
+      Dont voici le rapport avec $Rf_p$ représentative : \
       #canvas({
         plot.plot(
           axis-style: "left",
@@ -385,7 +389,7 @@ Au delà 1, il devient difficile de calculer algébriquement le quotient, nous p
           {
             let f(x) = 1 + 1 / (calc.pow(x + 1, 0.710083))
             plot.add-hline(1)
-            plot.add(domain: (0, 30), x => f(x) / ratio.at(calc.floor(x)).at(-1), label: $ upright(A)_p / R_p $)
+            plot.add(domain: (0, 30), x => f(x) / ratio.at(calc.floor(x)).at(-1), label: $ upright(A)_p / Rf_p $)
           },
         )
       })
@@ -397,7 +401,7 @@ Au delà 1, il devient difficile de calculer algébriquement le quotient, nous p
       columns: 2,
       inset: 4pt,
       align: (x, y) => (left, right).at(x),
-      [$p$], [$ R_p $],
+      [$p$], [$ Rf_p $],
       [0], [2],
       [1], [1,618033989],
       [2], [1,465571232],
@@ -431,11 +435,12 @@ Au delà 1, il devient difficile de calculer algébriquement le quotient, nous p
       [30], [1,085449605],
     )],
 )
+
 #pagebreak()
 
 ==== \
-Le quotient noté $R_p$ peut s'écrire avec une sorte de fraction continue :
-$ R_p = 1 + 1/(1+ 1/(1+ 1/(dots))^p)^p $
+Le nombre périodique noté $Rf_p$ peut s'écrire avec une sorte de fraction continue :
+$ Rf_p = 1 + 1/(1+ 1/(1+ 1/(dots))^p)^p $
 
 *2#super("ième") généralisation*\
 Pour mieux coller à la définition on peut au lieux de faire la limite du quotient entre deux termes successif, on peut faire la limite du quotient entre deux termes séparé par $p-1$ termes noté $Q_p$, i.e.:
@@ -511,15 +516,15 @@ De même que pour la 1#super("er") généralisation, on a calculé le quotient j
   ],
 )
 == \
-Rappelle: on note $R_p$ le ratio de la première généralisation et $Q_p$ celle de la deuxième\
+Rappelle: on note $Rf_p$ le ratio de la première généralisation et $Q_p$ celle de la deuxième\
 alors on a:
-$ forall p in NN, (R_p)^p = Q_p $
+$ forall p in NN, (Rf_p)^p = Q_p $
 
 === \
 Soit $p in NN$
 $ F_(n+p)^((p)) / Fnp & = product_( k = n)^(n+p) F_(k+1)^((p)) / F_k^((p)) $
-En passant à la limite dans l'égalité et comme le quotient de deux termes successif tend vers $R_p$, on obtient:
-$ Q_p & = product_(k=n)^(n+p) R_p = product_(k=0)^(p) R_p = (R_p)^p $
+En passant à la limite dans l'égalité et comme le quotient de deux termes successif tend vers $Rf_p$, on obtient:
+$ Q_p & = product_(k=n)^(n+p) Rf_p = product_(k=0)^(p) Rf_p = (Rf_p)^p $
 #QED
 
 #align(

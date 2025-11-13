@@ -17,3 +17,4 @@
   move(dy: -l * calc.sin(calc.atan(k)) + a.last() + 10pt, dx: l * calc.cos(calc.atan(k)) + a.first())[#text(red)[#body]]
   line(stroke: red + .5pt, start: a, length: l, angle: calc.atan(-k))
 }
+#let Rf = text(font: "FreeMono")[#str.from-unicode(0x16A0)] 
