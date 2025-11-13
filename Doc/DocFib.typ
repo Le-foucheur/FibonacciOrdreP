@@ -799,6 +799,25 @@ $
 $
 #QED
 
+== \
+$
+  forall p in NN^*, forall n in NN, F_n^((p)) = P_(floor(n/p))^((p)) (n)
+$
+=== \
+Soit $p in NN^*$ et $k in NN$ \
+Selon la @P14, pour $n in [|k p, (k+1)p|], F_n^((p)) = P_k^((p)) (n)$,\
+donc $n in [|k p, (k+1)p-1|], F_n^((p)) = P_k^((p)) (n)$, \
+alors soit $n in [|k p, (k+1)p-1|]$, ainsi :
+$
+  k p <= n < (k+1)p <=>  k <= n/p < k +1 <=> k  = floor(n/p)
+$
+Donc sur $[|k p; (k+1)p - 1|], F_n^((p)) = P_floor(n/p)^((p)) (n)$\
+Or pour $k in NN, [|k p; (k+1)p - 1|]$ forme une partition de $NN$, ainsi :
+$
+  forall p in NN^*, forall n in NN, F_n^((p)) = P_floor(n/p)^((p)) (n)
+$
+#QED
+
 #align(center)[= Dessin créé par $(Fnp)$ modulo $2$]
 Si l'on prend sur une feuille à carreaux et que l'on mets dans la case d'indice $n,p$, le termes $F_n^((p))$ modulo 2, et que l'on colorise la dite case en noir ou en blanc si sa valeur est $1$ ou $0$, comme ci-dessous:
 
