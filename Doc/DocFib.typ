@@ -12,6 +12,9 @@
     } else if n == 3 { [*Preuve:*] } else if n == 4 { [Conjecture: ] }
   },
 )
+#show outline.entry.where(
+  level: 1
+): set block(above: 1.2em)
 #set math.equation(block: true)
 #show math.equation.where(block: true): set block(breakable: true)
 #let local_link = (label, content) => link(label, {
@@ -26,9 +29,11 @@
 
 #align(left)[Gaspar Daguet\ Julien Thillard\ Louwen Fricout\ Albin Chaboissier]
 
-#align(center, text(20pt)[Une généralisation de la suite de Fibonacci])
+#align(center, text(20pt)[Changement du temps de gestation des lapins de Fibonacci])
 
-#outline(depth: 1)
+#align(center + horizon,outline(depth: 1, title: [Table des Matières]))
+
+#pagebreak()
 
 #align(center, text[= Introduction <non>])
 
