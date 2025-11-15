@@ -6,14 +6,14 @@
     if n == 1 { numbering("1.", numbers.pos().at(0)) } 
     else if n == 2 {
       let ind = int(def.display()) + 1
-      [Définition #label("D" + str(def.display()))]
+      [Définition ]
       def.step()
       [#ind]
       ":"
     } 
     else if n == 3 {
       let ind = int(prop.display()) + 1
-      [Proposition #label("P" + str(prop.display()))]
+      [Proposition ]
       prop.step()
       [#ind]
       ":"
@@ -30,10 +30,7 @@
 #let local_link = (label, content) => link(label, {
   super[[#text(fill: blue)[#content]]]
 })
-#show ref: it => {
-  let coun = counter("Proposition").at(if it.element != none { it.target } else { label("non") }).at(0)
-  [propriété #str(coun)]
-}
+
 #import "@preview/cetz:0.4.2": *
 #import "@preview/cetz-plot:0.1.3": plot
 
@@ -752,7 +749,7 @@ $
 $
 
 ==== \
-celle-ci est immédiate par @P10, en effet :
+celle-ci est immédiate par la propriété 10, en effet :
 $
   forall k in NN, forall x in RR, S_k (x) = H_k (x + k - 1) = 1/k! product_(i = 0)^(k - 1) (x + k - 1 - i) = 1/k! product_(i = 0)^(k - 1) (x + i)
 $
@@ -764,7 +761,7 @@ $
 $
 
 *Remarque :*\
-la @P10 reste vrais sur $RR$, ce même avec la redéfinition, car l’on n’utilise aucune hypotèse sur les $n in NN$ 
+la propriété 10 reste vrais sur $RR$, ce même avec la redéfinition, car l’on n’utilise aucune hypotèse sur les $n in NN$ 
 
 
 ===
@@ -925,7 +922,7 @@ $
 $
 ==== \
 Soit $p in NN^*$ et $k in NN$ \
-Selon la @P14, pour $n in [|k p, (k+1)p|], F_n^((p)) = P_k^((p)) (n)$,\
+Selon la propriété 16, pour $n in [|k p, (k+1)p|], F_n^((p)) = P_k^((p)) (n)$,\
 donc $n in [|k p, (k+1)p-1|], F_n^((p)) = P_k^((p)) (n)$, \
 alors soit $n in [|k p, (k+1)p-1|]$, ainsi :
 $
@@ -941,7 +938,7 @@ $
 *Remarque :*\
 Cette proposition nous permets de généralisé la suite pour des $p$ réel positif, de même que l’on peut étendre leur domaine de définition sur $RR_+$, dont on en étudiras certaine de ces propriétés dans le chapitre $10$
 
-
+#pagebreak()
 #align(center)[= Dessin créé par $(Fnp)$ modulo $2$]
 Si l'on prend sur une feuille à carreaux et que l'on mets dans la case d'indice $n,p$, le termes $F_n^((p))$ modulo 2, et que l'on colorise la dite case en noir ou en blanc si sa valeur est $1$ ou $0$, comme ci-dessous:
 
@@ -990,4 +987,4 @@ Maintenant faut refaire des trucs mais pour la cas encore plus générale… yee
 
 
 
-#bibliography("Bibli.yml", style: "biomed-central", title: "References")
+#bibliography("./Bibli.yml", style: "biomed-central", title: "Références")
