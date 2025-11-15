@@ -1,4 +1,5 @@
 #let prop = counter("Proposition")
+#let def = counter("Définition")
 #let et = "et" + h(5pt)
 #let Fnp = $F_n^((p))$
 #let defF = $forall n, p in NN, F_n^((p)) := cases(F_j^((p)) = 1\, "si " 0 <=j <= p, F_(n+p+1)^((p)) = F^((p))_(n+p) + F^((p))_n "si " n>p)$
@@ -18,3 +19,4 @@
   line(stroke: red + .5pt, start: a, length: l, angle: calc.atan(-k))
 }
 #let Rf = text(font: "FreeMono")[#str.from-unicode(0x16A0)] 
+#let rayondeconv = text(font: "FreeMono")[#str.from-unicode(0x16B1)] 
