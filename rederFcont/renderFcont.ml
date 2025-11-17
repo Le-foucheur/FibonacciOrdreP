@@ -1,7 +1,7 @@
 open Oplot.Plt
 
-let n = 100;;
-let p = 1.;;
+let n = 30.;;
+let p = 20.;;
 
 let rec facto n = 
   let exception N_negatif in
@@ -20,11 +20,11 @@ let h k x =
   1. /. (float_of_int (facto k)) *. (aux k x) 
 
 ;;
+let polyash = int_of_float n |> Hashtbl.create ;;
+let hash = int_of_float n |> Hashtbl.create
 
-(*let pash = Hashtbl.create n ;;*)
-
-let rec poly p k x = 
-  let exception Erreur_de_reccurtion_f in
+let rec poly k p x = 
+  (* Marche pas, pourquoi ? :/
   let rec aux i acc = 
     if i >= 0 then
       aux (i-1) (acc +. ( poly p i ( float_of_int(i+1) *. p ) ) *. h (k - 1 - i) ( x -. (float_of_int k) *. p))
@@ -32,17 +32,33 @@ let rec poly p k x =
       0.
   in 
   (h k ( x -. (float_of_int k) *. p)) +. (aux (k-1) 0.)
+  *)
+  let res = ref 0. in 
+  for i = 0 to k-1 do
+    if Hashtbl.mem polyash i then
+      let tmp = Hashtbl.find polyash i in
+      res := !res +. ( tmp p ( float_of_int(i+1) *. p ) ) *. h (k - 1 - i) ( x -. (float_of_int k) *. p)
+    else
+      let tmp = poly i in
+      Hashtbl.add polyash i tmp;
+      res := !res +. ( tmp p ( float_of_int(i+1) *. p ) ) *. h (k - 1 - i) ( x -. (float_of_int k) *. p)
+  done;
+  (h k ( x -. (float_of_int k) *. p)) +. !res
+;;
 
 let rec f p x =  
-  poly p (floor (x /. p) |> int_of_float) x
+  poly (floor (x /. p) |> int_of_float) p x
+;;
+
+let rap n x = (f x (n +. 1.)) /. (f x n)
 ;;
 
 
 (*for i = 0 to 20 do
-  float_of_int i |>  f 1. |> Printf.printf "%f\n"
+  float_of_int i |>  f 1. |> Printf.printf "i: %d  --  %f\n" i
 done;;*)
 
-let a = axis 0. 0.;;
-let p = plot (f 1.) (0.) 5.;;
+let a = axis 1. 1.5;;
+let p = adapt_plot (rap n) ~step:0.1 (1.) p;;
 
 display [ Color red; p; Color black; a ];;
