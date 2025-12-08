@@ -70,7 +70,7 @@ fn extend(input: &mut [u32], valid: usize, p: usize) {
     if likely(p > 32) {
         let complete = p / 32;
         let partial = (p as u8) % 32;
-        for i in (valid..input.len()) {
+        for i in valid..input.len() {
             let fst = input[i - complete - 1];
             let snd = input[i - complete];
             let x = (snd as u64) << 32 | (fst as u64);
@@ -85,7 +85,7 @@ fn extend(input: &mut [u32], valid: usize, p: usize) {
         let inserter = 1u64 << p;
         let mut x = (input[valid - 2] as u64) | ((input[valid - 1] as u64) << 32);
         // we keep the p+1 last bits
-        x >>= (64 - (p + 1));
+        x >>= 64 - (p + 1);
 
         for i in (valid..input.len()) {
             let mut res = 0;
@@ -224,14 +224,12 @@ pub fn calculator<'a>(
         let mut add_one = n.next().unwrap();
 
         while let Some(next_add_one) = n.next() {
-            ranger(scratch1, scratch2, param.p, add_one);
-            extend(scratch2, param.valid, param.p);
+            step(scratch1, scratch2, param.p, param.valid, add_one);
 
             swap(&mut scratch1, &mut scratch2);
             add_one = next_add_one;
         }
-        ranger(scratch1, output, param.p, add_one);
-        extend(output, param.valid, param.p);
+        step(scratch1, output, param.p, param.valid, add_one);
     }
 }
 
@@ -245,7 +243,7 @@ mod tests {
         assert_eq!(result, 0b11);
         let packed = 0b110010u32;
         let bits = [0, 1, 0, 0, 1, 1].iter().map(|&x| x == 1);
-        for (x, y) in bits.zip(packed.iter_bits()) {
+        for (x, y) in bits.zip([packed].iter_bits()) {
             assert_eq!(x, y)
         }
     }
