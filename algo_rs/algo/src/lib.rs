@@ -111,7 +111,7 @@ fn step(input: &[u32], output: &mut [u32], p: usize, valid: usize, add_one: bool
 
 pub struct Parametters {
     p: usize,
-    ranges_size: usize,
+    pub ranges_size: usize,
     valid: usize,
 }
 
