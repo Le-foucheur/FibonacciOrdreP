@@ -250,9 +250,10 @@ impl Renderer {
                         .fibo
                         .generate(
                             current_p,
-                            image_width as usize / pix_per_elt,
+                            image_width as usize * elt_per_pix,
                             right_index.clone(),
                         )
+                        .step_by(elt_per_pix)
                         .collect::<Vec<_>>();
                     for (x, val) in (0..(image_width as usize / pix_per_elt)).zip(sequence) {
                         if val {
