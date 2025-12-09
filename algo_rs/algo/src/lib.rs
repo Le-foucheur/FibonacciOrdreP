@@ -1,4 +1,3 @@
-#![no_std]
 #![feature(array_windows, likely_unlikely, iter_array_chunks)]
 
 use core::{
@@ -30,7 +29,7 @@ fn interleave(a: u32, b: u32) -> u64 {
 
 /// 32 less significants bits of snd|fst >> k
 fn shift(fst: u32, snd: u32, k: u8) -> u32 {
-    let x = (fst as u64) << 32 | (snd as u64);
+    let x = (snd as u64) << 32 | (fst as u64);
     return (x >> k) as u32;
 }
 
@@ -40,30 +39,51 @@ fn shifterator(slice: &[u32], amount: usize) -> impl Iterator<Item = u32> {
 
     slice[completes..]
         .array_windows::<2>()
-        .map(move |&[fst, snd]| -> u32 { shift(fst, snd, partial) })
+        .map(move |&[fst, snd]| shift(fst, snd, partial))
+}
+
+fn xor(t: (u32, u32)) -> u32 {
+    t.0 ^ t.1
 }
 
 fn ranger(input: &[u32], output: &mut [u32], p: usize, add_one: bool) {
-    let vanilla = input.iter();
-    let mixed = input
-        .iter()
-        .zip(shifterator(input, p.div_ceil(2)))
-        .map(|(&a, b)| a ^ b);
-    let not_rev = p.is_multiple_of(2) ^ add_one;
-
+    let vanilla = input.iter().copied();
     let out_iter = output.chunks_exact_mut(2);
 
-    let mut big_iter = out_iter.zip(vanilla.zip(mixed));
-
-    while let Some(([o1, o2], (&(mut fst), mut snd))) = big_iter.next() {
-        if !not_rev {
-            (fst, snd) = (snd, fst)
+    fn assign<'a>(
+        output: impl Iterator<Item = &'a mut [u32]>,
+        first: impl Iterator<Item = u32>,
+        second: impl Iterator<Item = u32>,
+    ) {
+        let mut iterator = output.zip(first.zip(second));
+        while let Some(([o1, o2], (fst, snd))) = iterator.next() {
+            let inter = interleave(fst, snd);
+            *o1 = inter as u32;
+            *o2 = (inter >> 32) as u32
         }
-
-        let inter = interleave(fst, snd);
-        *o1 = inter as u32;
-        *o2 = (inter >> 32) as u32;
     }
+
+    match (p.is_multiple_of(2), add_one) {
+        (true, true) => {
+            let mixed = vanilla.clone().zip(shifterator(input, p / 2)).map(xor);
+            assign(out_iter, mixed, vanilla);
+            
+        }
+        (true, false) => {
+            let mixed = shifterator(input, 1).zip(shifterator(input, p/2+1)).map(xor);
+            assign(out_iter, vanilla, mixed);
+        },
+        (false, true) => {
+            let mixed = vanilla.clone().zip(shifterator(input, p.div_ceil(2))).map(xor);
+            assign(out_iter, vanilla, mixed);
+        },
+        (false, false) => {
+            let mixed = vanilla.zip(shifterator(input, p.div_ceil(2))).map(xor);
+            let shifted_vanilla = shifterator(input, 1);
+            assign(out_iter, mixed, shifted_vanilla);
+        },
+    }
+
 }
 
 fn extend(input: &mut [u32], valid: usize, p: usize) {
@@ -87,19 +107,24 @@ fn extend(input: &mut [u32], valid: usize, p: usize) {
         // we keep the p+1 last bits
         x >>= 64 - (p + 1);
 
-        for i in (valid..input.len()) {
-            let mut res = 0;
-            for _ in 0..32 {
-                let bit = (x & 1 != 0) ^ (x & 2 != 0);
+        let iter = repeat_with(|| {
+            let bit = (x & 1 != 0) ^ (x & 2 != 0);
+            x >>= 1;
+            if bit {
+                x |= inserter;
+            }
+            bit
+        });
 
-                res >>= 1;
-                x >>= 1;
-                if bit {
+        for (chunk, out) in iter.array_chunks::<32>().zip(input[valid..].iter_mut()) {
+            let mut res = 0;
+            for bit in chunk.iter().rev() {
+                res <<= 1;
+                if *bit {
                     res |= 1;
-                    x |= inserter;
                 }
             }
-            input[i] = res;
+            *out = res;
         }
     }
 }
@@ -109,6 +134,7 @@ fn step(input: &[u32], output: &mut [u32], p: usize, valid: usize, add_one: bool
     extend(output, valid, p);
 }
 
+#[derive(Debug)]
 pub struct Parametters {
     p: usize,
     pub ranges_size: usize,
@@ -221,8 +247,11 @@ pub fn calculator<'a>(
 
         // Finally, after the special cases the main loop!
         init(scratch1, sign, param.valid, param.p);
-        let mut add_one = n.next().unwrap();
+        //handling negatives
+        let mut n = n.map(|val| {val ^ is_n_negative});
 
+        let mut add_one = n.next().unwrap();
+        
         while let Some(next_add_one) = n.next() {
             step(scratch1, scratch2, param.p, param.valid, add_one);
 
@@ -237,14 +266,41 @@ pub fn calculator<'a>(
 mod tests {
     use super::*;
     use bit_iterator::BitIterable;
+    use std::vec::Vec;
     #[test]
     fn it_works() {
         let result = shift(1 << 31, 1, 31);
         assert_eq!(result, 0b11);
         let packed = 0b110010u32;
         let bits = [0, 1, 0, 0, 1, 1].iter().map(|&x| x == 1);
-        for (x, y) in bits.zip([packed].iter_bits()) {
+        for (x, y) in bits.zip(packed.iter_bits()) {
             assert_eq!(x, y)
         }
+
+        assert_eq!(0b10100101, interleave(0b11, 0b1100));
+
+        for (i, j) in shifterator([0b11, 0b111, 0].as_slice(), 1).zip([1 + (1 << 31), 0b11].iter())
+        {
+            assert_eq!(*j, i)
+        }
+
+        let mut output = repeat_n(0, 50).collect::<Vec<_>>();
+        init(output.as_mut_slice(), 1, 3, 33);
+
+        let mut output2 = repeat_n(0, 50).collect::<Vec<_>>();
+        init(output2.as_mut_slice(), 1, 2, 33);
+
+        assert_eq!(*output, *output2);
+
+        let mut output = repeat_n(0, 50).collect::<Vec<_>>();
+        init(output.as_mut_slice(), 0, 3, 34);
+
+        let mut output2 = repeat_n(0, 50).collect::<Vec<_>>();
+        init(output2.as_mut_slice(), 0, 3, 34);
+        let mut output3 = repeat_n(0, 50).collect::<Vec<_>>();
+        ranger(&output2, &mut output3, 34, false);
+        extend(&mut output3, 3, 34);
+
+        assert_eq!(*output, *output3);
     }
 }
