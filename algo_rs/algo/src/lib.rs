@@ -143,9 +143,9 @@ pub struct Parametters {
 
 pub fn setup(p: usize) -> Parametters {
     //we need at least that much valid blocs for extend to work without out of bound access
-    let valid = p.div_ceil(32) + 1;
+    let valid = p.div_ceil(16) + 2;
     //we discard (p.div_ceil(2).div_ceil(32)+1)+1 blocs in shifterator => to produce "valid" valids bloc, we need that much more
-    let ranges_size = valid + p.div_ceil(64) + 2;
+    let ranges_size = valid + p.div_ceil(16) + 2;
 
     Parametters {
         p,
@@ -190,9 +190,9 @@ fn init(input: &mut [u32], sign: i8, valid: usize, p: usize) {
         let inserter = 1 << p;
 
         let mut iter = repeat_with(|| {
-            let bit = (x & 1 != 0) ^ (x & 2 != 0);
+            let bit = x & 1 != 0;
             x >>= 1;
-            if bit {
+            if bit && (x&1!=0) {
                 x |= inserter;
             }
             bit
@@ -302,5 +302,15 @@ mod tests {
         extend(&mut output3, 3, 34);
 
         assert_eq!(*output, *output3);
+
+        
+        let mut output = repeat_n(0, 50).collect::<Vec<_>>();
+        init(output.as_mut_slice(), 1, 15, 31);
+
+        let mut output2 = repeat_n(0, 50).collect::<Vec<_>>();
+        init(output2.as_mut_slice(), 1, 2, 31);
+
+        assert_eq!(*output, *output2);
+
     }
 }
