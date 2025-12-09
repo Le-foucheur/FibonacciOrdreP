@@ -1,11 +1,11 @@
 use std::env;
 
-use command_line::{load_argument_f32, load_argument_mpz, load_argument_string, load_argument_u32, load_argument_u64, load_argument_u8};
+use command_line::{load_argument_f32, load_argument_bigint, load_argument_string, load_argument_u32, load_argument_u64, load_argument_u8};
+use num::{BigInt, FromPrimitive};
 
-use crate::{command_line::HELP_MESSAGE, gmp_utils::utils_mpz_init};
+use crate::{command_line::HELP_MESSAGE, };
 // mod fibo;
 mod fibo_fast;
-mod gmp_utils;
 mod command_line;
 mod constants;
 mod renderer;
@@ -17,15 +17,9 @@ mod draw_utils;
 mod window_manager;
 
 
-#[link(name = "fibo_mod2", kind = "static")]
-extern "C" {
-    fn fibo2_init_thread_pool(size: isize) -> u32;
-}
-
-
 fn main() {
     let mut args: Vec<String> = env::args().collect();
-    let mut n_mpz = utils_mpz_init();
+    let mut n = BigInt::from_u8(0).unwrap();
     let mut p = 0;
     let mut zoom = 1.0;
     let mut mode = 0;
@@ -43,9 +37,9 @@ fn main() {
     args.remove(0);
     while args.len() != 0 {
         if args[0] == "-n" {
-            load_argument_mpz(
+            load_argument_bigint(
                 &mut args,
-                &mut n_mpz,
+                &mut n,
                 "Invalid argument for -n. Please provide a valid number for the sequence length",
             );
         } else if args[0] == "-p" {
@@ -103,11 +97,8 @@ fn main() {
         }
     }
 
-    // Initialize the C library
-    unsafe { fibo2_init_thread_pool(0) };
-
     // Create the renderer
-    let mut renderer = renderer::Renderer::new(zoom, n_mpz, p, mode);
+    let mut renderer = renderer::Renderer::new(zoom, n, p as usize, mode);
 
     if headless {
         let mut buffer = renderer.generate_sequences_headless(width, height);

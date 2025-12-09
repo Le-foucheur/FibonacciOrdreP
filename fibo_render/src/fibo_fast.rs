@@ -1,87 +1,41 @@
-use crate::gmp_utils::mpz_t;
-use std::ffi::c_uchar;
-use std::borrow::BorrowMut;
-
-extern "C" {
-    fn fibo_mod2_initialization(p: isize) -> *mut c_uchar;
-    fn fibo_mod2(p: isize, n: *mut mpz_t) -> *mut c_uchar;
-    fn arr_getb(array: *const c_uchar, index: isize) -> bool;
-}
+use algo::bit_iterator::BitIterable;
+use num::{bigint::Sign, BigInt};
 
 pub struct FiboFastManager {
-    pub p: u64,
-    pub sequences: Vec<FiboFastSequence>,
+    scratch1: Vec<u32>,
+    scratch2: Vec<u32>,
+    output: Vec<u32>,
 }
 
 impl FiboFastManager {
     pub fn new() -> FiboFastManager {
         FiboFastManager {
-            p: 1,
-            sequences: vec![FiboFastSequence::new(1)],
+            scratch1: Vec::new(),
+            scratch2: Vec::new(),
+            output: Vec::new(),
         }
     }
 
-    pub fn generate(&mut self, p: u64, n: u64, mpz_start: mpz_t) -> Vec<bool> {
-        if self.p < p {
-            // Extend the sequences
-            for i in self.p..p {
-                self.sequences.push(FiboFastSequence::new(i + 1));
-            }
-            self.p = p;
-        }
+    pub fn generate(&mut self, p: usize, n: usize, end: BigInt) -> impl Iterator<Item = bool> + use<'_> {
         // Generate the sequence
-        self.sequences[p as usize - 1].generate(n, mpz_start)
-    }
-}
 
-#[derive(Clone)]
-pub struct FiboFastSequence {
-    pub p: u64,
-    pub saved: Vec<bool>,
-}
+        self.output.resize(n.div_ceil(32), 0);
+        let params = algo::setup(p);
+        self.scratch1.resize(params.ranges_size, 0);
+        self.scratch2.resize(params.ranges_size, 0);
 
-impl FiboFastSequence {
-    pub fn new(p: u64) -> FiboFastSequence {
-        FiboFastSequence { p, saved: vec![] }
-    }
 
-    pub fn generate(&mut self, n: u64, mut mpz_end: mpz_t) -> Vec<bool> {
-        // Manage this special case lonely, because it crash the C library
-        if self.p == 1 {
-            let mut result = vec![false; n as usize];
-            result[0] = true;
-            return result;
-        }
+        algo::calculator(
+            self.scratch1.as_mut_slice(),
+            self.scratch2.as_mut_slice(),
+            &mut self.output,
+            params,
+            end.iter_u32_digits().rev().flat_map(
+                |limb| limb.iter_bits().rev()
+            ),
+            end.sign() == Sign::Minus,
+        );
 
-        // Call the C library
-        let c_buf: *mut c_uchar =
-            unsafe { fibo_mod2((self.p - 1).try_into().unwrap(), mpz_end.borrow_mut()) };
-
-        // Initialize the result array
-        let mut result = vec![false; n as usize];
-
-        // Load the result in the end of the array
-        // Start variable is useful when self.p is bigger than the asked size n
-        let start = if self.p + 1 < n { 0 } else { self.p + 1 - n };
-        for i in start..self.p + 1 {
-            // Use arr_getb to get the result
-            result[(n + i - self.p - 1) as usize] =
-                unsafe { arr_getb(c_buf, (self.p - i).try_into().unwrap()) };
-        }
-
-        // If the sequence is too short, extend it from right to left
-        if self.p < n {
-            for i in 0..(n - self.p) as usize {
-                result[(n - self.p) as usize - i - 1] =
-                    result[n as usize - i - 1] ^ result[n as usize - i - 2]
-            }
-        }
-        result
-    }
-}
-
-pub fn init_serie(max_p: u64) {
-    unsafe {
-        fibo_mod2_initialization(max_p as isize);
+        self.output.iter().copied().flat_map(|limb| limb.iter_bits()).take(n)
     }
 }

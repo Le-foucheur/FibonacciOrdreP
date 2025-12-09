@@ -5,23 +5,16 @@ use crate::constants::SHOW_IMAGE_TIMES;
 #[cfg(feature = "graphic")]
 use crate::draw_utils::draw_line;
 #[cfg(feature = "graphic")]
-use crate::gmp_utils::mpz_mul_ui;
-#[cfg(feature = "graphic")]
-use crate::gmp_utils::{
-    utils_mpz_compare_i64, utils_mpz_compare_mpz, utils_mpz_divexact_u64, utils_mpz_sub_u64,
-    utils_mpz_to_i64,
-};
-#[cfg(feature = "graphic")]
 use crate::window_manager::manage_events;
+use num::BigInt;
 #[cfg(feature = "graphic")]
 use sfml::graphics::{
     Color, Image, RcSprite, RcTexture, RenderTarget, RenderWindow, Shape, Transformable,
 };
 
-use crate::fibo_fast::init_serie;
-use crate::gmp_utils::mpz_t;
-use crate::gmp_utils::{utils_mpz_add_mpz, utils_mpz_to_string};
-use crate::{fibo_fast, gmp_utils::utils_mpz_from_u64, progressbar};
+use crate::{fibo_fast, progressbar};
+
+use itertools::Itertools;
 
 pub struct Renderer {
     #[cfg(feature = "graphic")]
@@ -29,8 +22,8 @@ pub struct Renderer {
     #[cfg(feature = "graphic")]
     pub current_texture: RcTexture,
     pub pixel_size: f32,
-    pub start_index_mpz: mpz_t,
-    pub start_p: u64,
+    pub start_index: BigInt,
+    pub start_p: usize,
     pub fibo: fibo_fast::FiboFastManager,
     pub mode: u8,
     pub show_lines: bool,
@@ -40,14 +33,14 @@ pub struct Renderer {
 }
 
 impl Renderer {
-    pub fn new(pixel_size: f32, start_index_mpz: mpz_t, start_p: u64, mode: u8) -> Renderer {
+    pub fn new(pixel_size: f32, start_index: BigInt, start_p: usize, mode: u8) -> Renderer {
         Renderer {
             #[cfg(feature = "graphic")]
             current_sprite: RcSprite::new(),
             #[cfg(feature = "graphic")]
             current_texture: RcTexture::new().unwrap(),
             pixel_size,
-            start_index_mpz,
+            start_index,
             start_p,
             fibo: fibo_fast::FiboFastManager::new(),
             mode,
@@ -63,39 +56,32 @@ impl Renderer {
         // generate lines -x, -/2x, ... -1/nx
         // Check if the start index can be converted to u64
         // Initialize the mpz at the right side of the generation
-        let mut mpz_end: mpz_t =
-            utils_mpz_from_u64((window.size().x as f32 * 1.0 / self.pixel_size).ceil() as u64);
-        utils_mpz_add_mpz(mpz_end.borrow_mut(), self.start_index_mpz.borrow_mut());
 
         // Line in positive
-        if utils_mpz_compare_i64(self.start_index_mpz.borrow_mut(), i64::MAX) < 0
-            && utils_mpz_compare_i64(mpz_end.borrow_mut(), 0) > 0
-        {
-            let temp = utils_mpz_to_i64(self.start_index_mpz.borrow_mut());
-            for i in 1..n {
-                let starty = 1.0 / i as f32 * temp as f32 * self.pixel_size
-                    - self.start_p as f32 * self.pixel_size;
-                let endy = 1.0 / i as f32
-                    * (temp as f32 * self.pixel_size + window.size().x as f32)
-                    - self.start_p as f32 * self.pixel_size;
-                draw_line(0., starty, window.size().x as f32, endy, window);
+        let start_i64_try: Result<i64, _> = self.start_index.clone().try_into();
+        if let Ok(start_i64) = start_i64_try {
+            if start_i64 >= 0 {
+                for i in 1..n {
+                    let starty = 1.0 / i as f32 * start_i64 as f32 * self.pixel_size
+                        - self.start_p as f32 * self.pixel_size;
+                    let endy = 1.0 / i as f32
+                        * (start_i64 as f32 * self.pixel_size + window.size().x as f32)
+                        - self.start_p as f32 * self.pixel_size;
+                    draw_line(0., starty, window.size().x as f32, endy, window);
+                }
             }
-        }
-
-        // Line in negative
-        if utils_mpz_compare_i64(mpz_end.borrow_mut(), i64::MIN) > 0
-            && utils_mpz_compare_i64(self.start_index_mpz.borrow_mut(), 0) < 0
-        {
-            // Compute again mpz_end in floating point
-            let t1 = utils_mpz_to_i64(self.start_index_mpz.borrow_mut());
-            let temp = window.size().x as f32 * 1.0 / self.pixel_size + t1 as f32;
-            for i in 1..n {
-                let starty = -1.0 / i as f32 * temp as f32 * self.pixel_size
-                    - self.start_p as f32 * self.pixel_size;
-                let endy = -1.0 / i as f32
-                    * (temp as f32 * self.pixel_size - window.size().x as f32)
-                    - self.start_p as f32 * self.pixel_size;
-                draw_line(0., endy, window.size().x as f32, starty, window);
+            // Line in negative
+            else {
+                // Compute again mpz_end in floating point
+                let temp = window.size().x as f32 * 1.0 / self.pixel_size + start_i64 as f32;
+                for i in 1..n {
+                    let starty = -1.0 / i as f32 * temp as f32 * self.pixel_size
+                        - self.start_p as f32 * self.pixel_size;
+                    let endy = -1.0 / i as f32
+                        * (temp as f32 * self.pixel_size - window.size().x as f32)
+                        - self.start_p as f32 * self.pixel_size;
+                    draw_line(0., endy, window.size().x as f32, starty, window);
+                }
             }
         }
     }
@@ -104,34 +90,32 @@ impl Renderer {
         &mut self,
         buffer: &mut Vec<u8>,
         image_width: usize,
-        x: f32,
-        y: f32,
-        size: f32,
+        x: usize,
+        y: usize,
+        size: usize,
         color: f32,
     ) {
-        for i in 0..size as u32 {
-            for j in 0..size as u32 {
-                buffer[(y * size + j as f32) as usize * image_width
-                    + (x * size + i as f32) as usize] = ((255.0 * color).ceil()) as u8;
+        for i in 0..size {
+            for j in 0..size {
+                buffer[(y * size + j) * image_width + (x * size + i)] =
+                    ((255.0 * color).ceil()) as u8;
             }
         }
     }
 
     #[cfg(feature = "graphic")]
-    pub fn fill_buffer(&mut self, buffer: &mut Image, x: f32, y: f32, size: f32, color: f32) {
-        for i in 0..size as u32 {
-            for j in 0..size as u32 {
-                unsafe {
-                    buffer.set_pixel(
-                        (x * size + i as f32) as u32,
-                        (y * size + j as f32) as u32,
-                        Color::rgb(
-                            (255.0 * color).ceil() as u8,
-                            (255.0 * color).ceil() as u8,
-                            (255.0 * color).ceil() as u8,
-                        ),
-                    );
-                }
+    pub fn fill_buffer(&mut self, buffer: &mut Image, x: usize, y: usize, size: usize, color: f32) {
+        for i in 0..size {
+            for j in 0..size {
+                let _ = buffer.set_pixel(
+                    (x * size + i) as u32,
+                    (y * size + j) as u32,
+                    Color::rgb(
+                        (255.0 * color).ceil() as u8,
+                        (255.0 * color).ceil() as u8,
+                        (255.0 * color).ceil() as u8,
+                    ),
+                );
             }
         }
     }
@@ -165,35 +149,27 @@ impl Renderer {
             * (1.0 / self.pixel_size).ceil()) as u64
             + 1;
         println!(
-            "Start generating texture with pixel size: {}, n: {}, p: {}, delta_n: {}, delta_p: {}",
-            self.pixel_size,
-            utils_mpz_to_string(&mut self.start_index_mpz),
-            self.start_p,
-            delta_n,
-            delta_p
+            "Start generating texture in mode {} with pixel size: {}, n: {}, p: {}, delta_n: {}, delta_p: {}",
+            self.mode, self.pixel_size, self.start_index, self.start_p, delta_n, delta_p
         );
 
         // Initialize the mpz at the right side of the generation
-        let mut mpz_start =
-            utils_mpz_from_u64(image_width as u64 * (1.0 / self.pixel_size).ceil() as u64 - 1);
-        utils_mpz_add_mpz(mpz_start.borrow_mut(), self.start_index_mpz.borrow_mut());
+        let right_index = self.start_index.clone()
+            + (image_width as u64 * (1.0 / self.pixel_size).ceil() as u64 - 1);
 
         // Initialize buffer
         let mut buffer = Image::new_solid(image_width, image_height, Color::BLACK).unwrap();
 
-        init_serie(
-            ((image_height as f32 / upixel_size).floor() * (1.0 / self.pixel_size).ceil()) as u64
-                + self.start_p
-                + 1
-                - 1,
-        );
-
         let mut progressbar = progressbar::Progressbar::new();
 
+        let elt_per_pix = (1.0 / self.pixel_size).ceil() as usize;
+        let elt_per_pix_square = (elt_per_pix * elt_per_pix) as f32;
+        let pix_per_elt = self.pixel_size.ceil() as usize;
+
         // Loop over the image size divided by the pixel size
-        for y in 0_u32..(image_height as f32 / upixel_size).floor() as u32 {
+        for y in 0_usize..(image_height as usize / pix_per_elt) {
             // Update progress bar and show the image sometimes
-            progressbar.update(y.pow(2) as f32 / (image_height / upixel_size as u32).pow(2) as f32);
+            progressbar.update(y as f32 / (image_height as usize / pix_per_elt) as f32);
             progressbar.show();
             let event = manage_events(window, self);
             if event == 1 {
@@ -203,7 +179,8 @@ impl Renderer {
                 progressbar.clear();
                 return false;
             }
-            if (image_height / SHOW_IMAGE_TIMES) != 0 && y % (image_height / SHOW_IMAGE_TIMES) == 0
+            if (image_height as usize / SHOW_IMAGE_TIMES) != 0
+                && y % (image_height as usize / SHOW_IMAGE_TIMES) == 0
             {
                 self.generate_texture(&buffer, image_width, image_height);
                 window.draw(&self.current_sprite);
@@ -211,74 +188,83 @@ impl Renderer {
                 window.display();
             }
 
-            let current_p = ((y as f32) * (1.0 / self.pixel_size).ceil()) as u64 + self.start_p + 1;
-            let sequence = self.fibo.generate(
-                current_p,
-                ((image_width as f32) * (1.0 / self.pixel_size).ceil()) as u64,
-                mpz_start,
-            );
+            let current_p = y * elt_per_pix + self.start_p + 1;
             match self.mode {
-                // Average over n
+                // Average over n*n
                 0 => {
-                    for x in 0..(image_width as f32 / upixel_size).floor() as u32 {
-                        let mut sum = 0;
-                        for i in 0..(1.0 / self.pixel_size).ceil() as usize {
-                            sum += sequence
-                                [((x as f32) * (1.0 / self.pixel_size).ceil()) as usize + i]
-                                as u32;
+                    let sequence = Itertools::chunks(
+                        self.fibo.generate(
+                            current_p ,
+                            image_width as usize * elt_per_pix,
+                            right_index.clone(),
+                        ),
+                        elt_per_pix,
+                    )
+                    .into_iter()
+                    .map(|chunk| chunk.map(|x| x as usize).sum::<usize>())
+                    .collect::<Vec<_>>();
+                    for x in 0..image_width as usize {
+                        let sum = sequence[x];
+                        self.fill_buffer(
+                            &mut buffer,
+                            image_width as usize - x - 1,
+                            y,
+                            pix_per_elt,
+                            sum as f32 / elt_per_pix as f32,
+                        );
+                    }
+                }
+                2 => {
+                    let sequences = (0..elt_per_pix)
+                        .map(|i| {
+                            Itertools::chunks(
+                                self.fibo.generate(
+                                    current_p + i,
+                                    image_width as usize * elt_per_pix,
+                                    right_index.clone(),
+                                ),
+                                elt_per_pix,
+                            )
+                            .into_iter()
+                            .map(|chunk| chunk.map(|x| x as usize).sum::<usize>())
+                            .collect::<Vec<_>>()
+                        })
+                        .collect::<Vec<_>>();
+                    for x in 0..image_width as usize {
+                        let mut sum: usize = 0;
+                        for c in sequences.iter() {
+                            sum += c[x];
                         }
                         self.fill_buffer(
                             &mut buffer,
-                            x as f32,
-                            y as f32,
-                            upixel_size as f32,
-                            sum as f32 / (1.0 / self.pixel_size).ceil() as f32,
+                            image_width as usize - x - 1,
+                            y,
+                            pix_per_elt,
+                            sum as f32 / elt_per_pix_square,
                         );
                     }
                 }
                 // Take only once cell
                 1 => {
-                    for x in 0..(image_width as f32 / upixel_size).floor() as u32 {
-                        if sequence[((x as f32) * (1.0 / self.pixel_size).ceil()) as usize] {
+                    let sequence = self
+                        .fibo
+                        .generate(
+                            current_p,
+                            image_width as usize * elt_per_pix,
+                            right_index.clone(),
+                        )
+                        .step_by(elt_per_pix)
+                        .collect::<Vec<_>>();
+                    for (x, val) in (0..(image_width as usize / pix_per_elt)).zip(sequence) {
+                        if val {
                             self.fill_buffer(
                                 &mut buffer,
-                                x as f32,
-                                y as f32,
-                                upixel_size as f32,
+                                image_width as usize - x - 1,
+                                y,
+                                pix_per_elt,
                                 1.0,
                             );
                         }
-                    }
-                }
-                // Average over n and p
-                2 => {
-                    let mut sequences = vec![];
-                    for j in 0..(1.0 / self.pixel_size).ceil() as usize {
-                        sequences.push(self.fibo.generate(
-                            ((y as f32) * (1.0 / self.pixel_size).ceil()) as u64
-                                + self.start_p
-                                + 1
-                                + j as u64,
-                            ((image_width as f32) * (1.0 / self.pixel_size).ceil()) as u64,
-                            mpz_start,
-                        ));
-                    }
-                    for x in 0..(image_width as f32 / upixel_size).floor() as u32 {
-                        let mut sum = 0;
-                        for i in 0..(1.0 / self.pixel_size).ceil() as usize {
-                            for j in 0..(1.0 / self.pixel_size).ceil() as usize {
-                                sum += sequences[i]
-                                    [((x as f32) * (1.0 / self.pixel_size).ceil()) as usize + j]
-                                    as u32;
-                            }
-                        }
-                        self.fill_buffer(
-                            &mut buffer,
-                            x as f32,
-                            y as f32,
-                            upixel_size as f32,
-                            sum as f32 / (1.0 / (self.pixel_size * self.pixel_size)).ceil() as f32,
-                        );
                     }
                 }
                 _ => {}
@@ -305,107 +291,107 @@ impl Renderer {
             + 1;
         println!(
             "Start generating texture with pixel size: {}, n: {}, p: {}, delta_n: {}, delta_p: {}",
-            self.pixel_size,
-            utils_mpz_to_string(&mut self.start_index_mpz),
-            self.start_p,
-            delta_n,
-            delta_p
+            self.pixel_size, self.start_index, self.start_p, delta_n, delta_p
         );
 
         // Initialize the mpz at the right side of the generation
-        let mut mpz_start =
-            utils_mpz_from_u64(image_width as u64 * (1.0 / self.pixel_size).ceil() as u64 - 1);
-        utils_mpz_add_mpz(mpz_start.borrow_mut(), self.start_index_mpz.borrow_mut());
+        let right_index = self.start_index.clone()
+            + (image_width as u64 * (1.0 / self.pixel_size).ceil() as u64 - 1);
 
         // Initialize buffer
         let mut headless_buffer: Vec<u8> = vec![0; (image_width * image_height) as usize];
 
-        init_serie(
-            ((image_height as f32 / upixel_size).floor() * (1.0 / self.pixel_size).ceil()) as u64
-                + self.start_p
-                + 1
-                - 1,
-        );
-
         let mut progressbar = progressbar::Progressbar::new();
 
+        let elt_per_pix = (1.0 / self.pixel_size).ceil() as usize;
+        let elt_per_pix_square = (elt_per_pix * elt_per_pix) as f32;
+        let pix_per_elt = self.pixel_size.ceil() as usize;
+
         // Loop over the image size divided by the pixel size
-        for y in 0_u32..(image_height as f32 / upixel_size).floor() as u32 {
+        for y in 0_usize..(image_height as usize / pix_per_elt) {
             // Update progress bar and show the image sometimes
-            progressbar.update(y.pow(2) as f32 / (image_height / upixel_size as u32).pow(2) as f32);
+            progressbar.update(y as f32 / (image_height as usize / pix_per_elt) as f32);
             progressbar.show();
 
-            let current_p = ((y as f32) * (1.0 / self.pixel_size).ceil()) as u64 + self.start_p + 1;
-            let sequence = self.fibo.generate(
-                current_p,
-                ((image_width as f32) * (1.0 / self.pixel_size).ceil()) as u64,
-                mpz_start,
-            );
+            let current_p = y * elt_per_pix + self.start_p + 1;
             match self.mode {
                 // Average over n
                 0 => {
-                    for x in 0..(image_width as f32 / upixel_size).floor() as u32 {
-                        let mut sum = 0;
-                        for i in 0..(1.0 / self.pixel_size).ceil() as usize {
-                            sum += sequence
-                                [((x as f32) * (1.0 / self.pixel_size).ceil()) as usize + i]
-                                as u32;
+                    let sequence = Itertools::chunks(
+                        self.fibo.generate(
+                            current_p,
+                            image_width as usize * elt_per_pix,
+                            right_index.clone(),
+                        ),
+                        elt_per_pix,
+                    )
+                    .into_iter()
+                    .map(|chunk| chunk.map(|x| x as usize).sum::<usize>())
+                    .collect::<Vec<_>>();
+                    for x in 0..image_width as usize {
+                        let sum: usize = sequence[x];
+                        self.fill_buffer_headless(
+                            &mut headless_buffer,
+                            image_width as usize,
+                            image_width as usize - x - 1,
+                            y,
+                            pix_per_elt,
+                            sum as f32 / elt_per_pix as f32,
+                        );
+                    }
+                }
+                2 => {
+                    let sequences = (0..elt_per_pix)
+                        .map(|i| {
+                            Itertools::chunks(
+                                self.fibo.generate(
+                                    current_p + i,
+                                    image_width as usize * elt_per_pix,
+                                    right_index.clone(),
+                                ),
+                                elt_per_pix,
+                            )
+                            .into_iter()
+                            .map(|chunk| chunk.map(|x| x as usize).sum::<usize>())
+                            .collect::<Vec<_>>()
+                        })
+                        .collect::<Vec<_>>();
+                    for x in 0..image_width as usize {
+                        let mut sum: usize = 0;
+                        for c in sequences.iter() {
+                            sum += c[x];
                         }
                         self.fill_buffer_headless(
                             &mut headless_buffer,
                             image_width as usize,
-                            x as f32,
-                            y as f32,
-                            upixel_size as f32,
-                            sum as f32 / (1.0 / self.pixel_size).ceil() as f32,
+                            image_width as usize - x - 1,
+                            y,
+                            pix_per_elt,
+                            sum as f32 / elt_per_pix_square,
                         );
                     }
                 }
                 // Take only once cell
                 1 => {
-                    for x in 0..(image_width as f32 / upixel_size).floor() as u32 {
-                        if sequence[((x as f32) * (1.0 / self.pixel_size).ceil()) as usize] {
+                    let sequence = self
+                        .fibo
+                        .generate(
+                            current_p,
+                            image_width as usize / pix_per_elt,
+                            right_index.clone(),
+                        )
+                        .collect::<Vec<_>>();
+                    for (x, val) in (0..(image_width as usize / pix_per_elt)).zip(sequence) {
+                        if val {
                             self.fill_buffer_headless(
                                 &mut headless_buffer,
                                 image_width as usize,
-                                x as f32,
-                                y as f32,
-                                upixel_size as f32,
+                                image_width as usize - x - 1,
+                                y,
+                                pix_per_elt,
                                 1.0,
                             );
                         }
-                    }
-                }
-                // Average over n and p
-                2 => {
-                    let mut sequences = vec![];
-                    for j in 0..(1.0 / self.pixel_size).ceil() as usize {
-                        sequences.push(self.fibo.generate(
-                            ((y as f32) * (1.0 / self.pixel_size).ceil()) as u64
-                                + self.start_p
-                                + 1
-                                + j as u64,
-                            ((image_width as f32) * (1.0 / self.pixel_size).ceil()) as u64,
-                            mpz_start,
-                        ));
-                    }
-                    for x in 0..(image_width as f32 / upixel_size).floor() as u32 {
-                        let mut sum = 0;
-                        for i in 0..(1.0 / self.pixel_size).ceil() as usize {
-                            for j in 0..(1.0 / self.pixel_size).ceil() as usize {
-                                sum += sequences[i]
-                                    [((x as f32) * (1.0 / self.pixel_size).ceil()) as usize + j]
-                                    as u32;
-                            }
-                        }
-                        self.fill_buffer_headless(
-                            &mut headless_buffer,
-                            image_width as usize,
-                            x as f32,
-                            y as f32,
-                            upixel_size as f32,
-                            sum as f32 / (1.0 / (self.pixel_size * self.pixel_size)).ceil() as f32,
-                        );
                     }
                 }
                 _ => {}
@@ -428,74 +414,48 @@ impl Renderer {
     #[cfg(feature = "graphic")]
     // Move the start index to the right, to center the screen on the next power of 2
     pub fn move_right_next_power_of_2(&mut self, window: &mut RenderWindow) {
-        // Get the position at the center of the screen
-        let mut center = utils_mpz_from_u64(
-            (window.size().x as f32 * (1.0 / self.pixel_size)).floor() as u64 / 2,
-        );
-        utils_mpz_add_mpz(center.borrow_mut(), self.start_index_mpz.borrow_mut());
+        use num::FromPrimitive;
+        let decalage = (window.size().x as f32 * (1.0 / self.pixel_size)).floor() as u64 / 2;
+        self.start_index += decalage;
         // Get the next power of 2
-        let mut next_power_of_2 = utils_mpz_from_u64(1);
-        while utils_mpz_compare_mpz(next_power_of_2.borrow_mut(), center.borrow_mut()) <= 0 {
-            unsafe {
-                mpz_mul_ui(
-                    next_power_of_2.borrow_mut(),
-                    next_power_of_2.borrow_mut(),
-                    2,
-                );
-            }
+        let mut next_power_of_2 = BigInt::from_u8(2).unwrap();
+        while next_power_of_2 <= self.start_index {
+            next_power_of_2 *= 2;
         }
-        // COmpute the new start index (next power of 2 - half of the screen)
-        utils_mpz_sub_u64(
-            next_power_of_2.borrow_mut(),
-            (window.size().x as f32 * (1.0 / self.pixel_size)).floor() as u64 / 2,
-        );
-        self.start_index_mpz = next_power_of_2;
+        self.start_index = next_power_of_2 - decalage;
     }
 
     #[cfg(feature = "graphic")]
     // Move the start index to the left, center on the previous power of two
     pub fn move_left_previous_power_of_two(&mut self, window: &mut RenderWindow) {
-        // Get the position at the center of the screen
-        let mut center = utils_mpz_from_u64(
-            (window.size().x as f32 * (1.0 / self.pixel_size)).floor() as u64 / 2,
-        );
-        utils_mpz_add_mpz(center.borrow_mut(), self.start_index_mpz.borrow_mut());
-        // Get the next power of 2
-        let mut next_power_of_2 = utils_mpz_from_u64(1);
-        while utils_mpz_compare_mpz(next_power_of_2.borrow_mut(), center.borrow_mut()) < 0 {
-            unsafe {
-                mpz_mul_ui(
-                    next_power_of_2.borrow_mut(),
-                    next_power_of_2.borrow_mut(),
-                    2,
-                );
-            }
-        }
-        // Divide by two to get the previous power of two
-        utils_mpz_divexact_u64(next_power_of_2.borrow_mut(), 2);
+        use num::FromPrimitive;
 
-        // COmpute the new start index (next power of 2 - half of the screen)
-        utils_mpz_sub_u64(
-            next_power_of_2.borrow_mut(),
-            (window.size().x as f32 * (1.0 / self.pixel_size)).floor() as u64 / 2,
-        );
-        self.start_index_mpz = next_power_of_2;
+        let decalage = (window.size().x as f32 * (1.0 / self.pixel_size)).floor() as u64 / 2;
+        // Get the position at the center of the screen
+        self.start_index += decalage;
+        // Get the next power of 2
+        let mut next_power_of_2 = BigInt::from_u8(2).unwrap();
+        while next_power_of_2 < self.start_index {
+            next_power_of_2 *= 2;
+        }
+
+        self.start_index = next_power_of_2 / 2 - decalage;
     }
 
     #[cfg(feature = "graphic")]
     // Move the start p index to the bottom, center on the next power of two
     pub fn move_bottom_next_power_of_two(&mut self, window: &mut RenderWindow) {
         // Get the position at the center of the screen
-        let center = (window.size().y as f32 * (1.0 / self.pixel_size)).floor() as u64 / 2;
+        let center = (window.size().y as f32 * (1.0 / self.pixel_size)).floor() as usize / 2;
         // Get the next power of 2
-        let mut next_power_of_2 = 1;
+        let mut next_power_of_2 = 2;
         while next_power_of_2 <= center + self.start_p {
             next_power_of_2 *= 2;
         }
         // Compute the new start index (next power of 2 - half of the screen)
         let temp = next_power_of_2 as i64 - center as i64;
         if temp > 0 {
-            self.start_p = temp as u64;
+            self.start_p = temp as usize;
         } else {
             self.start_p = 0;
         }
@@ -505,9 +465,9 @@ impl Renderer {
     // Move the start p index to the top, center on the previous power of two
     pub fn move_top_previous_power_of_two(&mut self, window: &mut RenderWindow) {
         // Get the position at the center of the screen
-        let center = (window.size().y as f32 * (1.0 / self.pixel_size)).floor() as u64 / 2;
+        let center = (window.size().y as f32 * (1.0 / self.pixel_size)).floor() as usize / 2;
         // Get the next power of 2
-        let mut next_power_of_2 = 1;
+        let mut next_power_of_2 = 2;
         while next_power_of_2 < center + self.start_p {
             next_power_of_2 *= 2;
         }
@@ -516,7 +476,7 @@ impl Renderer {
         // Compute the new start index (next power of 2 - half of the screen)
         let temp = next_power_of_2 as i64 - center as i64;
         if temp > 0 {
-            self.start_p = temp as u64;
+            self.start_p = temp as usize;
         } else {
             self.start_p = 0;
         }
@@ -579,14 +539,13 @@ impl Renderer {
     pub fn draw_position(&mut self, window: &mut RenderWindow) {
         // Draw text
         let font = sfml::graphics::Font::from_file("assets/monospacebold.ttf").unwrap();
-        let mut temp_mpz =
-            utils_mpz_from_u64((self.mouse_x as f32 * (1.0 / self.pixel_size)).floor() as u64);
-        utils_mpz_add_mpz(temp_mpz.borrow_mut(), self.start_index_mpz.borrow_mut());
+        let temp_mpz = self.start_index.clone()
+            + ((self.mouse_x as f32 * (1.0 / self.pixel_size)).floor() as u64);
         let mut text = sfml::graphics::Text::new(
             &format!(
                 "n: {}, p: {}",
-                utils_mpz_to_string(temp_mpz.borrow_mut()),
-                self.start_p + (self.mouse_y as f32 * (1.0 / self.pixel_size)).floor() as u64
+                temp_mpz,
+                self.start_p + (self.mouse_y as f32 * (1.0 / self.pixel_size)).floor() as usize
             ),
             &font,
             15,

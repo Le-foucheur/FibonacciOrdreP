@@ -645,7 +645,7 @@ Pour $p --> +oo$, on a, pour $abs(x) < min(1,rho_p), sigma_p (x) tend(p, +oo) 1/
   center,
 )[= Étude préliminaire de $display(sum_(i_1 = 0)^(n-1) sum_(i_2 = 0)^(i_1 - 1) dots.c sum_(i_k = 0)^(i_(k-1) - 1) 1)$]
 \
-Pour les besoins de l’étude des $(F_n^((p)))$, nous avons besoins d’étudier et de battre un formule explicite\
+Pour les besoins de l’étude des $(F_n^((p)))$, nous avons besoins d’étudier et de trouver un formule explicite\
 
 de la somme suivante $sum_(i_1 = 0)^(n-1) sum_(i_2 = 0)^(i_1 - 1) dots.c sum_(i_k = 0)^(i_(k-1) - 1) 1$
 

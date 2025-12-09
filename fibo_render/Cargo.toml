@@ -10,6 +10,9 @@ sfml = { version = "0.24.0", optional = true }
 png = "0.17.13"
 libc-stdhandle = "0.1.0"
 libc = "0.2"
+algo = { path = "../algo_rs/algo"}
+num = { version = "0.4.3", features = ["std", "alloc", "num-bigint"] }
+itertools = "0.14.0"
 
 [features]
 graphic = ["dep:sfml"]
