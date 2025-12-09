@@ -1,5 +1,6 @@
-use std::{borrow::BorrowMut, io::Write};
+use std::io::Write;
 
+use num::{BigInt, Num};
 use sfml::{
     cpp::FBox,
     graphics::{RenderTarget, RenderWindow},
@@ -9,7 +10,6 @@ use sfml::{
 use crate::{
     command_line::HELP_MESSAGE,
     constants::MOVE_STEP,
-    gmp_utils::{utils_mpz_add_u64, utils_mpz_set_string, utils_mpz_sub_u64},
     renderer::Renderer,
 };
 
@@ -63,21 +63,21 @@ pub fn manage_events(window: &mut RenderWindow, renderer: &mut Renderer) -> u8 {
                 }
                 sfml::window::Key::Right => {
                     if Key::LShift.is_pressed() {
-                        utils_mpz_add_u64(renderer.start_index_mpz.borrow_mut(), 1);
+                        renderer.start_index += 1;
                     } else if Key::LControl.is_pressed() {
                         renderer.move_right_next_power_of_2(window);
                     } else {
-                        utils_mpz_add_u64(renderer.start_index_mpz.borrow_mut(), MOVE_STEP);
+                        renderer.start_index += MOVE_STEP;
                     }
                     result = 1;
                 }
                 sfml::window::Key::Left => {
                     if Key::LShift.is_pressed() {
-                        utils_mpz_sub_u64(renderer.start_index_mpz.borrow_mut(), 1);
+                        renderer.start_index -= 1;
                     } else if Key::LControl.is_pressed() {
                         renderer.move_left_previous_power_of_two(window);
                     } else {
-                        utils_mpz_sub_u64(renderer.start_index_mpz.borrow_mut(), MOVE_STEP);
+                        renderer.start_index -= MOVE_STEP;
                     }
                     result = 1;
                 }
@@ -108,10 +108,11 @@ pub fn manage_events(window: &mut RenderWindow, renderer: &mut Renderer) -> u8 {
                     std::io::stdout().flush().unwrap();
                     let mut input = String::new();
                     std::io::stdin().read_line(&mut input).unwrap();
-                    utils_mpz_set_string(
-                        input.trim().to_string(),
-                        renderer.start_index_mpz.borrow_mut(),
-                    );
+                    
+                    BigInt::from_str_radix(
+                        input.trim(),
+                            10).and_then(|x| {renderer.start_index = x;Ok(())})
+                    ;
                     result = 1;
                 }
                 sfml::window::Key::B => {

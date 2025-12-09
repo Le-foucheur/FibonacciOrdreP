@@ -1,4 +1,4 @@
-use crate::gmp_utils::{utils_mpz_set_string, mpz_t};
+use num::{BigInt, Num};
 
 pub const HELP_MESSAGE: &str = "Command line usage:
     -n <n_start_index>: start index of the sequence (default=0)
@@ -67,13 +67,14 @@ pub fn load_argument_f32(args: &mut Vec<String>, arg: &mut f32, msg: &str) {
     *arg = args[1].parse::<f32>().expect(msg);
     _end_argument(args);
 }
-pub fn load_argument_mpz(args: &mut Vec<String>, arg: &mut mpz_t, msg: &str) {
+pub fn load_argument_bigint(args: &mut Vec<String>, arg: &mut BigInt, msg: &str) {
     if _start_load_argument(args, msg) {
         return;
     }
     let mut temp = args[1].parse::<String>().expect(msg);
     temp = temp.replace("_", "");
-    utils_mpz_set_string(temp, arg);
+
+    *arg = BigInt::from_str_radix(temp.as_str(), 10).unwrap();
     _end_argument(args);
 }
 
