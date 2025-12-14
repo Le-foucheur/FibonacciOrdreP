@@ -1,6 +1,7 @@
 [workspace]
 resolver = "3"
-members = ["algo","runner_gpu", "shader"]
+members = ["algo","runner_gpu"]
+exclude = ["./runner_gpu/shader"]
 
 [workspace.package]
 version = "0.1.0"
@@ -8,6 +9,8 @@ authors = ["Louwen FRICOUT"]
 edition = "2024"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/Le-foucheur/FibonacciOrdreP"
+
+
 
 [profile.release.build-override]
 opt-level = 3

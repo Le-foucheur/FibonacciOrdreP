@@ -1,13 +1,9 @@
-#![no_std]
-#![feature(array_windows, likely_unlikely, iter_array_chunks)]
-
 use core::{
     hint::{likely, unlikely},
     iter::{repeat_n, repeat_with},
     mem::swap,
 };
-pub mod bit_iterator;
-
+use crate::bit_iterator;
 /// turn abc, def in daebcf  (b will be shifted once more / a rightmost bit will stay there)
 /// see https://graphics.stanford.edu/~seander/bithacks.html#InterleaveBMN for method
 fn interleave(a: u32, b: u32) -> u64 {
