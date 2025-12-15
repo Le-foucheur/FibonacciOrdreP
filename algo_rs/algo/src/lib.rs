@@ -144,9 +144,9 @@ pub struct Parametters {
 
 pub fn setup(p: usize) -> Parametters {
     //we need at least that much valid blocs for extend to work without out of bound access
-    let valid = p.div_ceil(16) + 2;
+    let valid = p.div_ceil(32) + 2;
     //we discard (p.div_ceil(2).div_ceil(32)+1)+1 blocs in shifterator => to produce "valid" valids bloc, we need that much more
-    let ranges_size = valid + p.div_ceil(16) + 2;
+    let ranges_size = valid + p.div_ceil(64) + 2;
 
     Parametters {
         p,

@@ -1,5 +1,4 @@
 #![feature(array_windows, likely_unlikely, iter_array_chunks)]
-#![allow(unexpected_cfgs)]
 #![cfg_attr(target_arch = "spirv", no_std)]
 #![deny(warnings)]
 
@@ -18,7 +17,7 @@ use algo::*;
 pub fn main_cs(
     #[spirv(global_invocation_id)] id: UVec3,
     #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] the_big_buffer: &mut [u32],
-    #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] output_buffer: &mut [u32],
+    #[spirv(storage_buffer, descriptor_set = 1, binding = 0)] output_buffer: &mut [u32],
 ) {
     fn work<'a>(idx: usize, mut the_big_buffer: &'a mut [u32], mut output_buffer: &'a mut [u32]) {
         let work_buffer_size = the_big_buffer[0] as usize;
@@ -55,6 +54,7 @@ pub fn main_cs(
             )
         };
         let params = Parametters { p, valid };
+
         calculator(buf1, buf2, output, params, step_num, steps_as_u32, n_sign);
     }
     work(id.x as usize, the_big_buffer, output_buffer)

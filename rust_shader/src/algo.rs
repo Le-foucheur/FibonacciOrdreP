@@ -1,9 +1,64 @@
+use crate::bit_iterator::BitIterable;
 use core::{
     hint::{likely, unlikely},
-    iter::{repeat_n, repeat_with},
     mem::swap,
+    ops::{Index, IndexMut},
 };
-use crate::bit_iterator;
+
+#[derive(Clone, Copy)]
+pub struct Slice<'a, T> {
+    buffer: *mut &'a mut [T],
+    pub start: usize,
+    len: usize,
+}
+
+impl<'a, T> IndexMut<usize> for Slice<'a, T> {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        unsafe { &mut (*self.buffer)[self.start + index] }
+    }
+}
+
+impl<'a, T> Index<usize> for Slice<'a, T> {
+    type Output = T;
+    fn index(&self, index: usize) -> &Self::Output {
+        unsafe { &(*self.buffer)[self.start + index] }
+    }
+}
+impl<'a, T> Slice<'a, T> {
+    pub unsafe fn new(buffer: *mut &'a mut [T], start: usize, len: usize) -> Self {
+        Self { buffer, start, len }
+    }
+    pub fn len(&self) -> usize {
+        self.len
+    }
+    pub fn iter_val(self) -> SliceIterVal<'a, T> {
+        SliceIterVal(self)
+    }
+    pub fn skip(self, len: usize) -> Self {
+        Self {
+            buffer: self.buffer,
+            start: self.start + len,
+            len: self.len - len,
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct SliceIterVal<'a, T>(Slice<'a, T>);
+impl<'a, T: Copy + 'a> Iterator for SliceIterVal<'a, T> {
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.0.len == 0 {
+            None
+        } else {
+            let next = unsafe { (*self.0.buffer)[self.0.start] };
+            self.0.start += 1;
+            self.0.len -= 1;
+            Some(next)
+        }
+    }
+}
 /// turn abc, def in daebcf  (b will be shifted once more / a rightmost bit will stay there)
 /// see https://graphics.stanford.edu/~seander/bithacks.html#InterleaveBMN for method
 fn interleave(a: u32, b: u32) -> u64 {
@@ -25,68 +80,100 @@ fn interleave(a: u32, b: u32) -> u64 {
 }
 
 /// 32 less significants bits of snd|fst >> k
-fn shift(fst: u32, snd: u32, k: u8) -> u32 {
+fn shift(fst: u32, snd: u32, k: u32) -> u32 {
     let x = (snd as u64) << 32 | (fst as u64);
     (x >> k) as u32
 }
 
-fn shifterator(slice: &[u32], amount: usize) -> impl Iterator<Item = u32> {
+struct Shifterator<'a> {
+    slice: Slice<'a, u32>,
+    amount: u32,
+}
+
+impl<'a> Iterator for Shifterator<'a> {
+    type Item = u32;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.slice.len() < 2 {
+            None
+        } else {
+            let fst = self.slice[0];
+            let snd = self.slice[1];
+            Some(shift(fst, snd, self.amount))
+        }
+    }
+}
+
+fn shifterator<'a>(slice: Slice<'a, u32>, amount: usize) -> Shifterator<'a> {
     let completes = amount / 32;
-    let partial = amount as u8 % 32;
+    let partial = amount as u32 % 32;
 
-    slice[completes..]
-        .array_windows::<2>()
-        .map(move |&[fst, snd]| shift(fst, snd, partial))
+    Shifterator {
+        slice: slice.skip(completes),
+        amount: partial,
+    }
 }
 
-fn xor(t: (u32, u32)) -> u32 {
-    t.0 ^ t.1
+#[inline(always)]
+fn xor(a:u32, b:u32) -> u32 {
+    a ^ b
 }
 
-fn ranger(input: &[u32], output: &mut [u32], p: usize, add_one: bool) {
-    let vanilla = input.iter().copied();
-    let out_iter = output.chunks_exact_mut(2);
+fn ranger<'a>(input: Slice<'a, u32>, output: Slice<'a, u32>, p: usize, add_one: bool) {
+    struct XorMap<I,J>(I,J);
+    impl<I: Iterator<Item = u32>,J:Iterator<Item = u32>> Iterator for XorMap<I,J> {
+        type Item = u32;
+        #[allow(clippy::manual_map)]
+        #[inline(always)]
+        fn next(&mut self) -> Option<Self::Item> {
+            match (self.0.next(),self.1.next()) {
+                (Some(a),Some(b)) => Some(xor(a,b)),
+                _ => None,
+            }
+        }
+    }
 
+    let vanilla = input.iter_val();
+    #[inline(always)]
     fn assign<'a>(
-        output: impl Iterator<Item = &'a mut [u32]>,
-        first: impl Iterator<Item = u32>,
-        second: impl Iterator<Item = u32>,
+        mut output: Slice<'a, u32>,
+        mut first: impl Iterator<Item = u32>,
+        mut second: impl Iterator<Item = u32>,
     ) {
-        let mut iterator = output.zip(first.zip(second));
-        while let Some(([o1, o2], (fst, snd))) = iterator.next() {
+        let mut output_point = 0;
+        while let (Some(fst), Some(snd)) = (first.next(), second.next()) {
             let inter = interleave(fst, snd);
-            *o1 = inter as u32;
-            *o2 = (inter >> 32) as u32
+            output[output_point] = inter as u32;
+            output[output_point + 1] = (inter >> 32) as u32;
+            output_point += 2;
         }
     }
 
     match (p.is_multiple_of(2), add_one) {
         (true, true) => {
-            let mixed = vanilla.clone().zip(shifterator(input, p / 2)).map(xor);
-            assign(out_iter, mixed, vanilla);
-            
+            let mixed = XorMap(input.iter_val(),shifterator(input, p / 2));
+            assign(output, mixed, vanilla);
         }
         (true, false) => {
-            let mixed = shifterator(input, 1).zip(shifterator(input, p/2+1)).map(xor);
-            assign(out_iter, vanilla, mixed);
-        },
+            let mixed = XorMap(shifterator(input, 1),shifterator(input, p / 2 + 1));
+            assign(output, vanilla, mixed);
+        }
         (false, true) => {
-            let mixed = vanilla.clone().zip(shifterator(input, p.div_ceil(2))).map(xor);
-            assign(out_iter, vanilla, mixed);
-        },
+            let mixed = XorMap(input.iter_val(),shifterator(input, p.div_ceil(2)));
+            assign(output, vanilla, mixed);
+        }
         (false, false) => {
-            let mixed = vanilla.zip(shifterator(input, p.div_ceil(2))).map(xor);
+            let mixed = XorMap(vanilla,shifterator(input, p.div_ceil(2)));
             let shifted_vanilla = shifterator(input, 1);
-            assign(out_iter, mixed, shifted_vanilla);
-        },
+            assign(output, mixed, shifted_vanilla);
+        }
     }
-
 }
 
-fn extend(input: &mut [u32], valid: usize, p: usize) {
+fn extend(mut input: Slice<u32>, valid: usize, p: usize) {
     if likely(p > 32) {
         let complete = p / 32;
-        let partial = (p as u8) % 32;
+        let partial = p % 32;
         for i in valid..input.len() {
             let fst = input[i - complete - 1];
             let snd = input[i - complete];
@@ -104,116 +191,113 @@ fn extend(input: &mut [u32], valid: usize, p: usize) {
         // we keep the p+1 last bits
         x >>= 64 - (p + 1);
 
-        let iter = repeat_with(|| {
+        let mut next = || {
             let bit = (x & 1 != 0) ^ (x & 2 != 0);
             x >>= 1;
             if bit {
                 x |= inserter;
             }
             bit
-        });
+        };
 
-        for (chunk, out) in iter.array_chunks::<32>().zip(input[valid..].iter_mut()) {
+        #[allow(clippy::needless_range_loop)]
+        for i in valid..input.len() {
             let mut res = 0;
-            for bit in chunk.iter().rev() {
-                res <<= 1;
-                if *bit {
-                    res |= 1;
+            let mut inserter = (1_u32) << 31;
+            for _ in 0..32 {
+                if next() {
+                    res |= inserter;
                 }
+                inserter >>= 1;
             }
-            *out = res;
+            input[i] = res;
         }
     }
 }
 
-fn step(input: &[u32], output: &mut [u32], p: usize, valid: usize, add_one: bool) {
+fn step<'a>(input: Slice<'a, u32>, output: Slice<'a, u32>, p: usize, valid: usize, add_one: bool) {
     ranger(input, output, p, add_one);
     extend(output, valid, p);
 }
 
 #[derive(Debug)]
 pub struct Parametters {
-    p: usize,
-    pub ranges_size: usize,
-    valid: usize,
+    pub(crate) p: usize,
+    pub(crate) valid: usize,
 }
-
-pub fn setup(p: usize) -> Parametters {
-    //we need at least that much valid blocs for extend to work without out of bound access
-    let valid = p.div_ceil(16) + 2;
-    //we discard (p.div_ceil(2).div_ceil(32)+1)+1 blocs in shifterator => to produce "valid" valids bloc, we need that much more
-    let ranges_size = valid + p.div_ceil(16) + 2;
-
-    Parametters {
-        p,
-        ranges_size,
-        valid,
+fn value_in_init(p: usize, mut n: usize) -> bool {
+    if n < 2 {
+        return true;
     }
+    n -= 2;
+    if n < p {
+        return false;
+    } else if n == p {
+        return true;
+    }
+    n -= p + 1;
+    if n < (p - 1) {
+        return false;
+    } else if n <= p {
+        return true;
+    }
+    false
 }
 
-fn init(input: &mut [u32], sign: i8, valid: usize, p: usize) {
+fn init(mut input: Slice<u32>, sign: i32, p: usize) {
+    let valid = p.div_ceil(32) + 2;
+
     if likely(p > 32) {
         // we need less than 3*p values, and we know them!
-        let mut iter = repeat_n(true, 2)
-            .chain(repeat_n(false, p))
-            .chain(repeat_n(true, 1))
-            .chain(repeat_n(false, p - 1))
-            .chain(repeat_n(true, 2))
-            .chain(repeat_n(false, p - 2))
-            .chain([true, false, true].iter().copied());
-        match sign {
-            1 => {}
-            0 => {
-                iter.next();
-            }
-            -1 => {
-                iter.next();
-                iter.next();
-            }
-            _ => panic!(),
-        }
-        for (chunk, out) in iter.array_chunks::<32>().zip(input.iter_mut()) {
+        let mut counter = 0;
+        counter += (1 - sign) as usize;
+        #[allow(clippy::needless_range_loop)]
+        for i in 0..valid {
             let mut res = 0;
-            for bit in chunk.iter().rev() {
-                res <<= 1;
-                if *bit {
-                    res |= 1;
+            let mut inserter = (1_u32) << 31;
+            for _ in 0..32 {
+                if value_in_init(p, counter) {
+                    res |= inserter;
                 }
+                inserter >>= 1;
+                counter += 1;
             }
-            *out = res;
+            input[i] = res;
         }
     } else {
         let mut x = 1u64;
         let inserter = 1 << p;
 
-        let mut iter = repeat_with(|| {
+        let mut next = || {
             let bit = x & 1 != 0;
             x >>= 1;
-            if bit && (x&1!=0) {
+            if bit && (x & 1 != 0) {
                 x |= inserter;
             }
             bit
-        });
+        };
         match sign {
             1 => {}
             0 => {
-                iter.next();
+                next();
             }
             -1 => {
-                iter.next();
-                iter.next();
+                next();
+                next();
             }
-            _ => panic!(),
+            _ => {}
         }
-        for (chunk, out) in iter.array_chunks::<32>().zip(input.iter_mut().take(valid)) {
+        #[allow(clippy::needless_range_loop)]
+        for i in 0..valid {
             let mut res = 0;
-            for bit in chunk.iter().rev() {
-                res <<= 1;
-                if *bit {
-                    res |= 1;
+            let mut inserter = (1_u32) << 31;
+            for _ in 0..32 {
+                if next() {
+                    res |= inserter;
                 }
+                inserter >>= 1;
             }
-            *out = res;
+            input[i] = res;
         }
     }
     extend(input, valid, p);
@@ -223,91 +307,38 @@ fn init(input: &mut [u32], sign: i8, valid: usize, p: usize) {
 // fill the output range with the max (rightmost / less significant bit in min index) = F(p,n)
 // n reprensented as magnitude bits in DECREASSING significance (you can use .iter_bits method of bit_iterator::BitIterable) + sign in separate var
 pub fn calculator<'a>(
-    mut scratch1: &'a mut [u32],
-    mut scratch2: &'a mut [u32],
-    output: &mut [u32],
+    mut scratch1: Slice<'a, u32>,
+    mut scratch2: Slice<'a, u32>,
+    output: Slice<'a, u32>,
     param: Parametters,
-    n: impl Iterator<Item = bool>,
-    is_n_negative: bool,
+    num_steps: usize,
+    n: Slice<'a, u32>,
+    n_sign: i32,
 ) {
-    let mut n = n.skip_while(|x| !x).peekable();
-
-    if unlikely(n.peek().is_none()) {
-        init(output, 0, param.valid, param.p);
-    } else {
-        n.next();
-
-        let sign = if is_n_negative { -1 } else { 1 };
-        if unlikely(n.peek().is_none()) {
-            init(output, sign, param.valid, param.p);
-        }
-
-        // Finally, after the special cases the main loop!
-        init(scratch1, sign, param.valid, param.p);
-        //handling negatives
-        let mut n = n.map(|val| {val ^ is_n_negative});
-
-        let mut add_one = n.next().unwrap();
-        
-        for next_add_one in n {
-            step(scratch1, scratch2, param.p, param.valid, add_one);
-
-            swap(&mut scratch1, &mut scratch2);
-            add_one = next_add_one;
-        }
-        step(scratch1, output, param.p, param.valid, add_one);
+    if unlikely(num_steps == 0) {
+        init(output, n_sign, param.p);
     }
-}
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use bit_iterator::BitIterable;
-    //use std::vec::Vec;
-    #[test]
-    fn it_works() {
-        let result = shift(1 << 31, 1, 31);
-        assert_eq!(result, 0b11);
-        let packed = 0b110010u32;
-        let bits = [0, 1, 0, 0, 1, 1].iter().map(|&x| x == 1);
-        for (x, y) in bits.zip(packed.iter_bits()) {
-            assert_eq!(x, y)
-        }
+    init(scratch1, n_sign, param.p);
+    //handling negatives
 
-        assert_eq!(0b10100101, interleave(0b11, 0b1100));
+    let mut steps = n.iter_bits();
+    for _ in 0..(num_steps - 1) {
+        step(
+            scratch1,
+            scratch2,
+            param.p,
+            param.valid,
+            steps.next().unwrap() != 0,
+        );
 
-        for (i, j) in shifterator([0b11, 0b111, 0].as_slice(), 1).zip([1 + (1 << 31), 0b11].iter())
-        {
-            assert_eq!(*j, i)
-        }
-/*
-        let mut output = repeat_n(0, 50).collect::<Vec<_>>();
-        init(output.as_mut_slice(), 1, 3, 33);
-
-        let mut output2 = repeat_n(0, 50).collect::<Vec<_>>();
-        init(output2.as_mut_slice(), 1, 2, 33);
-
-        assert_eq!(*output, *output2);
-
-        let mut output = repeat_n(0, 50).collect::<Vec<_>>();
-        init(output.as_mut_slice(), 0, 3, 34);
-
-        let mut output2 = repeat_n(0, 50).collect::<Vec<_>>();
-        init(output2.as_mut_slice(), 0, 3, 34);
-        let mut output3 = repeat_n(0, 50).collect::<Vec<_>>();
-        ranger(&output2, &mut output3, 34, false);
-        extend(&mut output3, 3, 34);
-
-        assert_eq!(*output, *output3);
-
-        
-        let mut output = repeat_n(0, 50).collect::<Vec<_>>();
-        init(output.as_mut_slice(), 1, 15, 31);
-
-        let mut output2 = repeat_n(0, 50).collect::<Vec<_>>();
-        init(output2.as_mut_slice(), 1, 2, 31);
-
-        assert_eq!(*output, *output2);*/
-
+        swap(&mut scratch1, &mut scratch2);
     }
+    step(
+        scratch1,
+        output,
+        param.p,
+        param.valid,
+        steps.next().unwrap() != 0,
+    );
 }
