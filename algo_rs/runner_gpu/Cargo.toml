@@ -10,3 +10,8 @@ eager2 = "1.1.4"
 
 [build-dependencies]
 spirv-builder = {git = "https://github.com/rust-gpu/rust-gpu"}
+
+[profile.dev]
+debug = true
+[profile.release]
+debug = true
