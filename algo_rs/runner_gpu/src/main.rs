@@ -210,7 +210,7 @@ fn vulkan_compute(
     out_size: u32,
     num_step: u32,
     n_sign: u32,
-    n_steps: impl Iterator<Item = u32> + ExactSizeIterator,
+    n_steps: impl ExactSizeIterator<Item = u32>,
     p_values: impl Iterator<Item = u32> + ExactSizeIterator + Clone,
 ) -> () {
     let p_max = p_values.clone().max().unwrap();
