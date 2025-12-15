@@ -766,7 +766,7 @@ la propriété 10 reste vrais sur $RR$, ce même avec la redéfinition, car l’
 
 ===
 $
-  forall k in NN, forall N in NN, H_k (n) = sum_(i = 0)^(k) alpha_i^k n^i
+  forall k in NN, forall N in NN, S_k (n) = sum_(i = 0)^(k) alpha_i^k n^i
 $
 avec 
 $
@@ -777,13 +777,13 @@ avec les $(B_i)$ les nombre de bernouilli tel que $B_1 = 1/2$
 ==== \
 Montrons par récurrance sur $k$ la propriété précédente :
  - *Initialisation :*
-pour $k = 0$ : soit $n in NN$, On à $H_0 (n) = 1$ et $sum_(i = 0)^0 alpha_i^0 n^i = underbrace(alpha_0^0, = 1) n^0 = 1$\
-On à donc bien que $forall n in NN, H_0 (n) = sum_(i = 0)^0 alpha_i^0 n^i$
+pour $k = 0$ : soit $n in NN$, On à $S_0 (n) = 1$ et $sum_(i = 0)^0 alpha_i^0 n^i = underbrace(alpha_0^0, = 1) n^0 = 1$\
+On à donc bien que $forall n in NN, S_0 (n) = sum_(i = 0)^0 alpha_i^0 n^i$
 
- - *Hérédité :* Soit $k in NN$ tel que $forall n in NN, H_k (n) = sum_(i = 0)^k alpha_i^k n^i$, alors\
+ - *Hérédité :* Soit $k in NN$ tel que $forall n in NN, S_k (n) = sum_(i = 0)^k alpha_i^k n^i$, alors\
  Soit $n in RR$
  $
-  H_(k+1) (x) &= sum_(i = 1)^n H_k (i) = sum_(i = 1)^n sum_(j = 0)^k alpha_j^k i^j  = sum_(j = 0)^k alpha_j^k sum_(i = 1)^n i^j \
+  S_(k+1) (x) &= sum_(i = 1)^n S_k (i) = sum_(i = 1)^n sum_(j = 0)^k alpha_j^k i^j  = sum_(j = 0)^k alpha_j^k sum_(i = 1)^n i^j \
   &= sum_(j = 0)^k alpha_j^k /(j+1) sum_(i = 0)^j binom(j+1,i) B_i n^(j - i +1) \
   &= sum_(j = 0)^k  sum_(i = 0)^j binom(j+1,i) alpha_j^k /(j+1) B_i n^(j - i +1) \
   &= sum_(j = 0)^k  sum_(i = 0)^j binom(j+1,j - i) alpha_j^k /(j+1) B_(j-i) n^(i +1) "avec" i’ = j - i\
@@ -794,11 +794,11 @@ On à donc bien que $forall n in NN, H_0 (n) = sum_(i = 0)^0 alpha_i^0 n^i$
  $
 Ainsi par le principe de récurrance simple :
 $
-  forall k, n in NN, H_k (n) = sum_(i = 0)^k alpha_i^k n^i
+  forall k, n in NN, S_k (n) = sum_(i = 0)^k alpha_i^k n^i
 $
 #QED
 
-#align(center)[= Comportement de (#Fnp) sur $NN$]
+#align(center)[= Comportementà de (#Fnp) sur $NN$]
 
 === \
 $ forall p in NN, forall n in [|0; p|], Fnp = 1 $
