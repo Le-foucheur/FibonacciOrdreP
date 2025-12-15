@@ -1,19 +1,27 @@
+use std::iter::{repeat_n, TrustedLen};
 use std::sync::Arc;
-use vulkano::buffer::{Buffer, BufferCreateInfo, BufferUsage};
+use vulkano::buffer::{Buffer, BufferCreateInfo, BufferUsage, Subbuffer};
 use vulkano::command_buffer::allocator::{
     StandardCommandBufferAllocator, StandardCommandBufferAllocatorCreateInfo,
 };
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage};
 use vulkano::descriptor_set::allocator::StandardDescriptorSetAllocator;
+use vulkano::descriptor_set::layout::DescriptorSetLayout;
 use vulkano::descriptor_set::{DescriptorSet, WriteDescriptorSet};
-use vulkano::device::{Device, DeviceCreateInfo, DeviceFeatures, QueueCreateInfo, QueueFlags};
+use vulkano::device::{
+    Device, DeviceCreateInfo, DeviceFeatures, Queue, QueueCreateInfo, QueueFlags,
+};
 use vulkano::instance::{Instance, InstanceCreateFlags, InstanceCreateInfo};
-use vulkano::memory::allocator::{AllocationCreateInfo, MemoryTypeFilter, StandardMemoryAllocator};
+use vulkano::memory::allocator::{
+    AllocationCreateInfo, FreeListAllocator, GenericMemoryAllocator, MemoryTypeFilter,
+    StandardMemoryAllocator,
+};
 use vulkano::pipeline::compute::ComputePipelineCreateInfo;
 use vulkano::pipeline::layout::PipelineDescriptorSetLayoutCreateInfo;
 use vulkano::pipeline::Pipeline;
 use vulkano::pipeline::PipelineBindPoint;
 use vulkano::pipeline::{ComputePipeline, PipelineLayout, PipelineShaderStageCreateInfo};
+use vulkano::shader::EntryPoint;
 use vulkano::sync::{self, GpuFuture};
 use vulkano::VulkanLibrary;
 
@@ -21,16 +29,30 @@ mod shader_spirv {
     use eager2::lazy;
 
     lazy!(vulkano_shaders::shader! {
+
         bytes: eager!(env!("shader.spv"))
     });
 }
 
 fn main() {
-    vulkan(true);
+    let mut vulkanbloat = vulkan_inital_setup(true);
+
+    let (future, buffer) = vulkan_compute(true, &mut vulkanbloat, data, 1024);
 }
 
-fn vulkan(debug: bool) {
+struct VulkanBloat {
+    memory_allocator: Arc<GenericMemoryAllocator<FreeListAllocator>>,
+    command_buffer_allocator: Arc<StandardCommandBufferAllocator>,
+    queue_family_index: u32,
+    device: Arc<Device>,
+    descriptor_set_allocator: Arc<StandardDescriptorSetAllocator>,
+    queue: Arc<Queue>,
+    input_descriptor_set_layout: Arc<DescriptorSetLayout>,
+    output_descriptor_set_layout: Arc<DescriptorSetLayout>,
+}
+fn vulkan_inital_setup(debug: bool) -> VulkanBloat {
     let library = VulkanLibrary::new().expect("no local Vulkan library/DLL");
+
     let instance = Instance::new(
         library,
         InstanceCreateInfo {
@@ -50,9 +72,10 @@ fn vulkan(debug: bool) {
             physical_devices.len()
         );
     }
-
     let requested_features = DeviceFeatures {
         vulkan_memory_model: true,
+        shader_int64: true,
+        shader_int8: true,
         ..Default::default()
     };
     let mut filtered_phy_dev =
@@ -94,38 +117,19 @@ fn vulkan(debug: bool) {
     let queue = queues.next().unwrap();
     let memory_allocator = Arc::new(StandardMemoryAllocator::new_default(device.clone()));
 
-    let data_iter = 0..65536u32;
-    let data_buffer = Buffer::from_iter(
-        memory_allocator.clone(),
-        BufferCreateInfo {
-            usage: BufferUsage::STORAGE_BUFFER,
-            ..Default::default()
-        },
-        AllocationCreateInfo {
-            memory_type_filter: MemoryTypeFilter::PREFER_DEVICE
-                | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
-            ..Default::default()
-        },
-        data_iter,
-    )
-    .expect("failed to create buffer");
-
     let command_buffer_allocator = Arc::new(StandardCommandBufferAllocator::new(
         device.clone(),
         StandardCommandBufferAllocatorCreateInfo::default(),
     ));
 
-    let builder = AutoCommandBufferBuilder::primary(
-        command_buffer_allocator.clone(),
-        queue_family_index,
-        CommandBufferUsage::OneTimeSubmit,
-    );
-
     let shader = shader_spirv::load(device.clone()).expect("failed to create shader module");
 
-    let cs = shader.entry_point("main_cs").unwrap();
-
-    let stage = PipelineShaderStageCreateInfo::new(cs);
+    let shader_entry = shader.entry_point("main_cs").unwrap();
+    let descriptor_set_allocator = Arc::new(StandardDescriptorSetAllocator::new(
+        device.clone(),
+        Default::default(),
+    ));
+    let stage = PipelineShaderStageCreateInfo::new(shader_entry.clone());
     let layout = PipelineLayout::new(
         device.clone(),
         PipelineDescriptorSetLayoutCreateInfo::from_stages([&stage])
@@ -141,38 +145,97 @@ fn vulkan(debug: bool) {
     )
     .expect("failed to create compute pipeline");
 
-    let descriptor_set_allocator = Arc::new(StandardDescriptorSetAllocator::new(
-        device.clone(),
-        Default::default(),
-    ));
     let pipeline_layout = compute_pipeline.layout();
     let descriptor_set_layouts = pipeline_layout.set_layouts();
 
-    let descriptor_set_layout_index = 0;
-    let descriptor_set_layout = descriptor_set_layouts
-        .get(descriptor_set_layout_index)
-        .unwrap();
-    let descriptor_set = DescriptorSet::new(
+    let input_descriptor_set_layout = descriptor_set_layouts[0];
+    let output_descriptor_set_layout = descriptor_set_layouts[1];
+    VulkanBloat {
+        memory_allocator,
+        command_buffer_allocator,
+        queue_family_index,
+        device,
         descriptor_set_allocator,
-        descriptor_set_layout.clone(),
+        queue,
+        input_descriptor_set_layout,
+        output_descriptor_set_layout,
+    }
+}
+struct TrustedLenIterator<I> {
+    iter: I,
+    len: usize,
+}
+impl<I: Iterator> Iterator for TrustedLenIterator<I> {
+    type Item = I::Item;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.len -= 1;
+        self.iter.next()
+    }
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.len, Some(self.len))
+    }
+}
+impl<I: Iterator> ExactSizeIterator for TrustedLenIterator<I> {}
+
+fn vulkan_compute<T: Iterator<Item = u32> + ExactSizeIterator>(
+    _debug: bool,
+    vulkan: &mut VulkanBloat,
+    out_buffer: Arc<DescriptorSet>,
+    out_size: u32,
+    num_step: u32,
+    n_sign: u32,
+    n_steps: impl Iterator<Item = u32> + ExactSizeIterator,
+    p_values: impl Iterator<Item = u32> + ExactSizeIterator + Clone,
+) -> () {
+    let p_max = p_values.clone().max().unwrap();
+    let num_worker = p_values.len().div_ceil(64) as u32;
+    let num_spaces = num_worker * 64;
+    let valid = p_max.div_ceil(32) + 2;
+    let work_buffer_size = valid + p_max.div_ceil(64) + 2;
+
+    let entry_data = TrustedLenIterator {
+        iter: [work_buffer_size, out_size, valid, n_sign, num_step]
+            .into_iter()
+            .chain(n_steps)
+            .chain(p_values.flat_map(|p| {
+                repeat_n(p, 1).chain(repeat_n(0_u32, 2 * work_buffer_size as usize))
+            })),
+        len: 5
+            + (num_step as usize).div_ceil(32)
+            + (1 + 2 * work_buffer_size as usize) * num_spaces as usize,
+    };
+
+    let data_buffer = Buffer::from_iter(
+        vulkan.memory_allocator.clone(),
+        BufferCreateInfo {
+            usage: BufferUsage::STORAGE_BUFFER,
+            ..Default::default()
+        },
+        AllocationCreateInfo {
+            memory_type_filter: MemoryTypeFilter::PREFER_DEVICE
+                | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
+            ..Default::default()
+        },
+        entry_data,
+    )
+    .expect("failed to create buffer");
+
+    let input_descriptor_set = DescriptorSet::new(
+        vulkan.descriptor_set_allocator.clone(),
+        vulkan.input_descriptor_set_layout.clone(),
         [WriteDescriptorSet::buffer(0, data_buffer.clone())], // 0 is the binding
         [],
     )
     .unwrap();
 
-    let command_buffer_allocator = Arc::new(StandardCommandBufferAllocator::new(
-        device.clone(),
-        StandardCommandBufferAllocatorCreateInfo::default(),
-    ));
-
     let mut command_buffer_builder = AutoCommandBufferBuilder::primary(
-        command_buffer_allocator,
-        queue.queue_family_index(),
+        vulkan.command_buffer_allocator.clone(),
+        vulkan.queue_family_index,
         CommandBufferUsage::OneTimeSubmit,
     )
     .unwrap();
 
-    let work_group_counts = [1024, 1, 1];
+    let work_group_counts = [num_worker, 1, 1];
 
     unsafe {
         command_buffer_builder
@@ -182,7 +245,7 @@ fn vulkan(debug: bool) {
                 PipelineBindPoint::Compute,
                 compute_pipeline.layout().clone(),
                 descriptor_set_layout_index as u32,
-                descriptor_set,
+                (input_descriptor_set, out_buffer),
             )
             .unwrap()
             .dispatch(work_group_counts)
@@ -191,17 +254,11 @@ fn vulkan(debug: bool) {
 
     let command_buffer = command_buffer_builder.build().unwrap();
 
-    let future = sync::now(device.clone())
-        .then_execute(queue.clone(), command_buffer)
+    let future = sync::now(vulkan.device.clone())
+        .then_execute(vulkan.queue.clone(), command_buffer)
         .unwrap()
         .then_signal_fence_and_flush()
         .unwrap();
 
-    future.wait(None).unwrap();
-
-    let final_content = data_buffer.read().unwrap();
-    for i in final_content.iter() {
-        print!("{i} ")
-    }
-    println!("Everything succeeded!");
+    future.wait(None);
 }

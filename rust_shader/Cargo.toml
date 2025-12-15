@@ -8,3 +8,4 @@ edition = "2024"
 
 [dependencies]
 spirv-std = {git = "https://github.com/rust-gpu/rust-gpu"}
+[workspace]
