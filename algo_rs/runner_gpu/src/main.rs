@@ -11,7 +11,8 @@ use vulkano::descriptor_set::{DescriptorSet, WriteDescriptorSet};
 use vulkano::device::{
     Device, DeviceCreateInfo, DeviceFeatures, Queue, QueueCreateInfo, QueueFlags,
 };
-use vulkano::instance::{Instance, InstanceCreateFlags, InstanceCreateInfo};
+use vulkano::instance::debug::ValidationFeatureEnable;
+use vulkano::instance::{Instance, InstanceCreateFlags, InstanceCreateInfo, InstanceExtensions};
 use vulkano::memory::allocator::{
     AllocationCreateInfo, FreeListAllocator, GenericMemoryAllocator, MemoryTypeFilter,
     StandardMemoryAllocator,
@@ -56,7 +57,11 @@ fn vulkan_inital_setup(debug: bool) -> VulkanBloat {
     let instance = Instance::new(
         library,
         InstanceCreateInfo {
-            flags: InstanceCreateFlags::ENUMERATE_PORTABILITY,
+            enabled_extensions: InstanceExtensions{
+                    ext_validation_features: true,
+                    ..Default::default()
+            },
+            enabled_validation_features: vec![ValidationFeatureEnable::BestPractices],
             ..Default::default()
         },
     )
