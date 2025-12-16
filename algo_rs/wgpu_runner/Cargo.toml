@@ -1,0 +1,12 @@
+[package]
+name = "wgpu_runner"
+version = "0.1.0"
+edition = "2024"
+
+[build-dependencies]
+spirv-builder = {git = "https://github.com/rust-gpu/rust-gpu"}
+
+[dependencies]
+num = { version = "0.4.3", features = ["std", "alloc", "num-bigint"] }
+tokio = { version = "1.48.0", features = ["parking_lot", "rt", "rt-multi-thread", "macros"] }
+wgpu = { git = "https://github.com/gfx-rs/wgpu", features = ["vulkan-portability", "spirv"] }
