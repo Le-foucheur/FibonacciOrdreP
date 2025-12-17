@@ -1,11 +1,16 @@
 #![feature(iter_array_chunks)]
 
-const NUM_THREADS: usize = 1024;
+const NUM_THREADS: u32 = 1024;
 
 use num::{BigInt, Integer, Signed, bigint::Sign};
-use std::iter::{repeat, repeat_n};
+use std::{
+    iter::{repeat, repeat_n},
+    str::FromStr,
+};
 use tokio;
-use wgpu::{BufferAddress, BufferDescriptor, BufferUsages, COPY_BUFFER_ALIGNMENT, util::DeviceExt};
+use wgpu::{
+    util::DeviceExt, wgc::api::Vulkan, BackendOptions, Backends, BindGroupEntry, BindGroupLayout, BindGroupLayoutDescriptor, BindGroupLayoutEntry, BufferAddress, BufferDescriptor, BufferUsages, CommandEncoder, ComputePipeline, Device, FeaturesWGPU, InstanceFlags, PipelineLayout, PollType, ShaderStages, Surface, COPY_BUFFER_ALIGNMENT
+};
 mod bit_iterator;
 use bit_iterator::BitIterable;
 
@@ -20,43 +25,72 @@ mod shader_spirv {
     }
 }
 
+use bytemuck;
+use cpualgo::{calculator, setup};
+
 #[tokio::main]
 async fn main() {
-    let bloat = wgpu_inital_setup(true).await;
     let p_values = (10..(4096 * 16 + 10)).step_by(16);
-    let test_buffer = allocate_out_buffer(&bloat, p_values.len(), 10_000);
+    let n = BigInt::from_str("231651301651006849841651068498409132").unwrap();
 
-    println!("out buffer allocated");
-    wgpu_compute(
-        true,
-        &bloat,
-        test_buffer,
-        32,
-        1,
-        [654065456].into_iter(),
-        p_values,
-    );
-    println!("computation success");
+    let bloat = WgpuBloat::init(true).await;
+    let test_buffer =
+        bloat.allocate_out_buffer(p_values.len() as u32, 10_000, BufferUsages::COPY_SRC);
+    let final_buffer = bloat.device.create_buffer(&BufferDescriptor {
+        label: label("out_buffer", true),
+        size: test_buffer.get().2.size(),
+        usage: BufferUsages::MAP_READ | BufferUsages::COPY_DST,
+        mapped_at_creation: false,
+    });
+
+    bloat
+        .compute(true, &test_buffer, n.clone(), p_values.clone(), |encoder| {
+            encoder.copy_buffer_to_buffer(
+                &test_buffer.buffer,
+                0,
+                &final_buffer,
+                0,
+                final_buffer.size(),
+            );
+            encoder.map_buffer_on_submit(&final_buffer, wgpu::MapMode::Read, .., |result| {
+                result.unwrap();
+            })
+        })
+        .await;
+    let binding = final_buffer.get_mapped_range(..);
+    let data = binding.chunks_exact(10_000.div_ceil(&32));
+    for (chunk, p) in data.zip(p_values.clone()) {
+        let n = n.clone();
+        let n_as_bits = n
+            .iter_u32_digits()
+            .rev()
+            .flat_map(|limb| limb.iter_bits().rev())
+            .skip_while(|x| !x)
+            .skip(1);
+        let params = setup(p as usize);
+        let mut scratch1 = Vec::from_iter(repeat_n(0, params.ranges_size));
+        let mut scratch2 = Vec::from_iter(repeat_n(0, params.ranges_size));
+        let mut output = Vec::from_iter(repeat_n(0, 10_000.div_ceil(&32)));
+        calculator(
+            scratch1.as_mut_slice(),
+            scratch2.as_mut_slice(),
+            output.as_mut_slice(),
+            params,
+            n_as_bits,
+            false,
+        );
+
+        let eq = *bytemuck::cast_slice::<_, u8>(output.as_slice()) == *chunk;
+
+        println!("Lines for p={p}: equal:{eq}");
+    }
 }
 
 struct WgpuBloat {
-    device: wgpu::Device,
+    device: Device,
+    fibo_pipeline: ComputePipeline,
+    queue: wgpu::Queue,
 }
-struct TrustedLenIterator<I> {
-    iter: I,
-    len: usize,
-}
-impl<I: Iterator> Iterator for TrustedLenIterator<I> {
-    type Item = I::Item;
-    fn next(&mut self) -> Option<Self::Item> {
-        self.len -= 1;
-        self.iter.next()
-    }
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.len, Some(self.len))
-    }
-}
-impl<I: Iterator> ExactSizeIterator for TrustedLenIterator<I> {}
 
 pub struct StructuredBuffer {
     num_p_values: u32,
@@ -75,16 +109,37 @@ impl StructuredBuffer {
 fn label(s: &str, debug: bool) -> Option<&str> {
     match debug {
         true => Some(s),
-        false => None
+        false => None,
     }
 }
 
 impl WgpuBloat {
+    pub fn device(&self) -> &Device {
+        &self.device
+    }
+    pub fn pipeline(&self) -> &ComputePipeline {
+        &self.fibo_pipeline
+    }
+    pub fn queue(&self) -> &wgpu::Queue {
+        &self.queue
+    }
     async fn init(debug: bool) -> Self {
-        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor::from_env_or_default());
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
+            backends: Backends::VULKAN,
+            flags: if debug {
+                InstanceFlags::VALIDATION | InstanceFlags::GPU_BASED_VALIDATION
+            } else {
+                InstanceFlags::empty()
+            },
+            memory_budget_thresholds: wgpu::MemoryBudgetThresholds {
+                for_resource_creation: None,
+                for_device_loss: None,
+            },
+            backend_options: Default::default(),
+        });
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions {
-                power_preference: wgpu::PowerPreference::default(),
+                power_preference: wgpu::PowerPreference::HighPerformance,
                 force_fallback_adapter: false,
                 compatible_surface: None,
             })
@@ -93,9 +148,8 @@ impl WgpuBloat {
 
         let (device, queue) = adapter
             .request_device(&wgpu::DeviceDescriptor {
-                label: None,
-                required_features: wgpu::Features::TIMESTAMP_QUERY
-                    | wgpu::Features::SHADER_INT64
+                label: label("Main fibo device", debug),
+                required_features: wgpu::Features::SHADER_INT64
                     | wgpu::Features::EXPERIMENTAL_PASSTHROUGH_SHADERS,
                 required_limits: wgpu::Limits::defaults(),
                 experimental_features: unsafe { wgpu::ExperimentalFeatures::enabled() },
@@ -105,42 +159,70 @@ impl WgpuBloat {
             .await
             .expect("failed to find device");
         let shader = shader_spirv::load(&device);
-        let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+
+        let buffer_descriptor = (0..4).map(|i| {
+            
+                    device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+                        label: label("fibo group layout", debug),
+                        entries: &[BindGroupLayoutEntry {
+                            binding: i,
+                            visibility: ShaderStages::COMPUTE,
+                            ty: wgpu::BindingType::Buffer { ty: wgpu::BufferBindingType::Storage { read_only: false }, has_dynamic_offset: false, min_binding_size: None },
+                            count: None,
+                        }]
+                    })
+        }).collect::<Vec<_>>();
+        let refs = buffer_descriptor.iter().collect::<Vec<_>>();
+
+        let pipeline_layout = device.create_pipeline_layout(
+
+            &wgpu::PipelineLayoutDescriptor { label: label("Fibo pipeline layout", debug),
+                bind_group_layouts: refs.as_slice(),
+                immediates_ranges: &[] }
+        );
+        
+        let fibo_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
             label: label("Fibo compute pipeline", debug),
-            layout: None,
+            layout: Some(&pipeline_layout),
             module: &shader,
-            entry_point: None,
+            entry_point: Some("main_cs"),
             compilation_options: Default::default(),
             cache: Default::default(),
         });
-        ()
+        WgpuBloat {
+            device,
+            fibo_pipeline,
+            queue,
+        }
     }
     pub fn allocate_out_buffer(
-        bloat: &WgpuBloat,
+        &self,
         num_p_val: u32,
         buffer_nbbits: u32,
+        suplemental_usage: BufferUsages,
     ) -> StructuredBuffer {
         let individual_buffer_size = buffer_nbbits.div_ceil(32);
         let size = individual_buffer_size * num_p_val;
         StructuredBuffer {
             num_p_values: num_p_val,
             size_u32_per_p: individual_buffer_size,
-            buffer: bloat.device.create_buffer(&BufferDescriptor {
+            buffer: self.device.create_buffer(&BufferDescriptor {
                 label: None,
                 mapped_at_creation: false,
                 size: ((size as usize * size_of::<u32>()) as wgpu::BufferAddress)
                     .next_multiple_of(wgpu::COPY_BUFFER_ALIGNMENT),
-                usage: BufferUsages::COPY_SRC | BufferUsages::STORAGE,
+                usage: suplemental_usage | BufferUsages::STORAGE,
             }),
         }
     }
 
-    pub async fn wgpu_compute(
+    pub async fn compute(
         &self,
         debug: bool,
-        out_buffer: StructuredBuffer,
+        out_buffer: &StructuredBuffer,
         mut n: BigInt,
         p_values: impl Iterator<Item = u32> + ExactSizeIterator + Clone,
+        additional_command: impl Fn(&mut CommandEncoder),
     ) -> () {
         let p_max = p_values.clone().max().unwrap();
         let valid = p_max.div_ceil(32) + 2;
@@ -199,12 +281,12 @@ impl WgpuBloat {
         let entry_buffer = self
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: None,
+                label: label("Entry buffer", debug),
                 usage: BufferUsages::STORAGE,
                 contents: entry_data.as_slice(),
             });
         let work_buffer_descriptor = BufferDescriptor {
-            label: None,
+            label: label("Scratchpad buffer", debug),
             size:
                 ((work_buffer_size as usize * out_buffer.num_p_values as usize * size_of::<u32>())
                     as BufferAddress)
@@ -212,43 +294,49 @@ impl WgpuBloat {
             mapped_at_creation: false,
             usage: BufferUsages::STORAGE,
         };
+        let work_buffer1 = self.device.create_buffer(&work_buffer_descriptor);
+        let work_buffer2 = self.device.create_buffer(&work_buffer_descriptor);
 
         let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: None,
-            layout: &bind_group_layout,
-            entries: &[wgpu::BindGroupEntry {
-                binding: 0,
-                resource: entry_buffer.as_entire_binding(),
-            }],
+            label: label("Temporary fibo work_group", debug),
+            layout: &self.fibo_pipeline.get_bind_group_layout(0),
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: entry_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: work_buffer1.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: work_buffer2.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: out_buffer.buffer.as_entire_binding(),
+                },
+            ],
         });
 
-        /* let descriptor_set = DescriptorSet::new(
-            vulkan.descriptor_set_allocator.clone(),
-            vulkan.descriptor_set_layout.clone(),
-            [WriteDescriptorSet::buffer(0, data_buffer.clone()),
-                                WriteDescriptorSet::buffer( 1, out_buffer.clone()),],
-            [],
-        )
-        .unwrap();
-
-        let mut command_buffer_builder = AutoCommandBufferBuilder::primary(
-            vulkan.command_buffer_allocator.clone(),
-            vulkan.queue_family_index,
-            CommandBufferUsage::OneTimeSubmit,
-        )
-        .unwrap();
-
-        let work_group_counts = [num_worker, 1, 1];
-
-
-        let command_buffer = command_buffer_builder.build().unwrap();
-        if debug { println!("setup sucess, launching calculations");}
-        let future = sync::now(vulkan.device.clone())
-            .then_execute(vulkan.queue.clone(), command_buffer)
-            .unwrap()
-            .then_signal_fence_and_flush()
+        let mut encoder = self.device.create_command_encoder(&Default::default());
+        {
+            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: label("Fibo compute pass", debug),
+                timestamp_writes: None,
+            });
+            pass.set_pipeline(&self.fibo_pipeline);
+            pass.set_bind_group(0, &bind_group, &[]);
+            pass.dispatch_workgroups(out_buffer.num_p_values.div_ceil(NUM_THREADS as u32), 1, 1);
+        }
+        additional_command(&mut encoder);
+        let submission = self.queue.submit([encoder.finish()]);
+        self.device
+            .poll(PollType::Wait {
+                submission_index: Some(submission),
+                timeout: None,
+            })
             .unwrap();
-
-        future.wait(None).unwrap(); */
     }
 }

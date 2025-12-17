@@ -1,8 +1,5 @@
 use crate::bit_iterator::BitIterable;
-use core::{
-    hint::{likely, unlikely},
-    mem::swap,
-};
+use core::hint::{likely, unlikely};
 
 /// turn abc, def in daebcf  (b will be shifted once more / a rightmost bit will stay there)
 /// see https://graphics.stanford.edu/~seander/bithacks.html#InterleaveBMN for method
@@ -167,11 +164,6 @@ fn step(
     extend(output_buf, output_start, output_size, valid, p);
 }
 
-#[derive(Debug)]
-pub struct Parametters {
-    pub(crate) p: usize,
-    pub(crate) valid: usize,
-}
 #[inline(always)]
 fn value_in_init(p: usize, mut n: usize) -> bool {
     if n < 2 {
@@ -254,64 +246,108 @@ fn init(buffer: &mut [u32], start: usize, size: usize, sign: i32, p: usize) {
 
 #[inline(always)]
 #[allow(clippy::too_many_arguments)]
-pub fn calculator(
-    the_big_buffer: &mut [u32],
-    mut scratch1: usize,
-    mut scratch2: usize,
+pub fn calculator<'a>(
+    params: &mut [u32],
+    scratch1_buf: &'a mut [u32],
+    scratch2_buf: &'a mut [u32],
+    scratch_index: usize,
     scratch_size: usize,
     output_buffer: &mut [u32],
     output_start: usize,
     output_size: usize,
-    param: Parametters,
     num_steps: usize,
     n_sign: i32,
+    p: usize,
+    valid: usize,
 ) {
     if unlikely(num_steps == 0) {
-        init(output_buffer, output_start, output_size, n_sign, param.p);
+        init(output_buffer, output_start, output_size, n_sign, p);
     }
 
-    init(the_big_buffer, scratch1, scratch_size, n_sign, param.p);
     //handling negatives
 
     let mut counter = 6;
-    let mut bits = the_big_buffer[5].iter_bits();
-    for _ in 0..(num_steps - 1) {
+    let mut bits = params[5].iter_bits();
+
+    let tour_de_boucles = (num_steps - 1) / 2;
+    let steps_pair = (num_steps - 1) % 2 == 0;
+    if steps_pair {
+        init(scratch1_buf, scratch_index, scratch_size, n_sign, p);
+    } else {
+        init(scratch2_buf, scratch_index, scratch_size, n_sign, p);
         let add_one = match bits.next() {
             Some(v) => v,
             None => {
-                bits = the_big_buffer[counter].iter_bits();
+                bits = params[counter].iter_bits();
                 counter += 1;
                 bits.next().unwrap()
             }
         };
         step(
-            unsafe{&mut *(the_big_buffer as *mut _)},
-            scratch1,
-            the_big_buffer,
-            scratch2,
+            scratch2_buf,
+            scratch_index,
+            scratch1_buf,
+            scratch_index,
             scratch_size,
-            param.p,
-            param.valid,
+            p,
+            valid,
             add_one != 0,
         );
+    }
 
-        swap(&mut scratch1, &mut scratch2);
+    for _ in 0..tour_de_boucles {
+        let add_one = match bits.next() {
+            Some(v) => v,
+            None => {
+                bits = params[counter].iter_bits();
+                counter += 1;
+                bits.next().unwrap()
+            }
+        };
+        step(
+            scratch1_buf,
+            scratch_index,
+            scratch2_buf,
+            scratch_index,
+            scratch_size,
+            p,
+            valid,
+            add_one != 0,
+        );
+        let add_one = match bits.next() {
+            Some(v) => v,
+            None => {
+                bits = params[counter].iter_bits();
+                counter += 1;
+                bits.next().unwrap()
+            }
+        };
+        step(
+            scratch2_buf,
+            scratch_index,
+            scratch1_buf,
+            scratch_index,
+            scratch_size,
+            p,
+            valid,
+            add_one != 0,
+        );
     }
     let add_one = match bits.next() {
         Some(v) => v,
         None => {
-            bits = the_big_buffer[counter].iter_bits();
+            bits = params[counter].iter_bits();
             bits.next().unwrap()
         }
     };
     step(
-        the_big_buffer,
-        scratch1,
+        scratch1_buf,
+        scratch_index,
         output_buffer,
         output_start,
         output_size,
-        param.p,
-        param.valid,
+        p,
+        valid,
         add_one != 0,
     );
 }

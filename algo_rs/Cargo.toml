@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["algo","runner_gpu"]
+members = ["algo","runner_gpu", "wgpu_runner"]
 exclude = ["./runner_gpu/shader"]
 
 [workspace.package]

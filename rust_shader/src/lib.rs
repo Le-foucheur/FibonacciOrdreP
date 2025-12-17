@@ -17,30 +17,44 @@ use algo::*;
 #[spirv(compute(threads(1024)))]
 pub fn main_cs(
     #[spirv(global_invocation_id)] id: UVec3,
-    #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] the_big_buffer: &mut [u32],
-    #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] output_buffer: &mut [u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] params: &mut [u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] scratch1: &mut [u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 2)] scratch2: &mut [u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 3)] output_buffer: &mut [u32],
 ) {
     let idx = id.x as usize;
-    let work_buffer_size = the_big_buffer[0] as usize;
-    let out_buffer_size = the_big_buffer[1] as usize;
-    let valid = the_big_buffer[2] as usize;
-    let n_sign = the_big_buffer[3] as i32;
-    let step_num = the_big_buffer[4] as usize;
+
+    
+    
+    let work_buffer_size = params[0] as usize;
+    let out_buffer_size = params[1] as usize;
+    let valid = params[2] as usize;
+    let n_sign = params[3] as i32;
+    let step_num = params[4] as usize;
     let step_num_u32 = step_num.div_ceil(32);
-    let personnal_space_size = work_buffer_size * 2 + 1;
-    let personnal_space_index = 5 + step_num_u32 + (personnal_space_size * idx);
-    let p = the_big_buffer[personnal_space_index] as usize;
-    let params = Parametters { p, valid };
+    let personnal_space_index = work_buffer_size * idx;
+
+    let max_invoc = params.len() - 5 - step_num_u32;
+    if idx >= max_invoc {
+        return;
+    }
+    
+    let p = params[5+step_num_u32+idx] as usize;
+
+    
+    
     calculator(
-        the_big_buffer,
-        personnal_space_index + 1,
-        personnal_space_index + 1 + work_buffer_size,
+        params,
+        scratch1,
+        scratch2,
+        personnal_space_index,
         work_buffer_size,
         output_buffer,
-        out_buffer_size * idx,
+        out_buffer_size*idx,
         out_buffer_size,
-        params,
         step_num,
         n_sign,
+        p,
+        valid,
     );
 }
