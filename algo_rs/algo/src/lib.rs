@@ -1,4 +1,4 @@
-#![no_std]
+// #![no_std]
 #![feature(array_windows, likely_unlikely, iter_array_chunks)]
 
 use core::{
@@ -68,23 +68,26 @@ fn ranger(input: &[u32], output: &mut [u32], p: usize, add_one: bool) {
         (true, true) => {
             let mixed = vanilla.clone().zip(shifterator(input, p / 2)).map(xor);
             assign(out_iter, mixed, vanilla);
-            
         }
         (true, false) => {
-            let mixed = shifterator(input, 1).zip(shifterator(input, p/2+1)).map(xor);
+            let mixed = shifterator(input, 1)
+                .zip(shifterator(input, p / 2 + 1))
+                .map(xor);
             assign(out_iter, vanilla, mixed);
-        },
+        }
         (false, true) => {
-            let mixed = vanilla.clone().zip(shifterator(input, p.div_ceil(2))).map(xor);
+            let mixed = vanilla
+                .clone()
+                .zip(shifterator(input, p.div_ceil(2)))
+                .map(xor);
             assign(out_iter, vanilla, mixed);
-        },
+        }
         (false, false) => {
             let mixed = vanilla.zip(shifterator(input, p.div_ceil(2))).map(xor);
             let shifted_vanilla = shifterator(input, 1);
             assign(out_iter, mixed, shifted_vanilla);
-        },
+        }
     }
-
 }
 
 fn extend(input: &mut [u32], valid: usize, p: usize) {
@@ -107,7 +110,7 @@ fn extend(input: &mut [u32], valid: usize, p: usize) {
         let mut x = (input[valid - 2] as u64) | ((input[valid - 1] as u64) << 32);
         // we keep the p+1 last bits
         x >>= 64 - (p + 1);
-
+        // println!("{x},{valid}");
         let iter = repeat_with(|| {
             let bit = (x & 1 != 0) ^ (x & 2 != 0);
             x >>= 1;
@@ -144,7 +147,7 @@ pub struct Parametters {
 
 pub fn setup(p: usize) -> Parametters {
     //we need at least that much valid blocs for extend to work without out of bound access
-    let valid = p.div_ceil(32) + 2;
+    let valid = p.div_ceil(32) + 1;
     //we discard (p.div_ceil(2).div_ceil(32)+1)+1 blocs in shifterator => to produce "valid" valids bloc, we need that much more
     let ranges_size = valid + p.div_ceil(64) + 2;
 
@@ -187,13 +190,13 @@ fn init(input: &mut [u32], sign: i8, valid: usize, p: usize) {
             *out = res;
         }
     } else {
-        let mut x = 1u64;
+        let mut x = 0b11u64;
         let inserter = 1 << p;
 
         let mut iter = repeat_with(|| {
             let bit = x & 1 != 0;
             x >>= 1;
-            if bit && (x&1!=0) {
+            if bit ^ (x & 1 != 0) {
                 x |= inserter;
             }
             bit
@@ -235,7 +238,20 @@ pub fn calculator<'a>(
     is_n_negative: bool,
 ) {
     let mut n = n.skip_while(|x| !x).peekable();
+    if unlikely(param.p==0) {
+        let magic = if
+        match n.last() {
+            None => true,
+            Some(bit) => !bit            
+        }
 
+        {0x55555555u32} else {0xAAAAAAAAu32};
+        for out in output {
+            *out = magic
+        }
+        return;
+    }
+    
     if unlikely(n.peek().is_none()) {
         init(output, 0, param.valid, param.p);
     } else {
@@ -244,15 +260,16 @@ pub fn calculator<'a>(
         let sign = if is_n_negative { -1 } else { 1 };
         if unlikely(n.peek().is_none()) {
             init(output, sign, param.valid, param.p);
+            return;
         }
 
         // Finally, after the special cases the main loop!
         init(scratch1, sign, param.valid, param.p);
         //handling negatives
-        let mut n = n.map(|val| {val ^ is_n_negative});
+        let mut n = n.map(|val| val ^ is_n_negative);
 
         let mut add_one = n.next().unwrap();
-        
+
         for next_add_one in n {
             step(scratch1, scratch2, param.p, param.valid, add_one);
 
@@ -284,7 +301,7 @@ mod tests {
         {
             assert_eq!(*j, i)
         }
-/*
+        /*
         let mut output = repeat_n(0, 50).collect::<Vec<_>>();
         init(output.as_mut_slice(), 1, 3, 33);
 
@@ -304,7 +321,7 @@ mod tests {
 
         assert_eq!(*output, *output3);
 
-        
+
         let mut output = repeat_n(0, 50).collect::<Vec<_>>();
         init(output.as_mut_slice(), 1, 15, 31);
 
@@ -312,6 +329,5 @@ mod tests {
         init(output2.as_mut_slice(), 1, 2, 31);
 
         assert_eq!(*output, *output2);*/
-
     }
 }

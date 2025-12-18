@@ -6,10 +6,13 @@ use num::{BigInt, Integer, Signed, bigint::Sign};
 use std::{
     iter::{repeat, repeat_n},
     str::FromStr,
+    time::Instant,
 };
 use tokio;
 use wgpu::{
-    util::DeviceExt, wgc::api::Vulkan, BackendOptions, Backends, BindGroupEntry, BindGroupLayout, BindGroupLayoutDescriptor, BindGroupLayoutEntry, BufferAddress, BufferDescriptor, BufferUsages, CommandEncoder, ComputePipeline, Device, FeaturesWGPU, InstanceFlags, PipelineLayout, PollType, ShaderStages, Surface, COPY_BUFFER_ALIGNMENT
+    Backends, BindGroupLayoutDescriptor, BindGroupLayoutEntry, BufferAddress, BufferDescriptor,
+    BufferUsages, COPY_BUFFER_ALIGNMENT, CommandEncoder, ComputePipeline, Device, InstanceFlags,
+    PollType, ShaderStages, util::DeviceExt,
 };
 mod bit_iterator;
 use bit_iterator::BitIterable;
@@ -30,47 +33,54 @@ use cpualgo::{calculator, setup};
 
 #[tokio::main]
 async fn main() {
-    let p_values = (10..(4096 * 16 + 10)).step_by(16);
-    let n = BigInt::from_str("231651301651006849841651068498409132").unwrap();
+    let p_values = 100_000..100_000 + 4096;
+    let n = BigInt::from_str("3216843213215654646513213216549874654132132165498765431321").unwrap();
 
-    let bloat = WgpuBloat::init(true).await;
+    let bloat = WgpuBloat::init(false).await;
     let test_buffer =
-        bloat.allocate_out_buffer(p_values.len() as u32, 10_000, BufferUsages::COPY_SRC);
+        bloat.allocate_out_buffer(p_values.len() as u32, 1920, BufferUsages::COPY_SRC);
     let final_buffer = bloat.device.create_buffer(&BufferDescriptor {
-        label: label("out_buffer", true),
+        label: label("out_buffer", false),
         size: test_buffer.get().2.size(),
         usage: BufferUsages::MAP_READ | BufferUsages::COPY_DST,
         mapped_at_creation: false,
     });
-
-    bloat
-        .compute(true, &test_buffer, n.clone(), p_values.clone(), |encoder| {
-            encoder.copy_buffer_to_buffer(
-                &test_buffer.buffer,
-                0,
-                &final_buffer,
-                0,
-                final_buffer.size(),
-            );
-            encoder.map_buffer_on_submit(&final_buffer, wgpu::MapMode::Read, .., |result| {
-                result.unwrap();
+    println!("setup finished, calculating ...");
+    for _ in 0..100 {
+        let time = Instant::now();
+        bloat
+            .compute(true, &test_buffer, n.clone(), p_values.clone(), |encoder| {
+                encoder.copy_buffer_to_buffer(
+                    &test_buffer.buffer,
+                    0,
+                    &final_buffer,
+                    0,
+                    final_buffer.size(),
+                );
+                encoder.map_buffer_on_submit(&final_buffer, wgpu::MapMode::Read, .., |result| {
+                    result.unwrap();
+                })
             })
-        })
-        .await;
+            .await;
+        final_buffer.unmap();
+        println!(
+            "gpu compute finished in {}s",
+            (Instant::now() - time).as_secs_f64()
+        );
+    }
     let binding = final_buffer.get_mapped_range(..);
-    let data = binding.chunks_exact(10_000.div_ceil(&32));
+    let data = binding.chunks_exact(1920.div_ceil(&32) * 4);
     for (chunk, p) in data.zip(p_values.clone()) {
-        let n = n.clone();
+
+        /* let n = n.clone();
         let n_as_bits = n
             .iter_u32_digits()
             .rev()
-            .flat_map(|limb| limb.iter_bits().rev())
-            .skip_while(|x| !x)
-            .skip(1);
+            .flat_map(|limb| limb.iter_bits().rev());
         let params = setup(p as usize);
         let mut scratch1 = Vec::from_iter(repeat_n(0, params.ranges_size));
         let mut scratch2 = Vec::from_iter(repeat_n(0, params.ranges_size));
-        let mut output = Vec::from_iter(repeat_n(0, 10_000.div_ceil(&32)));
+        let mut output = Vec::from_iter(repeat_n(0, 1920.div_ceil(&32).next_multiple_of(&2)));
         calculator(
             scratch1.as_mut_slice(),
             scratch2.as_mut_slice(),
@@ -81,8 +91,13 @@ async fn main() {
         );
 
         let eq = *bytemuck::cast_slice::<_, u8>(output.as_slice()) == *chunk;
-
-        println!("Lines for p={p}: equal:{eq}");
+        if !eq {
+            println!(
+                "{p}",
+                // bytemuck::cast_slice::<_, u32>(chunk),
+                // output.as_slice()
+            );
+        } */
     }
 }
 
@@ -160,27 +175,30 @@ impl WgpuBloat {
             .expect("failed to find device");
         let shader = shader_spirv::load(&device);
 
-        let buffer_descriptor = (0..4).map(|i| {
-            
-                    device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-                        label: label("fibo group layout", debug),
-                        entries: &[BindGroupLayoutEntry {
-                            binding: i,
-                            visibility: ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer { ty: wgpu::BufferBindingType::Storage { read_only: false }, has_dynamic_offset: false, min_binding_size: None },
-                            count: None,
-                        }]
-                    })
-        }).collect::<Vec<_>>();
-        let refs = buffer_descriptor.iter().collect::<Vec<_>>();
+        let buffer_descriptor = (0..4)
+            .map(|i| BindGroupLayoutEntry {
+                binding: i,
+                visibility: ShaderStages::COMPUTE,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Storage { read_only: i == 0 },
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            })
+            .collect::<Vec<_>>();
 
-        let pipeline_layout = device.create_pipeline_layout(
+        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: label("Fibo pipeline layout", debug),
+            bind_group_layouts: &[
+                &device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+                    label: label("fibo group layout", debug),
+                    entries: buffer_descriptor.as_slice(),
+                }),
+            ],
+            immediates_ranges: &[],
+        });
 
-            &wgpu::PipelineLayoutDescriptor { label: label("Fibo pipeline layout", debug),
-                bind_group_layouts: refs.as_slice(),
-                immediates_ranges: &[] }
-        );
-        
         let fibo_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
             label: label("Fibo compute pipeline", debug),
             layout: Some(&pipeline_layout),
@@ -201,7 +219,7 @@ impl WgpuBloat {
         buffer_nbbits: u32,
         suplemental_usage: BufferUsages,
     ) -> StructuredBuffer {
-        let individual_buffer_size = buffer_nbbits.div_ceil(32);
+        let individual_buffer_size = buffer_nbbits.div_ceil(32).next_multiple_of(2);
         let size = individual_buffer_size * num_p_val;
         StructuredBuffer {
             num_p_values: num_p_val,
@@ -226,7 +244,7 @@ impl WgpuBloat {
     ) -> () {
         let p_max = p_values.clone().max().unwrap();
         let valid = p_max.div_ceil(32) + 2;
-        let work_buffer_size = valid + p_max.div_ceil(64) + 2;
+        let work_buffer_size = (valid + p_max.div_ceil(64) + 2).next_multiple_of(2);
 
         let (n_sign, num_step) = match n.sign() {
             Sign::Plus => (1_i32 as u32, n.bits() - 1),
@@ -331,7 +349,9 @@ impl WgpuBloat {
             pass.dispatch_workgroups(out_buffer.num_p_values.div_ceil(NUM_THREADS as u32), 1, 1);
         }
         additional_command(&mut encoder);
-        let submission = self.queue.submit([encoder.finish()]);
+        let finished = encoder.finish();
+        println!("submiting work ...");
+        let submission = self.queue.submit([finished]);
         self.device
             .poll(PollType::Wait {
                 submission_index: Some(submission),

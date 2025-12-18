@@ -2,6 +2,7 @@
 #![allow(unexpected_cfgs)]
 #![cfg_attr(target_arch = "spirv", no_std)]
 #![deny(warnings)]
+#![feature(asm_experimental_arch)]
 
 use spirv_std::glam::UVec3;
 use spirv_std::spirv;
@@ -17,7 +18,7 @@ use algo::*;
 #[spirv(compute(threads(1024)))]
 pub fn main_cs(
     #[spirv(global_invocation_id)] id: UVec3,
-    #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] params: &mut [u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] params: &[u32],
     #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] scratch1: &mut [u32],
     #[spirv(storage_buffer, descriptor_set = 0, binding = 2)] scratch2: &mut [u32],
     #[spirv(storage_buffer, descriptor_set = 0, binding = 3)] output_buffer: &mut [u32],
@@ -41,8 +42,6 @@ pub fn main_cs(
     
     let p = params[5+step_num_u32+idx] as usize;
 
-    
-    
     calculator(
         params,
         scratch1,

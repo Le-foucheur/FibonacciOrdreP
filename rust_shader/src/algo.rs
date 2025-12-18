@@ -46,10 +46,11 @@ fn ranger(
     valid: usize,
     output_buf: &mut [u32],
     output_start: usize,
+    output_size: usize,
     p: usize,
     add_one: bool,
 ) {
-    let max = valid.div_ceil(2);
+    let max = (valid.min(output_size)).div_ceil(2);
     match (p.is_multiple_of(2), add_one) {
         (true, true) => {
             for i in 0..max {
@@ -128,12 +129,12 @@ fn extend(buffer: &mut [u32], start: usize, size: usize, valid: usize, p: usize)
         #[allow(clippy::needless_range_loop)]
         for i in valid..size {
             let mut res = 0;
-            let mut inserter = (1_u32) << 31;
+            let mut inserter = 1;
             for _ in 0..32 {
                 if next() {
                     res |= inserter;
                 }
-                inserter >>= 1;
+                inserter <<= 1;
             }
             buffer[start + i] = res;
         }
@@ -158,6 +159,7 @@ fn step(
         valid,
         output_buf,
         output_start,
+        output_size,
         p,
         add_one,
     );
@@ -186,8 +188,8 @@ fn value_in_init(p: usize, mut n: usize) -> bool {
 
 #[inline(always)]
 fn init(buffer: &mut [u32], start: usize, size: usize, sign: i32, p: usize) {
-    let valid = p.div_ceil(32) + 2;
-
+    let valid = p.div_ceil(32) + 1;
+    let valid = valid.min(size);
     if likely(p > 32) {
         // we need less than 3*p values, and we know them!
         let mut counter = 0;
@@ -195,24 +197,24 @@ fn init(buffer: &mut [u32], start: usize, size: usize, sign: i32, p: usize) {
         #[allow(clippy::needless_range_loop)]
         for i in 0..valid {
             let mut res = 0;
-            let mut inserter = (1_u32) << 31;
+            let mut inserter = 1_u32;
             for _ in 0..32 {
                 if value_in_init(p, counter) {
                     res |= inserter;
                 }
-                inserter >>= 1;
+                inserter <<= 1;
                 counter += 1;
             }
             buffer[start + i] = res;
         }
     } else {
-        let mut x = 1u64;
+        let mut x = 0b11u64;
         let inserter = 1 << p;
 
         let mut next = || {
             let bit = x & 1 != 0;
             x >>= 1;
-            if bit && (x & 1 != 0) {
+            if bit ^ (x & 1 != 0) {
                 x |= inserter;
             }
             bit
@@ -231,12 +233,12 @@ fn init(buffer: &mut [u32], start: usize, size: usize, sign: i32, p: usize) {
         #[allow(clippy::needless_range_loop)]
         for i in 0..valid {
             let mut res = 0;
-            let mut inserter = (1_u32) << 31;
+            let mut inserter = 1;
             for _ in 0..32 {
                 if next() {
                     res |= inserter;
                 }
-                inserter >>= 1;
+                inserter <<= 1;
             }
             buffer[start + i] = res;
         }
@@ -247,7 +249,7 @@ fn init(buffer: &mut [u32], start: usize, size: usize, sign: i32, p: usize) {
 #[inline(always)]
 #[allow(clippy::too_many_arguments)]
 pub fn calculator<'a>(
-    params: &mut [u32],
+    params: &[u32],
     scratch1_buf: &'a mut [u32],
     scratch2_buf: &'a mut [u32],
     scratch_index: usize,
@@ -260,6 +262,25 @@ pub fn calculator<'a>(
     p: usize,
     valid: usize,
 ) {
+    if unlikely(p == 0) {
+        let magic = if match num_steps {
+            0 => n_sign==0,
+            more => {
+                let complete = (more - 1) / 32;
+                let partial = (more - 1) % 32;
+                ((params[5 + complete] >> partial) & 1) == 0
+            }
+        } {
+            0x55555555u32
+        } else {
+            0xAAAAAAAAu32
+        };
+        for i in output_start..(output_start + output_size) {
+            output_buffer[i] = magic
+        }
+        return;
+    }
+
     if unlikely(num_steps == 0) {
         init(output_buffer, output_start, output_size, n_sign, p);
     }
